@@ -16,7 +16,7 @@ class Space(object):
     def sample(self):
         return np.random.uniform(self.low, self.high)
 
-class LanechangeEnv(object):
+class MergeEnv(object):
 
     def __init__(self, mpc, plan_T, plan_dt, init_param = None):
         self.mpc = mpc
@@ -36,15 +36,26 @@ class LanechangeEnv(object):
         # Road Parameters
         self.world_size = 30
         self.lane_len = 6
+        self.surrounding_v_pos = [-20,self.lane_len/2]
+        self.surrounding_v_vel = 2
+        self.surrounding_v_state = self.surrounding_v_pos.append(self.surrounding_v_vel)
 
-        self.surr_v1_pos = [-5,self.lane_len/2]
-        self.surr_v1_vel = 2
-        self.surr_v1_state = self.surr_v1_pos.append(self.surr_v1_vel)
+        ## Static Chance
+        self.chance_pos = [0,2] # [0, 2.0]
+        self.chance_len = self.lane_len/2
+        self.chance_vel = 0.5  # 0.5
 
-        self.surr_v2_pos = [5,-self.lane_len/2]
-        self.surr_v2_vel = 2
-        self.surr_v2_state = self.surr_v2_pos.append(self.surr_v2_vel)
+        ## High_Level Variable
+        self.high_variable_pos = None
+        
+        ## Planner 
+        self.sigma = 10 # 10
 
+        ## Reward for RL
+        self.reward = 0
+        self.tra = True
+        self.goal_reward = 300 # sparse positive reward if reach the goal without collision
+        self.scale_f = 0.1
 
         # parameters
         if init_param is None:
@@ -58,19 +69,18 @@ class LanechangeEnv(object):
             self.vehicle_init_pos = init_param[0]
             self.vehicle_init_vx = init_param[1]  # starting point of the quadrotor
        
-        #self.ball = Ball(self.ball_init_pos, dt=self.sim_dt)
 
         # state space
-        #self.observation_space = Space(
-            #low=np.array([-10.0, -10.0, -10.0, -2*np.pi, -2*np.pi, -2*np.pi, -10.0, -10.0, -10.0]),
-            #high=np.array([10.0, 10.0, 10.0, 2*np.pi, 2*np.pi, 2*np.pi, 10.0, 10.0, 10.0]),
-        #)
-        self.obs = None
+        self.observation_space = Space(
+            low=np.array([-30.0, -30.0, -2*np.pi, -30.0, -30.0, -30.0, -30.0, -10.0]), #low=np.array([-10.0, -10.0, -10.0, -2*np.pi, -2*np.pi, -2*np.pi, -10.0, -10.0, -10.0]),
+            high=np.array([30.0, 30.0,    2*np.pi, 30.0, 30.0, 30.0, 30.0, 10.0]), #high=np.array([10.0, 10.0, 10.0, 2*np.pi, 2*np.pi, 2*np.pi, 10.0, 10.0, 10.0]),
+        )
+        #self.obs = None
 
-        #self.action_space = Space(
-            #low=np.array([0.0]),
-            #high=np.array([2*self.plan_T])
-        #)
+        self.action_space = Space(
+            low=np.array([-3.0, -0.6]), #low=np.array([-3.0]),
+            high=np.array([1.5, 0.6]) #high=np.array([2*self.plan_T])
+        )
 
         # reset the environment
         self.t = 0
@@ -87,39 +97,60 @@ class LanechangeEnv(object):
             #self.ball_state = self.ball.reset(init_vel)
         #else:
             #self.ball_state = self.ball.reset(self.ball_init_vel)
-        if goal is not None:
-            vehicle_obs = goal
-        else:
-            vehicle_obs = np.zeros(self.vehicle.s_dim)
         
         # observation, can be part of the state, e.g., postion
         # or a cartesian representation of the state
+        self.goal = goal.tolist()
+        self.goal_pos = self.goal[kpx:kpy+1]
+
+        self.obs = []
+        self.obs += self.vehicle_state[kpx:kphi+1] # px, py, heading of init pos
+        self.obs += self.goal[kpx:kpy+1] # px, py of goal
+        self.obs += self.chance_pos[kpx:kpy+1] # px, py of chance pos
+        self.obs +=[self.chance_vel]
+
         #vehicle_obs = self.vehicle_state
-        #ball_obs = self.ball.get_cartesian_state()
         #
         #obs = (quad_obs - ball_obs).tolist()
-        self.obs = vehicle_obs.tolist()
+        #self.obs = vehicle_obs.tolist()
         
         return self.obs
 
-    def step(self):
+    def chance_plan(self):
+
+        #
+        plans = []#, pred_traj = [], []
+
+        current_t = self.t
+        trav_state = [0,0,0,3,0,0]
+        opt_t = 5
+        plan_i = trav_state + [current_t, opt_t, self.sigma]
+        #
+        plans += plan_i
+        
+        return plans 
+
+
+    def step(self, high_variable):
         self.t += self.sim_dt
         
+        self.high_variable_pos = high_variable[kpx:kpy+1]
+
         print("===========================================================")    
         #
         vehicle_state = self.vehicle_state
-        goal_state = self.obs
-        #ball_state = self.ball.get_cartesian_state()
-        #quad_s0 = np.zeros(8)
-        #quad_s0[0:3] = quad_state[0:3] - ball_state[0:3]  # relative position
-        #quad_s0[3:6] = quad_state[6:9] + ball_state[6:9]  # relative velocity # TODO -5
-        #quad_s0[6:8] = quad_state[3:5]
-        #quad_s0 = quad_s0.tolist()
+        goal_state = self.goal
         
-        ref_traj = vehicle_state + goal_state
+        #trav_state = self.chance_plan()
+        #tra_state = high_variable
+        current_t = self.t
+        tra_state = high_variable[kpx:komega+1] + [current_t, high_variable[-1], self.sigma]
+        print("current tra_state: ", tra_state)
+        ref_traj = vehicle_state + tra_state + goal_state
+
         # ------------------------------------------------------------
         # run  model predictive control
-        _act, pred_traj = self.mpc.solve(ref_traj,self.surr_v1_pos, self.surr_v2_pos)
+        _act, pred_traj = self.mpc.solve(ref_traj)
         #print(len(pred_traj[0]))
         # ------------------------------------------------------------
         # back to world frame
@@ -132,20 +163,21 @@ class LanechangeEnv(object):
         #     quad_act = np.array([9.81, 0, 1.0, 0])
     
         self.vehicle_state = self.vehicle.run(_act)
+        self.vehicle_pos = self.vehicle_state[kpx:kpy+1]
 
-        ## surrounding vehicle
-        self.surr_v1_pos[0] += self.sim_dt * self.surr_v1_vel
-        self.surr_v2_pos[0] += self.sim_dt * self.surr_v2_vel
+        if (self.tra):
+            self.reward -= self.scale_f * np.linalg.norm(np.array(self.goal_pos) - np.array(self.vehicle_pos))
 
+        self.chance_pos[1] -= self.chance_vel*self.sim_dt
         # simulate one step ball
         #self.ball_state = self.ball.run()
         
-        # update the observation.
-        #quad_obs = self.quad.get_cartesian_state()
-        #ball_obs = self.ball.get_cartesian_state()
-        #ball_obs[8] = -ball_obs[8]
-        
-        #obs = (quad_obs - ball_obs).tolist()
+        self.obs = []
+        self.obs += self.vehicle_state[kpx:kphi+1] # px, py, heading of init pos
+        self.obs += self.goal[kpx:kpy+1] # px, py of goal
+        self.obs += self.chance_pos[kpx:kpy+1] # px, py of chance pos
+        self.obs += [self.chance_vel]
+
         
         #pred_ball_traj_cart = pred_traj  # TODO: useless
         #
@@ -167,11 +199,13 @@ class LanechangeEnv(object):
             "plan_dt": self.plan_dt,
             #"cost": cost
             }
-        done = False
-        if self.t >= (self.sim_T-self.sim_dt):
-            done = True
 
-        return self.obs, done, info
+        done = False
+        if self.t >= (self.sim_T-self.sim_dt) or np.linalg.norm(np.array(self.goal_pos) - np.array(self.vehicle_pos)) < 1e-1:
+            done = True
+            self.reward += self.goal_reward
+
+        return self.obs, self.reward, done, info
     
     '''
     @staticmethod

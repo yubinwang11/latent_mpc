@@ -12,9 +12,9 @@ import argparse
 import torch
 from torch import nn
 
-from learning_mpc.intersection.mpc_intersection import High_MPC
-from learning_mpc.intersection.intersection_env import IntersectionEnv
-from learning_mpc.intersection.animation_intersection import SimVisual
+from learning_mpc.merge.mpc_merge import High_MPC
+from learning_mpc.merge.merge_env import MergeEnv
+from learning_mpc.merge.animation_merge import SimVisual
 from networks import DNN
 from worker import Worker
 
@@ -40,7 +40,7 @@ def main():
     initial_state = [-28.0, 0.0, 0, 0, 0, 0]
     initial_u = [0, 0]
     mpc = High_MPC(T=plan_T, dt=plan_dt, init_state=initial_state, init_u=initial_u)
-    env = IntersectionEnv(mpc, plan_T, plan_dt, init_param)
+    env = MergeEnv(mpc, plan_T, plan_dt, init_param)
 
     obs=env.reset(goal)
     NET_ARCH = [128, 128]

@@ -1,17 +1,8 @@
 import numpy as np
 import time
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-from functools import partial
-import argparse
 
 import torch
-from torch import nn
-
-from learning_mpc.intersection.mpc_intersection import High_MPC
-from learning_mpc.intersection.intersection_env import IntersectionEnv
-from learning_mpc.intersection.animation_intersection import SimVisual
-from learning_mpc.intersection.networks import DNN
 
 class Worker:
 

@@ -32,7 +32,7 @@ class SimVisual(object):
         self.frames = []
         #
         # create figure
-        self.fig = plt.figure(figsize=(self.world_size, 15)) # 20 15
+        self.fig = plt.figure(figsize=(self.world_size, self.world_size)) # 20 15
         # and figure grid
         #self.gs = gridspec.GridSpec(nrows=4, ncols=10)
         self.gs = gridspec.GridSpec(nrows=1, ncols=1)
@@ -57,18 +57,31 @@ class SimVisual(object):
         #self.l_vehicle_left, = self.ax_2d.plot([], [], 'g', linewidth=2)
         #self.l_vehicle_right, = self.ax_2d.plot([], [], 'g', linewidth=2)
         self.l_vehicle_outline, = self.ax_2d.plot([], [], 'b', linewidth=5)
-        self.l_surr_v_outline, = self.ax_2d.plot([], [], 'r', linewidth=5)
-        self.surr_v_pos = self.env.surr_v_pos
+        #self.l_surrounding_v_outline, = self.ax_2d.plot([], [], 'r', linewidth=2)
+        self.l_chance_outline, = self.ax_2d.plot([], [], 'r', linewidth=5)
+        #self.surrounding_v_pos = self.env.surrounding_v_pos
+        #self.surrounding_v_vel = self.env.surrounding_v_vel
+        self.chance_pos = self.env.chance_pos
+        self.chance_len = self.env.chance_len
+
         #
         #self.l_vehicle_x, = self.ax_2d.plot([], [], 'r', linewidth=3)
         #self.l_vehicle_y, = self.ax_2d.plot([], [], 'g', linewidth=3)
         
         #
         #self.ax_3d.scatter(self.pivot_point[0], self.pivot_point[1], self.pivot_point[2], marker='o', color='g')
+        self.p_high_variable = self.ax_2d.scatter([], [], marker='o', color='g')
         # Draw a circle on the x=0 'wall'
-        self.l_road_upper, = self.ax_2d.plot([-self.world_size,self.world_size], [self.lane_len,self.lane_len], 'black', linewidth=3)
-        self.l_road_mid, = self.ax_2d.plot([-self.world_size,self.world_size], [0,0], 'black', linewidth=2, linestyle = 'dashdot')
-        self.l_road_down, = self.ax_2d.plot([-self.world_size,self.world_size], [-self.lane_len,-self.lane_len], 'black', linewidth=3)
+        #self.l_road_upper, = self.ax_2d.plot([-self.world_size,self.world_size], [self.lane_len,self.lane_len], 'black', linewidth=2)
+        #self.l_road_mid, = self.ax_2d.plot([-self.world_size,self.world_size], [0,0], 'black', linewidth=1, linestyle = 'dashdot')
+        #self.l_road_down, = self.ax_2d.plot([-self.world_size,self.world_size], [-self.lane_len,-self.lane_len], 'black', linewidth=2)
+        self.l_road_leftup, = self.ax_2d.plot([-self.world_size,-self.lane_len/2,-self.lane_len/2], [self.lane_len/2,self.lane_len/2, self.world_size], 'black', linewidth=3)
+        self.l_road_rightup, = self.ax_2d.plot([self.world_size,self.lane_len/2,self.lane_len/2], [self.lane_len/2,self.lane_len/2, self.world_size], 'black', linewidth=3)
+        self.l_road_leftdown, = self.ax_2d.plot([-self.world_size,-self.lane_len/2,-self.lane_len/2], [-self.lane_len/2,-self.lane_len/2, -self.world_size], 'black', linewidth=3)
+        self.l_road_rightdown, = self.ax_2d.plot([self.world_size,self.lane_len/2,self.lane_len/2], [-self.lane_len/2,-self.lane_len/2, -self.world_size], 'black', linewidth=3)
+
+        #self.l_mid_h, = self.ax_2d.plot([-self.world_size,self.world_size], [0,0], 'black', linewidth=1, linestyle='dashdot')
+        #self.l_mid_v, = self.ax_2d.plot([0,0], [-self.world_size,self.world_size], 'black', linewidth=1, linestyle='dashdot')
         # # Ground
         # width, height = 5, 2
         # g = Rectangle(xy=(0.5-width, 0-height), width=2*width, height=2*height, \
@@ -103,11 +116,16 @@ class SimVisual(object):
         #self.l_vehicle_left.set_data([], [])
         #self.l_vehicle_right.set_data([], [])
         self.l_vehicle_outline.set_data([], [])
-        self.l_surr_v_outline.set_data([], [])
+        #self.l_surrounding_v_outline.set_data([], [])
+        self.l_chance_outline.set_data([], [])
+        self.p_high_variable = self.ax_2d.scatter([], [], marker='o', color='g')
+
+        #self.p_high_variable.set_data([],[])
 
 
         return self.l_vehicle_pos, self.l_vehicle_pred_traj, \
-            self.l_vehicle_outline, self.l_surr_v_outline #self.l_vehicle_front, self.l_vehicle_back, self.l_vehicle_left, self.l_vehicle_right
+            self.l_vehicle_outline, self.l_chance_outline, self.p_high_variable
+            #self.l_surrounding_v_outline #self.l_vehicle_front, self.l_vehicle_back, self.l_vehicle_left, self.l_vehicle_right
             #self.l_vehicle_x, self.l_vehicle_y,
                
 
@@ -147,12 +165,21 @@ class SimVisual(object):
             #self.l_vehicle_outline.set_data([np.array(self.vehicle_outline[0, :]).flatten()],[np.array(self.vehicle_outline[1, :]).flatten()])
             self.l_vehicle_outline.set_data([vehicle_outline[0, :]],[vehicle_outline[1, :]])
 
+            chance_outline = np.array([[-self.chance_len/2, self.chance_len/2, self.chance_len/2, -self.chance_len/2,-self.chance_len/2,],
+                        [self.chance_len/2,self.chance_len/2, - self.chance_len/2, -self.chance_len/2, self.chance_len/2]])
+            chance_outline[0,:] += self.chance_pos[0]
+            chance_outline[1,:] += self.chance_pos[1]
+            self.l_chance_outline.set_data([chance_outline[0, :]],[chance_outline[1, :]])
+
+            #self.p_high_variable.set_data([self.env.high_variable_pos[0]],[self.env.high_variable_pos[1]])
+            self.p_high_variable = self.ax_2d.scatter(self.env.high_variable_pos[0], self.env.high_variable_pos[1], marker='o', color='g')
+
             #self.surrounding_v_pos[0] += self.surrounding_v_vel * self.sim_dt
-            surr_v_outline = np.array([[-self.vehicle_length/2, self.vehicle_length/2, self.vehicle_length/2, -self.vehicle_length/2,-self.vehicle_length/2,],
-                        [self.vehicle_width / 2, self.vehicle_width / 2, - self.vehicle_width / 2, -self.vehicle_width / 2, self.vehicle_width / 2]])
-            surr_v_outline[0,:] += self.surr_v_pos[0]
-            surr_v_outline[1,:] += self.surr_v_pos[1]
-            self.l_surr_v_outline.set_data([surr_v_outline[0, :]],[surr_v_outline[1, :]])
+            #surrounding_v_outline = np.array([[-self.vehicle_length/2, self.vehicle_length/2, self.vehicle_length/2, -self.vehicle_length/2,-self.vehicle_length/2,],
+                        #[self.vehicle_width / 2, self.vehicle_width / 2, - self.vehicle_width / 2, -self.vehicle_width / 2, self.vehicle_width / 2]])
+            #surrounding_v_outline[0,:] += self.surrounding_v_pos[0]
+            #surrounding_v_outline[1,:] += self.surrounding_v_pos[1]
+            #self.l_surrounding_v_outline.set_data([surrounding_v_outline[0, :]],[surrounding_v_outline[1, :]])
 
             
             # plot quadrotor trajectory
@@ -165,7 +192,7 @@ class SimVisual(object):
                 #self.l_ball_pred_traj.set_3d_properties(np.array([pred_ball_traj[opt_idx, 2]]))
 
         return  self.l_vehicle_pred_traj, \
-                self.l_vehicle_outline, self.l_surr_v_outline #self.l_vehicle_pos, self.l_vehicle_pred_traj, \
+                self.l_vehicle_outline, self.l_chance_outline, self.p_high_variable #, self.l_surrounding_v_outline #self.l_vehicle_pos, self.l_vehicle_pred_traj, \
             
             #self.l_vehicle_front, self.l_vehicle_back, \
             #self.l_vehicle_left, self.l_vehicle_right  #\
