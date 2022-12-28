@@ -41,15 +41,16 @@ class MergeEnv(object):
         self.surrounding_v_state = self.surrounding_v_pos.append(self.surrounding_v_vel)
 
         ## Static Chance
-        self.chance_pos = [0,2] # [0, 2.0]
-        self.chance_len = self.lane_len/2
-        self.chance_vel = 0.5  # 0.5
+        self.chance_pos = [0,0] # [0, 2.0]
+        self.chance_len = self.lane_len *2
+        self.chance_wid = self.vehicle_width
+        self.chance_vel = 0  # 0.5
 
         ## High_Level Variable
         self.high_variable_pos = None
         
         ## Planner 
-        self.sigma = 10 # 10
+        self.sigma = 5 # 10
 
         ## Reward for RL
         self.reward = 0
@@ -67,7 +68,8 @@ class MergeEnv(object):
             #self.ball_init_pos = init_param[0] # starting point of the ball
             #self.ball_init_vel = init_param[1] # starting velocity of the ball
             self.vehicle_init_pos = init_param[0]
-            self.vehicle_init_vx = init_param[1]  # starting point of the quadrotor
+            self.vehicle_init_heading = init_param[1]
+            self.vehicle_init_vx = init_param[2]  # starting point of the quadrotor
        
 
         # state space
@@ -92,7 +94,7 @@ class MergeEnv(object):
     def reset(self, goal=None, init_vel=None):
         self.t = 0
         # state for ODE
-        self.vehicle_state = self.vehicle.reset(self.vehicle_init_pos, self.vehicle_init_vx)
+        self.vehicle_state = self.vehicle.reset(self.vehicle_init_pos, self.vehicle_init_heading, self.vehicle_init_vx)
         #if init_vel is not None:
             #self.ball_state = self.ball.reset(init_vel)
         #else:
@@ -116,21 +118,6 @@ class MergeEnv(object):
         
         return self.obs
 
-    def chance_plan(self):
-
-        #
-        plans = []#, pred_traj = [], []
-
-        current_t = self.t
-        trav_state = [0,0,0,3,0,0]
-        opt_t = 5
-        plan_i = trav_state + [current_t, opt_t, self.sigma]
-        #
-        plans += plan_i
-        
-        return plans 
-
-
     def step(self, high_variable):
         self.t += self.sim_dt
         
@@ -141,26 +128,15 @@ class MergeEnv(object):
         vehicle_state = self.vehicle_state
         goal_state = self.goal
         
-        #trav_state = self.chance_plan()
-        #tra_state = high_variable
         current_t = self.t
-        tra_state = high_variable[kpx:komega+1] + [current_t, high_variable[-1], self.sigma]
-        print("current tra_state: ", tra_state)
+        tra_state = high_variable[kpx:kphi+1] + [current_t, high_variable[-1], self.sigma]
+        #print("current tra_state: ", tra_state)
         ref_traj = vehicle_state + tra_state + goal_state
 
         # ------------------------------------------------------------
         # run  model predictive control
         _act, pred_traj = self.mpc.solve(ref_traj)
         #print(len(pred_traj[0]))
-        # ------------------------------------------------------------
-        # back to world frame
-        #pred_traj[:,0:3] = pred_traj[:,0:3] + self.ball.get_cartesian_state()[0:3]
-        
-        # run the actual control command on the quadrotor
-        # if (quad_state[4] > 0.5):
-        #     quad_act = np.array([12, 0, 0, 0])
-        # else:
-        #     quad_act = np.array([9.81, 0, 1.0, 0])
     
         self.vehicle_state = self.vehicle.run(_act)
         self.vehicle_pos = self.vehicle_state[kpx:kpy+1]
@@ -168,7 +144,7 @@ class MergeEnv(object):
         if (self.tra):
             self.reward -= self.scale_f * np.linalg.norm(np.array(self.goal_pos) - np.array(self.vehicle_pos))
 
-        self.chance_pos[1] -= self.chance_vel*self.sim_dt
+        self.chance_pos[0] += self.chance_vel*self.sim_dt
         # simulate one step ball
         #self.ball_state = self.ball.run()
         
@@ -178,20 +154,6 @@ class MergeEnv(object):
         self.obs += self.chance_pos[kpx:kpy+1] # px, py of chance pos
         self.obs += [self.chance_vel]
 
-        
-        #pred_ball_traj_cart = pred_traj  # TODO: useless
-        #
-        #info = {
-            #"quad_obs": quad_obs, 
-            #"quad_act": quad_act, 
-            #"quad_axes": self.quad.get_axes(),
-            #"ball_obs": ball_obs,
-            #"ball_corners": self.ball.get_3d_corners(),
-            #"pred_quad_traj": pred_traj, 
-            #"pred_ball_traj": pred_ball_traj_cart, 
-            #"opt_t": opt_t, "plan_dt": self.plan_dt,
-            #"quad_s0": quad_s0,
-            #"cost": cost}
         info = {
             "vehicle_state": self.vehicle_state,
             "act": _act, 
@@ -201,14 +163,13 @@ class MergeEnv(object):
             }
 
         done = False
-        if self.t >= (self.sim_T-self.sim_dt) or np.linalg.norm(np.array(self.goal_pos) - np.array(self.vehicle_pos)) < 1e-1:
+        if self.t >= (self.sim_T-self.sim_dt) or np.linalg.norm(np.array(self.goal_pos) - np.array(self.vehicle_pos)) < 0.2:
             done = True
             self.reward += self.goal_reward
 
         return self.obs, self.reward, done, info
     
-    '''
-    @staticmethod
+
     def _is_within_gap(gap_corners, point):
         A, B, C = [], [], []    
         for i in range(len(gap_corners)):
@@ -232,49 +193,5 @@ class MergeEnv(object):
         t2 = all(d <= 0 for d in D)
         return t1 or t2
 
-    def close(self,):
-        return True
-
-    def render(self,):
-        return False
-
-    def terminal_cost(self,x,u):
-        P = np.array([[ 4.62926944e+02,  1.12579780e-13,  2.71715235e-14,
-         8.39543304e+01,  3.76898971e-14, -6.76638800e-15,
-         1.67233208e-14,  6.27040086e+01],
-       [ 1.12579780e-13,  4.62926944e+02,  2.96208280e-13,
-         2.13652440e-14,  8.39543304e+01,  1.44584455e-13,
-         6.27040086e+01, -1.58557492e-14],
-       [ 2.71715235e-14,  2.96208280e-13,  3.61822016e+02,
-        -4.79742110e-15,  2.96141426e-14,  4.73164850e+01,
-         1.76132359e-15, -4.60323355e-15],
-       [ 8.39543304e+01,  2.13652440e-14, -4.79742110e-15,
-         2.40774426e+01,  1.22085597e-15, -6.17333244e-15,
-        -2.42034579e-15,  2.27569742e+01],
-       [ 3.76898971e-14,  8.39543304e+01,  2.96141426e-14,
-         1.22085597e-15,  2.40774426e+01,  2.40290197e-14,
-         2.27569742e+01, -1.02861327e-14],
-       [-6.76638800e-15,  1.44584455e-13,  4.73164850e+01,
-        -6.17333244e-15,  2.40290197e-14,  1.23884975e+01,
-         2.51466214e-14, -1.05792536e-14],
-       [ 1.67233208e-14,  6.27040086e+01,  1.76132359e-15,
-        -2.42034579e-15,  2.27569742e+01,  2.51466214e-14,
-         2.93179270e+01, -1.98758154e-14],
-       [ 6.27040086e+01, -1.58557492e-14, -4.60323355e-15,
-         2.27569742e+01, -1.02861327e-14, -1.05792536e-14,
-        -1.98758154e-14,  2.93179270e+01]])
-        cost = x.T @ P @ x
-        return cost
-
-    def cost_l(self,x,u):
-        Q = np.diag([
-            100, 100, 100,  # delta_x, delta_y, delta_z
-            0.0, 0.0, 0.0, # delta_vx, delta_vy, delta_vz
-            0.01, 0.01]) # delta_wx, delta_wy
-        R = np.diag([0.1, 0.1, 0.1, 0.1])
         
-        cost = x.T @ Q @ x + u.T @ Q @ u
-        return cost
-    
-    '''
     

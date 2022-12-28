@@ -20,7 +20,7 @@ class Bicycle_Dynamics(object):
         self._dt = dt# self._arm_l = 0.3   # m
         
         ## Vehicle Parameter settings
-        self.length = 3.5 # 4.5
+        self.length = 4 # 4.5
         self.width =2 #
 
         self.kf = -128916
@@ -35,7 +35,7 @@ class Bicycle_Dynamics(object):
         #self.reset()
         # self._t = 0.0
     
-    def reset(self, position=None, vx = None):
+    def reset(self, position=None, heading=None,  vx = None):
         self._state = np.zeros(shape=self.s_dim) 
 
         if position is None:
@@ -70,7 +70,7 @@ class Bicycle_Dynamics(object):
             self._state[kpx] = position[0]
             self._state[kpy] = position[1]
             # heading
-            self._state[kphi] = np.array([0])
+            self._state[kphi] = heading
             # v
             self._state[kvx] = vx
             self._state[kvy] = 0

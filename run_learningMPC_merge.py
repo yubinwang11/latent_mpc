@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from functools import partial
 import argparse
+import copy
 
 import torch
 from torch import nn
@@ -32,43 +33,47 @@ def main():
     plan_dt = 0.1 # Sampling time step for MPC and local planner
     
     init_param = []
-    init_param.append(np.array([-28.0, 0.0])) # starting point of the quadrotor
-    init_param.append(np.array([5.0]))
-    goal = np.array([28, 0.0, 0, 0.0, 0.0, 0.0])
-    #goal = np.array([15, 10, 3.14/2, 0.0, 0.0, 0.0])
+    init_param.append(np.array([-20.0, -20.0])) # starting point of the quadrotor
+    init_param.append(np.array([np.pi/4])) # heading angle
+    init_param.append(np.array([5.0])) # init vx
+    goal = np.array([2, 0.0, 0, 3.0, 0.0, 0.0])
 
-    initial_state = [-28.0, 0.0, 0, 0, 0, 0]
-    initial_u = [0, 0]
+    initial_state = [init_param[0][0], init_param[0][1], init_param[1], init_param[2], 0 , 0]
+    initial_u = [0.2, 0]
     mpc = High_MPC(T=plan_T, dt=plan_dt, init_state=initial_state, init_u=initial_u)
     env = MergeEnv(mpc, plan_T, plan_dt, init_param)
 
     obs=env.reset(goal)
     NET_ARCH = [128, 128]
     nn_input_dim = len(obs)
-    nn_output_dim = 7 # state_dim + tra_time
+    nn_output_dim = 4 # xy, heading + tra_time
     model = DNN(input_dim=nn_input_dim,
                                 output_dim=nn_output_dim,
                                 net_arch=NET_ARCH,model_togpu=False)
 
     worker = Worker(env, goal)
-    worker.run_episode(model) #run_episode(env,goal)
+    #worker_copy = copy.deepcopy(worker)
+    reward_true = worker.run_episode(model)
+    print(reward_true)
+    #reward_bsl = worker_copy.run_episode(model) #run_episode(env,goal)
+    #print(reward_bsl)
     
     #
-    sim_visual = SimVisual(env)
+    #sim_visual = SimVisual(env)
     #
     #run_mpc(env)
-    run_frame = partial(worker.run_episode, model)
-    ani = animation.FuncAnimation(sim_visual.fig, sim_visual.update, frames=run_frame,
-                                  init_func=sim_visual.init_animate, interval=100, blit=True, repeat=False)
+    #run_frame = partial(worker.run_episode, model)
+    #ani = animation.FuncAnimation(sim_visual.fig, sim_visual.update, frames=run_frame,
+                                  #init_func=sim_visual.init_animate, interval=100, blit=True, repeat=False)
 
     
-    if args.save_video:
-        writer = animation.writers["ffmpeg"]
-        writer = writer(fps=10, metadata=dict(artist='Yubin Wang'), bitrate=1800)
-        ani.save("learningMPC_intersection.mp4", writer=writer)
+    #if args.save_video:
+        #writer = animation.writers["ffmpeg"]
+        #writer = writer(fps=10, metadata=dict(artist='Yubin Wang'), bitrate=1800)
+        #ani.save("learningMPC_intersection.mp4", writer=writer)
 
     #plt.tight_layout()
-    plt.show()
+    #plt.show()
 
     
 if __name__ == "__main__":

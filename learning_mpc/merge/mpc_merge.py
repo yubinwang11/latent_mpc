@@ -44,16 +44,14 @@ class High_MPC(object):
         
         # cost matrix for tracking the goal point
         self._Q_goal = np.diag([
-            100, 100,  # delta_x, delta_y 100 100 
-            10, # delta_phi 10
-            10, 10, # delta_vx delta_vy
-            1]) # delta_omega
+            10, 10,  # delta_x, delta_y 100 100 
+            30, # delta_phi 10
+            1, 1, # delta_vx delta_vy
+            0.1]) # delta_omega
         
         self._Q_gap = np.diag([
-            100, 100,  # delta_x, delta_y 100 100
-            10, # delta_phi 10
-            10, 10, # delta_vx delta_vy
-            10]) # delta_omega #0, 100, 100,  # delta_x, delta_y, delta_z
+            1000, 1000,  # delta_x, delta_y 100 100
+            50]) # delta_omega #0, 100, 100,  # delta_x, delta_y, delta_z
             #10, 10, 10, 10, # delta_qw, delta_qx, delta_qy, delta_qz
             #0, 10, 10]) # delta_vx, delta_vy, delta_vz
         # cost matrix for the action
@@ -68,7 +66,7 @@ class High_MPC(object):
             self._vehicle_u0 = [0.0, 0.0]
         else:
             self._vehicle_u0 = init_u
-
+        print(init_state)
         self._initDynamics()
 
     def _initDynamics(self,):
@@ -122,7 +120,7 @@ class High_MPC(object):
 
         # placeholder for the quadratic cost function
         Delta_s = ca.SX.sym("Delta_s", self._s_dim)
-        Delta_p = ca.SX.sym("Delta_p", self._s_dim)
+        Delta_p = ca.SX.sym("Delta_p", 3)
         Delta_u = ca.SX.sym("Delta_u", self._u_dim)        
         
         #        
@@ -152,16 +150,15 @@ class High_MPC(object):
         u_min = [self.a_min, self.delta_min] #
         u_max = [self.a_max,  self.delta_max] #
         x_bound = np.inf #x_bound = ca.inf
-        #x_bound = 6 #x_bound = ca.inf
         x_min = [-x_bound for _ in range(self._s_dim)]
-        x_min[kpy] = -4 + self.vehicle.width/2
+
         x_max = [x_bound  for _ in range(self._s_dim)]
-        x_max[kpy] = 4 - self.vehicle.width/2
+
         #
         g_min = [0 for _ in range(self._s_dim)]
         g_max = [0 for _ in range(self._s_dim)]
 
-        P = ca.SX.sym("P", self._s_dim+(self._s_dim+3)*1+self._s_dim)
+        P = ca.SX.sym("P", self._s_dim+(3+3)*1+self._s_dim)
         #P = ca.SX.sym("P", self._s_dim+self._s_dim)
         X = ca.SX.sym("X", self._s_dim, self._N+1)
         U = ca.SX.sym("U", self._u_dim, self._N)
@@ -188,9 +185,9 @@ class High_MPC(object):
             
             # retrieve time constant
             #idx_k = self._s_dim+self._s_dim+(self._s_dim+3)*(k)
-            idx_k = self._s_dim+self._s_dim
+            idx_k = self._s_dim+3
             #idx_k_end = self._s_dim+(self._s_dim+3)*(k+1)\
-            idx_k_end = self._s_dim+self._s_dim+3
+            idx_k_end = self._s_dim+3+3
             time_k = P[ idx_k : idx_k_end]
 
             # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -199,33 +196,31 @@ class High_MPC(object):
             # - time_k[0] defines the current time 
             # - time_k[1] defines the best traversal time, which is selected via 
             #              a high-level policy / a deep high-level policy
-            # # # # # # # # # # # # # # # # # # # # # # # # 
-            weight = ca.exp(- time_k[2] * (time_k[0]-time_k[1])**2 ) 
 
+            # # # # # # # # # # # # # # # # # # # # # # # # 
+            #weight = ca.exp(- time_k[2] * (time_k[0]-time_k[1])**2 ) 
+            weight = ca.exp(- time_k[2] * (time_k[0]-time_k[1])**2 ) 
 
             # cost for tracking the goal position
             #cost_goal_k = 0
             cost_goal_k, cost_gap_k = 0, 0
             #delta_s_k = (X[:, k+1] - P[self._s_dim:]) # The goal postion.
             #cost_goal_k = f_cost_goal(delta_s_k)
+
             
             if k >= self._N-1: # The goal postion.
-                delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*1:])
+                delta_s_k = (X[:, k+1] - P[self._s_dim+(3+3)*1:])
                 cost_goal_k = f_cost_goal(delta_s_k)
             else:
+                # cost for tracking the goal
+                delta_s_k = (X[:, k+1] - P[self._s_dim+(3+3)*1:])
+                cost_goal_k = f_cost_goal(delta_s_k)
+
                 # cost for tracking the moving gap
-                delta_p_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*0 : \
-                    self._s_dim+(self._s_dim+3)*(0+1)-3]) 
+                delta_p_k = (X[0:3, k+1] - P[self._s_dim+(3+3)*0 : \
+                    self._s_dim+(3+3)*(0+1)-3]) 
                 cost_gap_k = f_cost_gap(delta_p_k) * weight
                 #print(cost_gap_k)
-            '''
-            delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*1:])
-            cost_goal_k = f_cost_goal(delta_s_k)
-
-            delta_p_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*0 : \
-                self._s_dim+(self._s_dim+3)*(0+1)-3]) 
-            cost_gap_k = f_cost_gap(delta_p_k) * weight
-            '''
 
             delta_u_k = U[:, k]-[0, 0] #delta_u_k = U[:, k]-[self._gz, 0, 0, 0]
             cost_u_k = f_cost_u(delta_u_k)
@@ -337,11 +332,3 @@ class High_MPC(object):
         F = ca.Function('F', [X0, U], [X])
         return F
     
-if __name__ == "__main__":
-    plan_T = 2.0   # Prediction horizon for MPC and local planner
-    plan_dt = 0.1 # Sampling time step for MPC and local planner
-    so_path = "./mpc/saved/mpc_v1.so" # saved mpc model (casadi code generation)
-    mpc = MPC(T=plan_T, dt=plan_dt, so_path=so_path)
-    ref_traj = mpc._vehicle_s0 + np.array([1.5, 1.5, 0.0, 0.0, 0.0, 0.0]).tolist() 
-    _act, pred_traj = mpc.solve(ref_traj)
-    print(_act)
