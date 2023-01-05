@@ -62,9 +62,11 @@ class SimVisual(object):
 
         self.p_high_variable = self.ax_2d.scatter([], [], marker='o', color='g')
 
-        self.l_mainroad_up, = self.ax_2d.plot([-self.world_size,self.world_size], [self.lane_len/2,self.lane_len/2], 'black', linewidth=2)
-        self.l_mainroad_dw_lf, = self.ax_2d.plot([-self.world_size,-self.lane_len/2*4], [-self.lane_len/2,-self.lane_len/2], 'black', linewidth=2)
-        self.l_mainroad_dw_rt, = self.ax_2d.plot([self.lane_len/2*4,self.world_size], [-self.lane_len/2,-self.lane_len/2], 'black', linewidth=2)
+        self.l_mainroad_up, = self.ax_2d.plot([-self.world_size,self.world_size], [self.lane_len,self.lane_len], 'black', linewidth=2)
+        self.l_mainroad_mid, = self.ax_2d.plot([-self.world_size,self.world_size], [0,0], 'black', linewidth=1)
+        self.l_mainroad_dw, = self.ax_2d.plot([-self.world_size,self.world_size], [-self.lane_len,-self.lane_len], 'black', linewidth=2)
+        #self.l_mainroad_dw_lf, = self.ax_2d.plot([-self.world_size,-self.lane_len/2*4], [-self.lane_len/2,-self.lane_len/2], 'black', linewidth=2)
+        #self.l_mainroad_dw_rt, = self.ax_2d.plot([self.lane_len/2*4,self.world_size], [-self.lane_len/2,-self.lane_len/2], 'black', linewidth=2)
 
         #
         # #
@@ -100,6 +102,7 @@ class SimVisual(object):
 
         vehicle_state = info["vehicle_state"]
         vehicle_act = info["act"]
+        chance_pos = info["chance_pos"]
         pred_vehicle_traj = info["pred_vehicle_traj"]
         plan_dt = info["plan_dt"]
         
@@ -132,10 +135,17 @@ class SimVisual(object):
             self.l_vehicle_outline.set_data([vehicle_outline[0, :]],[vehicle_outline[1, :]])
 
             chance_lf_outline = np.array([[-self.world_size, -self.chance_len/2, -self.chance_len/2, -self.world_size,-self.world_size,],
-                        [self.chance_wid/2,self.chance_wid/2, - self.chance_wid/2, -self.chance_wid/2, self.chance_wid/2]])
+                        [self.chance_wid/2+self.lane_len/2,self.chance_wid/2+self.lane_len/2, - self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, self.chance_wid/2+self.lane_len/2]])
 
             chance_rt_outline = np.array([[self.chance_len/2, self.world_size, self.world_size, self.chance_len/2,self.chance_len/2,],
-                        [self.chance_wid/2,self.chance_wid/2, - self.chance_wid/2, -self.chance_wid/2, self.chance_wid/2]])
+                        [self.chance_wid/2+self.lane_len/2,self.chance_wid/2+self.lane_len/2, - self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, self.chance_wid/2+self.lane_len/2]])
+            
+            chance_lf_outline[0, :] += chance_pos[0]
+            #chance_lf_outline[1, :] += chance_pos[1] 
+
+            chance_rt_outline[0, :] += chance_pos[0]
+            #chance_rt_outline[1, :] += chance_pos[1] 
+
             self.l_chance_lf_outline.set_data([chance_lf_outline[0, :]],[chance_lf_outline[1, :]])
             self.l_chance_rt_outline.set_data([chance_rt_outline[0, :]],[chance_rt_outline[1, :]])
 

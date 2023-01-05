@@ -151,8 +151,9 @@ class High_MPC(object):
         u_max = [self.a_max,  self.delta_max] #
         x_bound = np.inf #x_bound = ca.inf
         x_min = [-x_bound for _ in range(self._s_dim)]
-
+        x_min[1] = -6 + 2
         x_max = [x_bound  for _ in range(self._s_dim)]
+        x_max[1] = 6 - 2
 
         #
         g_min = [0 for _ in range(self._s_dim)]
@@ -242,7 +243,7 @@ class High_MPC(object):
         nlp_dict = {'f': self.mpc_obj, 
             'x': ca.vertcat(*self.nlp_w), 
             'p': P,               
-            'g': ca.vertcat(*self.nlp_g) }        
+            'g': ca.vertcat(*self.nlp_g)}        
         
         # # # # # # # # # # # # # # # # # # # 
         # -- qpoases            

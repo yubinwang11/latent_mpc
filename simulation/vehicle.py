@@ -31,22 +31,31 @@ class Bicycle_Dynamics(object):
         self.Iz = 1536.7
         self.Lk = (self.lf*self.kf) - (self.lr*self.kr)
 
+        # Sampling range of the vehicle's initial position
+        self._xy_dist = np.array(
+            [ [-25, -5]]   # x
+        )
+        # Sampling range of the vehicle's initial velocity
+        self._vxy_dist = np.array(
+            [ [3.0, 10.0]  # vx
+            ] 
+        )
+
         #
         #self.reset()
         # self._t = 0.0
     
     def reset(self, position=None, heading=None,  vx = None):
+        
         self._state = np.zeros(shape=self.s_dim) 
-
         if position is None:
             # self._state[kQuatW] = 1.0 #         
             #
             # initialize position,  not randomly
-            #self._state[kpx] = np.random.uniform(
-                #low=self._xyz_dist[0, 0], high=self._xyz_dist[0, 1])
-            
-            self._state[kpx]  = 0    
-            self._state[kpy] = 0 #np.random.uniform(
+            self._state[kpx] = np.random.uniform(
+                low=self._xy_dist[0, 0], high=self._xy_dist[0, 1])
+           # self._state[kpx]  = 0    
+            self._state[kpy] = -3 #np.random.uniform(
                 #low=self._xyz_dist[1, 0], high=self._xyz_dist[1, 1])
             #self._state[kPosZ] = np.random.uniform(
                 #low=self._xyz_dist[2, 0], high=self._xyz_dist[2, 1])
@@ -58,9 +67,9 @@ class Bicycle_Dynamics(object):
             self._state[kphi] = 0
             
             # initialize velocity, not randomly
-            #self._state[kVelX] = np.random.uniform(
-                #low=self._vxyz_dist[0, 0], high=self._vxyz_dist[0, 1])
-            self._state[kvx] = 0
+            self._state[kvx] = np.random.uniform(
+                low=self._vxy_dist[0, 0], high=self._vxy_dist[0, 1])
+           # self._state[kvx] = 0
             #self._state[kVelY] = np.random.uniform(
                 #low=self._vxyz_dist[1, 0], high=self._vxyz_dist[1, 1])
             self._state[kvy] = 0
