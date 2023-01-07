@@ -1,6 +1,7 @@
 import numpy as np
 #
 from simulation.vehicle import Bicycle_Dynamics
+from simulation.object import Surr_Vehicle
 from learning_mpc.merge.mpc_merge import High_MPC
 #
 from common.vehicle_index import *
@@ -35,32 +36,39 @@ class MergeEnv(object):
         self.vehicle_width = self.vehicle.width
 
         # Road Parameters
-        self.world_size = 30
+        self.world_size = 40
         self.lane_len = 6
-        self.surrounding_v_pos = [-20,self.lane_len/2]
-        self.surrounding_v_vel = 2
-        self.surrounding_v_state = self.surrounding_v_pos.append(self.surrounding_v_vel)
 
-        # Sampling range of the vehicle's initial position
+        # Sampling range of the chance's initial position
         self.c_xy_dist = np.array(
-            [ [-15, 0]]   # x
+            [ [-30, -15]]   # x
         )
-        # Sampling range of the vehicle's initial velocity
+        # Sampling range of the chance's initial velocity
         self.c_vxy_dist = np.array(
-            [ [3.0, 5.0]  # vx
+            [ [2.0, 10.0]  # vx
             ] 
         )
 
+        # Sampling range of the front vehicle's initial position
+        self.f_v_relxy_dist = np.array(
+            [ [5, 20]]   # x
+        )
+        # Sampling range of the front vehicle's initial velocity
+        self.f_v_vxy_dist = np.array(
+            [ [0.2, 3]  # vx
+            ] 
+        )
         # Chance Parameters
         self.chance_pos = [-10,self.lane_len/2] # [0, 2.0]
         self.chance_pos[0] = np.random.uniform(
                 low=self.c_xy_dist[0, 0], high=self.c_xy_dist[0, 1])
+    
 
         self.chance_vel = np.random.uniform(
                 low=self.c_vxy_dist[0, 0], high=self.c_vxy_dist[0, 1])
         self.chance_len = self.lane_len *2
         self.chance_wid = self.vehicle_width
-        #self.chance_vel = 2  # 0.5
+        self.chance_vel = 2  # 0.5
 
         ## High_Level Variable
         self.high_variable_pos = None
@@ -71,19 +79,10 @@ class MergeEnv(object):
         ## Reward for RL
         #self.reward = 0
         self.tra = True
-        self.goal_reward = 300 # sparse positive reward if reach the goal without collision
         self.scale_f = 0.1
 
         #self.goal = np.array([2, 3.0, 0, 3.0, 0.0, 0.0])
         self.goal = np.array([-10,self.lane_len/2, 0, self.chance_vel, 0.0, 0.0])
-
-        self.vehicle_init_pos = np.array([-25.0, -3.0])
-        self.vehicle_init_heading = np.array([0])
-        self.vehicle_init_vx = np.array([3.0])
-
-        initial_state = [self.vehicle_init_pos[0], self.vehicle_init_pos[1], self.vehicle_init_heading, self.vehicle_init_vx, 0 , 0]
-        initial_u = [0.2, 0]
-        self.mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, init_state=initial_state, init_u=initial_u)
        
         # state space
         self.observation_space = Space(
@@ -108,6 +107,20 @@ class MergeEnv(object):
         # state for ODE
         #self.vehicle_state = self.vehicle.reset(self.vehicle_init_pos, self.vehicle_init_heading, self.vehicle_init_vx)
         self.vehicle_state = self.vehicle.reset()
+
+        initial_u = [0, 0]
+        self.mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, lane_len = self.lane_len, init_state=self.vehicle_state, init_u=initial_u)
+        
+        # regenerate the relative distance between chance and ego-vehicle
+        if np.array(self.chance_pos[0])  - self.vehicle_state[kpx] <= 5.0:
+            self.chance_pos[0] = self.vehicle_state[kpx] + 5.0
+            #self.chance_pos.tolist()
+
+        self.f_v_pos = [self.chance_pos[0]+np.random.uniform(
+                low=self.f_v_relxy_dist[0, 0], high=self.f_v_relxy_dist[0, 1]), -self.lane_len/2]
+        #self.f_v_pos = [np.random.uniform(low=self.f_v_xy_dist[0, 0], high=self.f_v_xy_dist[0, 1]), -self.lane_len/2]
+        self.f_v_vel = np.random.uniform(
+                low=self.f_v_vxy_dist[0, 0], high=self.f_v_vxy_dist[0, 1])
 
         # observation, can be part of the state, e.g., postion
         # or a cartesian representation of the state
@@ -147,23 +160,55 @@ class MergeEnv(object):
         self.vehicle_state = self.vehicle.run(_act)
         self.vehicle_pos = self.vehicle_state[kpx:kpy+1]
 
-        if (self.tra):
-            reward -= self.scale_f * np.linalg.norm(np.array(self.goal_pos) - np.array(self.vehicle_pos))
+        #if (self.tra):
+            #reward -= self.scale_f * np.linalg.norm(np.array(self.goal_pos) - np.array(self.vehicle_pos))
 
         self.chance_pos[0] += self.chance_vel*self.sim_dt
         self.goal[0] = self.chance_pos[0]+self.vehicle_length/2
-        # simulate one step ball
-        #self.ball_state = self.ball.run()
+
+        self.f_v_pos[0] += self.f_v_vel*self.sim_dt
         
+        self.surr_v_left_pos = np.array([(self.chance_pos[0]-self.chance_len/2-self.world_size)/2, self.chance_pos[1]])
+        self.surr_v_right_pos = np.array([(self.chance_pos[0]+self.chance_len/2+self.world_size)/2, self.chance_pos[1]])
+        #self.surr_v_left_pos = np.array([(self.chance_pos[0]+self.world_size)/2, self.chance_pos[1]])
+        self.surr_v_left = Surr_Vehicle(position=self.surr_v_left_pos, heading=np.array(0), vel=self.chance_vel, length=np.array(self.chance_pos[0]-self.chance_len/2+self.world_size), width=self.chance_wid)
+        self.surr_v_right = Surr_Vehicle(position=self.surr_v_right_pos, heading=np.array(0), vel=self.chance_vel, length=np.array(self.world_size-self.chance_pos[0]-self.chance_len/2), width=self.chance_wid)
+        self.f_v = Surr_Vehicle(position=np.array([self.f_v_pos]), heading=np.array(0), vel=self.f_v_vel, length=self.vehicle_length, width=self.vehicle_width)
+
+        collision = self.vehicle._is_colliding(self.surr_v_left) or self.vehicle._is_colliding(self.surr_v_right) or self.vehicle._is_colliding(self.f_v) 
+        
+        # sparse reward for collision avoidance 
+        if (collision):
+            if self.vehicle_state[kvx] >= 0:
+                reward -= 50
+            else:
+                reward -= 30
+        
+        # dense reward for collision avoidance
+        # px of the right corner of left surr vehicle: self.surr_v_left_pos[0]
+        px_corner_lv = np.array([(self.chance_pos[0]-self.chance_len/2)])
+        px_corner_rv = np.array([(self.chance_pos[0]+self.chance_len/2)])
+
+        if self.vehicle_state[kpy] >= 1/np.e: # already merged
+            weight = np.exp(-(self.vehicle_state[kpy]/self.lane_len/2))
+            if self.vehicle_state[kpx] <= np.array(self.chance_pos[0]):
+                reward += self.vehicle_state[kpx] - px_corner_lv
+            else:
+                reward += -(self.vehicle_state[kpx] - px_corner_rv)
+
+        # observation
         self.obs = []
         self.obs += self.vehicle_state[kpx:kphi+1] # px, py, heading of init pos
         self.obs += self.goal[kpx:kpy+1] # px, py of goal
         self.obs += self.chance_pos[kpx:kpy+1] # px, py of chance pos
         self.obs += [self.chance_vel]
+        self.obs += self.f_v_pos[kpx:kpy+1]
+        self.obs += [self.f_v_vel]
 
         info = {
             "vehicle_state": self.vehicle_state,
             "chance_pos": self.chance_pos,
+            "f_v_pos": self.f_v_pos,
             "act": _act, 
             "pred_vehicle_traj": pred_traj, 
             "plan_dt": self.plan_dt,
@@ -171,9 +216,10 @@ class MergeEnv(object):
             }
 
         done = False
-        if self.t >= (self.sim_T-self.sim_dt) or np.linalg.norm(np.array(self.goal_pos) - np.array(self.vehicle_pos)) < 0.2:
+        #if self.t >= (self.sim_T-self.sim_dt) or np.linalg.norm(np.array(self.goal_pos) - np.array(self.vehicle_pos)) < 0.5:
+        if self.t >= (self.sim_T-self.sim_dt) or np.linalg.norm(np.array(self.goal) - np.array(self.vehicle_state)) < 1.25:
             done = True
-            reward += self.goal_reward
+            reward += 100
 
         return self.obs, reward, done, info
     

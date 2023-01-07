@@ -2,6 +2,8 @@ import numpy as np
 import casadi as ca
 #from scipy.spatial.transform import Rotation as R
 from common.vehicle_index import *
+from common.utils import project_polygon
+from common.utils import are_polygons_intersecting
 #
 """
 Standard Vehicle Dynamics with Bicycle Model
@@ -22,6 +24,7 @@ class Bicycle_Dynamics(object):
         ## Vehicle Parameter settings
         self.length = 4 # 4.5
         self.width =2 #
+        self.diagonal = np.sqrt(self.length**2 + self.width**2)
 
         self.kf = -128916
         self.kr = -85944
@@ -33,7 +36,7 @@ class Bicycle_Dynamics(object):
 
         # Sampling range of the vehicle's initial position
         self._xy_dist = np.array(
-            [ [-25, -5]]   # x
+            [ [-35, -10]]   # x
         )
         # Sampling range of the vehicle's initial velocity
         self._vxy_dist = np.array(
@@ -87,6 +90,7 @@ class Bicycle_Dynamics(object):
             # initialize angular velocity
             self._state[komega] = 0
             #
+
         return self._state.tolist()
     
     def run(self, action):
@@ -108,6 +112,10 @@ class Bicycle_Dynamics(object):
         #
         self._state = X
         #print(f"real state is {self._state}")
+
+        self.position = np.array([self._state[kpx], self._state[kpy]])
+        self.heading = np.array(self._state[kphi])
+
         return self._state.tolist()
 
     def _f(self, state, action):
@@ -129,106 +137,24 @@ class Bicycle_Dynamics(object):
 
         return dstate
 
-    '''
-    def set_state(self, state):
-        """
-        Set the vehicle's state
-        """
-        self._state = state
-        
-    def get_state(self):
-        """
-        Get the vehicle's state
-        """
-        return self._state
-
-    def get_cartesian_state(self):
-        """
-        Get the Full state in Cartesian coordinates
-        """
-        cartesian_state = np.zeros(shape=9)
-        cartesian_state[0:3] = self.get_position()
-        cartesian_state[3:6] = self.get_euler()
-        cartesian_state[6:9] = self.get_velocity()
-        return cartesian_state
+    def _is_colliding(self, other):
+        # Fast spherical pre-check
+        #if np.linalg.norm(other.position - self.position) > (self.diagonal + other.diagonal) / 2: 
+            #return False,
+        # Accurate rectangular check
+        return are_polygons_intersecting(self.polygon(), other.polygon())
     
-    def get_position(self,):
-        """
-        Retrieve Position
-        """
-        return self._state[kPosX:kPosZ+1]
-    
-    def get_velocity(self,):
-        """
-        Retrieve Linear Velocity
-        """
-        return self._state[kVelX:kVelZ+1]
-    
-    def get_quaternion(self,):
-        """
-        Retrieve Quaternion
-        """
-        quat = np.zeros(4)
-        quat = self._state[kQuatW:kQuatZ+1]
-        quat = quat / np.linalg.norm(quat)
-        return quat
-
-    def get_euler(self,):
-        """
-        Retrieve Euler Angles of the Vehicle
-        """
-        quat = self.get_quaternion()
-        euler = self._quatToEuler(quat)
-        return euler
-
-    def get_axes(self):
-        """
-        Get the 3 axes (x, y, z) in world frame (for visualization only)
-        """
-        # axes in body frame
-        b_x = np.array([self._arm_l, 0, 0])
-        b_y = np.array([0, self._arm_l, 0])
-        b_z = np.array([0, 0,  -self._arm_l])
-        
-        # rotation matrix
-        rot_matrix = R.from_quat(self.get_quaternion()).as_matrix()
-        quad_center = self.get_position()
-        
-        # axes in body frame
-        w_x = rot_matrix@b_x + quad_center
-        w_y = rot_matrix@b_y + quad_center
-        w_z = rot_matrix@b_z + quad_center
-        return [w_x, w_y, w_z]
-
-    def get_motor_pos(self):
-        """
-        Get the 4 motor poses in world frame (for visualization only)
-        """
-        # motor position in body frame
-        b_motor1 = np.array([np.sqrt(self._arm_l/2), np.sqrt(self._arm_l/2), 0])
-        b_motor2 = np.array([-np.sqrt(self._arm_l/2), np.sqrt(self._arm_l/2), 0])
-        b_motor3 = np.array([-np.sqrt(self._arm_l/2), -np.sqrt(self._arm_l/2), 0])
-        b_motor4 = np.array([np.sqrt(self._arm_l/2), -np.sqrt(self._arm_l/2), 0])
-        #
-        rot_matrix = R.from_quat(self.get_quaternion()).as_matrix()
-        quad_center = self.get_position()
-        
-        # motor position in world frame
-        w_motor1 = rot_matrix@b_motor1 + quad_center
-        w_motor2 = rot_matrix@b_motor2 + quad_center
-        w_motor3 = rot_matrix@b_motor3 + quad_center
-        w_motor4 = rot_matrix@b_motor4 + quad_center
-        return [w_motor1, w_motor2, w_motor3, w_motor4]
-
-    @staticmethod
-    def _quatToEuler(quat):
-        """
-        Convert Quaternion to Euler Angles
-        """
-        quat_w, quat_x, quat_y, quat_z = quat[0], quat[1], quat[2], quat[3]
-        euler_x = np.arctan2(2*quat_w*quat_x + 2*quat_y*quat_z, quat_w*quat_w - quat_x*quat_x - quat_y*quat_y + quat_z*quat_z)
-        euler_y = -np.arcsin(2*quat_x*quat_z - 2*quat_w*quat_y)
-        euler_z = np.arctan2(2*quat_w*quat_z+2*quat_x*quat_y, quat_w*quat_w + quat_x*quat_x - quat_y*quat_y - quat_z*quat_z)
-        return [euler_x, euler_y, euler_z]
-    
-    '''
+    def polygon(self):
+        points = np.array([
+            [-self.length / 2, -self.width / 2],
+            [-self.length / 2, +self.width / 2],
+            [+self.length / 2, +self.width / 2],
+            [+self.length / 2, -self.width / 2],
+        ]).T
+        c, s = np.cos(self.heading), np.sin(self.heading)
+        rotation = np.array([
+            [c, -s],
+            [s, c]
+        ])
+        points = (rotation @ points).T + np.tile(self.position, (4, 1))
+        return np.vstack([points, points[0:1]])

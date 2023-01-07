@@ -11,6 +11,7 @@ from matplotlib.patches import Circle, PathPatch, Rectangle
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import math
 from math import cos, sin, tan
+import copy
 #
 from common.vehicle_index import *
 
@@ -51,6 +52,8 @@ class SimVisual(object):
         self.l_vehicle_pred_traj, = self.ax_2d.plot([], [], 'r*', markersize=4)
 
         self.l_vehicle_outline, = self.ax_2d.plot([], [], 'b', linewidth=3)
+
+        self.l_f_v_outline, = self.ax_2d.plot([], [], 'g', linewidth=3)
         #self.l_surrounding_v_outline, = self.ax_2d.plot([], [], 'r', linewidth=2)
         self.l_chance_lf_outline, = self.ax_2d.plot([], [], 'r', linewidth=3)
         self.l_chance_rt_outline, = self.ax_2d.plot([], [], 'r', linewidth=3)
@@ -86,16 +89,17 @@ class SimVisual(object):
 
 
         self.l_vehicle_outline.set_data([], [])
+        self.l_f_v_outline.set_data([], [])
         #self.l_surrounding_v_outline.set_data([], [])
         self.l_chance_lf_outline.set_data([], [])
         self.l_chance_rt_outline.set_data([], [])
-        self.p_high_variable = self.ax_2d.scatter([], [], marker='o', color='g')
+        self.p_high_variable = self.ax_2d.scatter([], [], marker='o', color='y')
 
         #self.p_high_variable.set_data([],[])
 
 
         return self.l_vehicle_pos, self.l_vehicle_pred_traj, \
-            self.l_vehicle_outline, self.l_chance_lf_outline, self.l_chance_rt_outline, self.p_high_variable
+            self.l_vehicle_outline, self.l_chance_lf_outline, self.l_chance_rt_outline, self.p_high_variable, self.l_f_v_outline
 
     def update(self, data_info):
         info, t, update = data_info[0], data_info[1], data_info[2]
@@ -103,8 +107,10 @@ class SimVisual(object):
         vehicle_state = info["vehicle_state"]
         vehicle_act = info["act"]
         chance_pos = info["chance_pos"]
+        f_v_pos = info["f_v_pos"]
         pred_vehicle_traj = info["pred_vehicle_traj"]
-        plan_dt = info["plan_dt"]
+        #plan_dt = info["plan_dt"]
+
         
         if update:
             self.reset_buffer()
@@ -131,8 +137,16 @@ class SimVisual(object):
             vehicle_outline[0, :] += vehicle_pos_arr[-1, 0] #vehicle_state[kpx]
             vehicle_outline[1, :] += vehicle_pos_arr[-1:, 1] #vehicle_state[kpy]
 
+            #f_v_outline = copy.deepcopy(vehicle_outline)
+            f_v_outline = np.array([[-self.vehicle_length/2, self.vehicle_length/2, self.vehicle_length/2, -self.vehicle_length/2,-self.vehicle_length/2,],
+                        [self.vehicle_width / 2, self.vehicle_width / 2, - self.vehicle_width / 2, -self.vehicle_width / 2, self.vehicle_width / 2]])
+
+            f_v_outline[0, :] += f_v_pos[0]
+            f_v_outline[1, :] += f_v_pos[1]
+
             #self.l_vehicle_outline.set_data([np.array(self.vehicle_outline[0, :]).flatten()],[np.array(self.vehicle_outline[1, :]).flatten()])
             self.l_vehicle_outline.set_data([vehicle_outline[0, :]],[vehicle_outline[1, :]])
+            self.l_f_v_outline.set_data([ f_v_outline[0, :]],[f_v_outline[1, :]])
 
             chance_lf_outline = np.array([[-self.world_size, -self.chance_len/2, -self.chance_len/2, -self.world_size,-self.world_size,],
                         [self.chance_wid/2+self.lane_len/2,self.chance_wid/2+self.lane_len/2, - self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, self.chance_wid/2+self.lane_len/2]])
@@ -159,6 +173,6 @@ class SimVisual(object):
 
 
         return  self.l_vehicle_pred_traj, \
-                self.l_vehicle_outline, self.l_chance_lf_outline, self.l_chance_rt_outline, self.p_high_variable #, self.l_surrounding_v_outline #self.l_vehicle_pos, self.l_vehicle_pred_traj, \
+                self.l_vehicle_outline, self.l_chance_lf_outline, self.l_chance_rt_outline, self.p_high_variable, self.l_f_v_outline #, self.l_surrounding_v_outline #self.l_vehicle_pos, self.l_vehicle_pred_traj, \
             
     

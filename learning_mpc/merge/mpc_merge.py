@@ -14,7 +14,7 @@ class High_MPC(object):
     """
     Nonlinear MPC
     """
-    def __init__(self, T, dt, init_state=None, init_u=None):
+    def __init__(self, T, dt, lane_len=6, init_state=None, init_u=None):
         """
         Nonlinear MPC for vehicle control        
         """
@@ -27,6 +27,7 @@ class High_MPC(object):
         self.a_max = 1.5; self.a_min = -3 
         self.delta_max = 0.6 ; self.delta_min = -0.6 
 
+        self.lane_len = lane_len
         self.vehicle = Bicycle_Dynamics(self._dt)
 
         # Vehicle constant (kinematics)        (# Quadrotor constant #self._w_max_yaw = 6.0 #self._w_max_xy = 6.0 #self._thrust_min = 2.0 #self._thrust_max = 20.0)
@@ -50,7 +51,7 @@ class High_MPC(object):
             0.1]) # delta_omega
         
         self._Q_gap = np.diag([
-            1000, 1000,  # delta_x, delta_y 100 100
+            500, 500,  # delta_x, delta_y 100 100
             50]) # delta_omega #0, 100, 100,  # delta_x, delta_y, delta_z
             #10, 10, 10, 10, # delta_qw, delta_qx, delta_qy, delta_qz
             #0, 10, 10]) # delta_vx, delta_vy, delta_vz
@@ -151,9 +152,9 @@ class High_MPC(object):
         u_max = [self.a_max,  self.delta_max] #
         x_bound = np.inf #x_bound = ca.inf
         x_min = [-x_bound for _ in range(self._s_dim)]
-        x_min[1] = -6 + 2
+        x_min[1] = -self.lane_len + 2.3
         x_max = [x_bound  for _ in range(self._s_dim)]
-        x_max[1] = 6 - 2
+        x_max[1] = self.lane_len - 2.3
 
         #
         g_min = [0 for _ in range(self._s_dim)]
