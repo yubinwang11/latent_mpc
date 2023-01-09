@@ -65,7 +65,7 @@ def train(episode_i, args):
         wandb.init(
         # set the wandb project where this run will be logged
         project="crl_mpc_test",
-        
+        entity="yubinwang",
         # track hyperparameters and run metadata
         config={
         "learning_rate": learning_rate,
