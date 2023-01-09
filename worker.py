@@ -35,15 +35,7 @@ class Worker_Train:
                 
             #t_now = time.time()
             #print(t_now - t0)
-            #t0 = time.time()
-            
-            
-            if args.visualization:
-                update = False
-                if t > self.env.sim_T:
-                        update = True
-                #yield [info, t, update, ep_reward]
-            
+            #t0 = time.time()          
     
         #print("arrvied: ", arrived)
     
