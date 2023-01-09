@@ -110,7 +110,6 @@ def train(episode_i, args):
         #print(param.grad.data)
         
     optimizer.step()
-    #print(total_grad)
 
     model = copy.deepcopy(model)
 
@@ -119,23 +118,24 @@ def train(episode_i, args):
         model_dir = Path('./models')
 
         if episode_i > 0 and episode_i % args.save_model_window == 0: ##default 100
+        
             model_dir = Path('./models')
-        if not model_dir.exists():
-            run_num = 1
-        else:
-            exst_run_nums = [int(str(folder.name).split('run')[1]) for folder in
-                            model_dir.iterdir() if
-                            str(folder.name).startswith('run')]
-            if len(exst_run_nums) == 0:
+            if not model_dir.exists():
                 run_num = 1
             else:
-                run_num = max(exst_run_nums) + 1 
+                exst_run_nums = [int(str(folder.name).split('run')[1]) for folder in
+                                model_dir.iterdir() if
+                                str(folder.name).startswith('run')]
+                if len(exst_run_nums) == 0:
+                    run_num = 1
+                else:
+                    run_num = max(exst_run_nums) + 1 
 
-        curr_run = 'run%i' % run_num
-        run_dir = model_dir / curr_run
+            curr_run = 'run%i' % run_num
+            run_dir = model_dir / curr_run
 
-        os.makedirs(run_dir)
-        torch.save(model, run_dir / 'model.pth')
+            os.makedirs(run_dir)
+            torch.save(model, run_dir / 'model.pth')
     
 if __name__ == "__main__":
     main()
