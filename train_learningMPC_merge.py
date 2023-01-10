@@ -28,7 +28,7 @@ from worker import Worker_Train
 
 def arg_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--run_wandb', type=bool, default=True,
+    parser.add_argument('--run_wandb', type=bool, default=False,
                         help="Monitor by wandb")
     parser.add_argument('--save_model_window', type=float, default=100,
                         help="Play animation")
@@ -40,7 +40,7 @@ def main():
 
     args = arg_parser().parse_args()
 
-    device = torch.device('cuda:2'if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     num_episode = 1000
 
@@ -152,7 +152,17 @@ def main():
                 run_dir = model_dir / curr_run
 
                 os.makedirs(run_dir)
-                torch.save(best_model, run_dir / 'model.pth')
+
+                print('Saving model', end='\n')
+                checkpoint = {"model": best_model.state_dict(),
+                              "optimizer": optimizer.state_dict(),
+                              "episode": episode_i,
+                              "lr_decay": lr_decay.state_dict()}
+
+                path_checkpoint = "./" + run_dir + "/checkpoint.pth"
+                torch.save(checkpoint, path_checkpoint)
+                print('Saved model', end='\n')
+                #torch.save(best_model, run_dir / 'model.pth')
 
     if args.run_wandb:
         wandb.finish()        
