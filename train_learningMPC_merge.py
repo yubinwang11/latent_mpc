@@ -30,7 +30,7 @@ def arg_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--use_crl', type=bool, default=False,
                         help="Curriculum RL")
-    parser.add_argument('--run_wandb', type=bool, default=False,
+    parser.add_argument('--run_wandb', type=bool, default=True,
                         help="Monitor by wandb")
     parser.add_argument('--episode_num', type=float, default=1000,
                         help="Number of episode")
@@ -64,7 +64,7 @@ def main():
     model = DNN(input_dim=nn_input_dim,
                                 output_dim=nn_output_dim,
                                 net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
-    
+
     learning_rate = 1e-4
     optimizer = optim.Adam(model.high_policy.parameters(), lr=learning_rate)
     DECAY_STEP = args.save_model_window # 32
@@ -82,6 +82,8 @@ def main():
         #}
     )
 
+    obs = None
+
     for episode_i in range(num_episode):
     
         env = MergeEnv()
@@ -90,25 +92,35 @@ def main():
         worker = Worker_Train(env)
         worker_copy = copy.deepcopy(worker)
         
-        obs = torch.tensor(obs, requires_grad=False, dtype=torch.float32)
-        obs.to(device)
+        #obs = torch.tensor(obs, requires_grad=False, dtype=torch.float32)
+
+        if torch.cuda.is_available():
+            obs = torch.tensor(obs, requires_grad=False, dtype=torch.float32).to(device)
+            #obs.cuda()
+            model.to(device)
+            #model.cuda()
+        else:
+            obs = torch.tensor(obs, requires_grad=False, dtype=torch.float32)
 
         #with torch.no_grad():
         with autocast():
-            model.to(device)
             high_variable = model.forward(obs)
             scaler = GradScaler()
         #with autocast():
             loss = -high_variable.sum()
             #loss.requires_grad_(True)
 
-        high_variable = high_variable.detach().numpy().tolist()
+        if torch.cuda.is_available():
+            high_variable = high_variable.cpu().detach().numpy().tolist()
+        else:
+            high_variable = high_variable.detach().numpy().tolist()
 
         ep_reward = worker.run_episode(high_variable, args)
         
         if args.run_wandb:
             wandb.log({"episode reward": ep_reward})
             wandb.log({"z_loss": loss})
+            wandb.watch(model)
 
         pertubed_high_variable = np.array(high_variable)
         noise_weight = np.random.rand()
@@ -118,7 +130,10 @@ def main():
 
         pertubed_ep_reward = worker_copy.run_episode(pertubed_high_variable, args) #run_episode(env,goal)
         #print(ep_reward); print(pertubed_ep_reward)
-        finite_diff_policy_grad = torch.tensor(pertubed_ep_reward - ep_reward)
+        if torch.cuda.is_available():
+            finite_diff_policy_grad = torch.tensor(pertubed_ep_reward - ep_reward).to(device)
+        else:
+            finite_diff_policy_grad = torch.tensor(pertubed_ep_reward - ep_reward)
         
         optimizer.zero_grad()
         scaler.scale(loss).backward()
@@ -139,9 +154,9 @@ def main():
         scaler.step(optimizer)
         scaler.update()
 
-        lr_decay.step()
-
         best_model = copy.deepcopy(model)
+
+        lr_decay.step()
 
         if args.save_model:
 
@@ -172,7 +187,7 @@ def main():
                               "episode": episode_i,
                               "lr_decay": lr_decay.state_dict()}
 
-                path_checkpoint = "./" + run_dir + "/checkpoint.pth"
+                path_checkpoint = "./" + "standardRL" + "/checkpoint.pth"
                 torch.save(checkpoint, path_checkpoint)
                 print('Saved model', end='\n')
                 #torch.save(best_model, run_dir / 'model.pth')
