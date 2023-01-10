@@ -40,7 +40,7 @@ def main():
 
     args = arg_parser().parse_args()
 
-    device = torch.device('cpu')
+    device = torch.device('cuda:2'if torch.cuda.is_available() else 'cpu')
 
     num_episode = 1000
 
