@@ -58,7 +58,8 @@ def main():
     NET_ARCH = [128, 128]
     nn_input_dim = len(obs)
     nn_output_dim = 4 # xy, heading + tra_time
-    if torch.cuda.is_available()
+    use_gpu = False
+    if torch.cuda.is_available():
         use_gpu = True
     model = DNN(input_dim=nn_input_dim,
                                 output_dim=nn_output_dim,
@@ -66,7 +67,7 @@ def main():
     
     learning_rate = 1e-4
     optimizer = optim.Adam(model.high_policy.parameters(), lr=learning_rate)
-    DECAY_STEP = 32
+    DECAY_STEP = 100 # 32
     lr_decay = optim.lr_scheduler.StepLR(optimizer, step_size=DECAY_STEP, gamma=0.96)
 
 
