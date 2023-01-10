@@ -1,0 +1,71 @@
+{
+    "os": "Linux-5.4.0-132-generic-x86_64-with-glibc2.10",
+    "python": "3.8.1",
+    "heartbeatAt": "2023-01-10T05:46:15.958907",
+    "startedAt": "2023-01-10T05:46:14.175050",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "train_learningMPC_merge.py",
+    "codePath": "train_learningMPC_merge.py",
+    "host": "yubinwang-ubuntu18",
+    "username": "yubinwang",
+    "executable": "/home/yubinwang/anaconda3/envs/mpc/bin/python",
+    "cpu_count": 4,
+    "cpu_count_logical": 8,
+    "cpu_freq": {
+        "current": 1046.1603750000002,
+        "min": 400.0,
+        "max": 4000.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 1079.696,
+            "min": 400.0,
+            "max": 4000.0
+        },
+        {
+            "current": 1031.175,
+            "min": 400.0,
+            "max": 4000.0
+        },
+        {
+            "current": 1147.114,
+            "min": 400.0,
+            "max": 4000.0
+        },
+        {
+            "current": 1027.997,
+            "min": 400.0,
+            "max": 4000.0
+        },
+        {
+            "current": 1030.038,
+            "min": 400.0,
+            "max": 4000.0
+        },
+        {
+            "current": 1023.687,
+            "min": 400.0,
+            "max": 4000.0
+        },
+        {
+            "current": 1102.118,
+            "min": 400.0,
+            "max": 4000.0
+        },
+        {
+            "current": 927.458,
+            "min": 400.0,
+            "max": 4000.0
+        }
+    ],
+    "disk": {
+        "total": 54.700042724609375,
+        "used": 10.386299133300781
+    },
+    "memory": {
+        "total": 7.566059112548828
+    }
+}

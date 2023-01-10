@@ -39,6 +39,9 @@ def arg_parser():
 def main():
 
     args = arg_parser().parse_args()
+
+    device = torch.device('cpu')
+
     num_episode = 1000
 
     env = MergeEnv()
@@ -50,7 +53,7 @@ def main():
     model = DNN(input_dim=nn_input_dim,
                                 output_dim=nn_output_dim,
                                 net_arch=NET_ARCH,model_togpu=False)
-
+    
     learning_rate = 1e-4
     optimizer = optim.Adam(model.high_policy.parameters(), lr=learning_rate)
     DECAY_STEP = 32
@@ -77,9 +80,11 @@ def main():
         worker_copy = copy.deepcopy(worker)
         
         obs = torch.tensor(obs, requires_grad=False, dtype=torch.float32)
+        obs.to(device)
 
         #with torch.no_grad():
         with autocast():
+            model.to(device)
             high_variable = model.forward(obs)
             scaler = GradScaler()
         #with autocast():
