@@ -28,8 +28,12 @@ from worker import Worker_Train
 
 def arg_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--use_crl', type=bool, default=False,
+                        help="Curriculum RL")
     parser.add_argument('--run_wandb', type=bool, default=False,
                         help="Monitor by wandb")
+    parser.add_argument('--episode_num', type=float, default=1000,
+                        help="Number of episode")
     parser.add_argument('--save_model_window', type=float, default=100,
                         help="Play animation")
     parser.add_argument('--save_model', type=bool, default=True,
@@ -38,11 +42,15 @@ def arg_parser():
 
 def main():
 
+    #curriculum_mode_list = ['easy', 'medium', 'hard']
+
     args = arg_parser().parse_args()
+    #if args.use_crl:
+        #curriculum_mode = curriculum_mode_list[0]
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    num_episode = 1000
+    num_episode = args.episode_num
 
     env = MergeEnv()
 
@@ -97,9 +105,11 @@ def main():
         
         if args.run_wandb:
             wandb.log({"episode reward": ep_reward})
+            wandb.log({"z_loss": loss})
 
         pertubed_high_variable = np.array(high_variable)
-        noise = np.random.randn(len(pertubed_high_variable)) * 0.5 # 1.5
+        noise_weight = np.random.rand()
+        noise = np.random.randn(len(pertubed_high_variable)) * noise_weight # 1.5
         pertubed_high_variable += noise
         pertubed_high_variable = pertubed_high_variable.tolist()
 
