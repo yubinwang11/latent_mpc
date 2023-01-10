@@ -34,7 +34,7 @@ def arg_parser():
                         help="Monitor by wandb")
     parser.add_argument('--episode_num', type=float, default=1000,
                         help="Number of episode")
-    parser.add_argument('--save_model_window', type=float, default=100,
+    parser.add_argument('--save_model_window', type=float, default=32,
                         help="Play animation")
     parser.add_argument('--save_model', type=bool, default=True,
                         help="Save the model of nn")
@@ -63,11 +63,11 @@ def main():
         use_gpu = True
     model = DNN(input_dim=nn_input_dim,
                                 output_dim=nn_output_dim,
-                                net_arch=NET_ARCH,model_togpu=use_gpu)
+                                net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
     
     learning_rate = 1e-4
     optimizer = optim.Adam(model.high_policy.parameters(), lr=learning_rate)
-    DECAY_STEP = 100 # 32
+    DECAY_STEP = args.save_model_window # 32
     lr_decay = optim.lr_scheduler.StepLR(optimizer, step_size=DECAY_STEP, gamma=0.96)
 
 
@@ -99,7 +99,7 @@ def main():
             high_variable = model.forward(obs)
             scaler = GradScaler()
         #with autocast():
-            loss = -high_variable.mean()
+            loss = -high_variable.sum()
             #loss.requires_grad_(True)
 
         high_variable = high_variable.detach().numpy().tolist()

@@ -29,14 +29,14 @@ def create_mlp(
 
 class DNN(nn.Module):
     #@torchsnooper.snoop()
-    def __init__(self, input_dim: int, output_dim: int,  net_arch: List[int], model_togpu=False):
+    def __init__(self, input_dim: int, output_dim: int,  net_arch: List[int], model_togpu=False, device='cpu'):
         
         super().__init__()
         if model_togpu:
-            self.high_policy = create_mlp(input_dim=input_dim, output_dim=output_dim, net_arch=net_arch).cuda()
+            self.high_policy = create_mlp(input_dim=input_dim, output_dim=output_dim, net_arch=net_arch).to(device)
         else:
             self.high_policy = create_mlp(input_dim=input_dim, output_dim=output_dim, net_arch=net_arch)
-            
+
     def forward(self, obs):
         return self.high_policy(obs)
 
