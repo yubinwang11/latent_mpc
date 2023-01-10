@@ -32,8 +32,11 @@ class DNN(nn.Module):
     def __init__(self, input_dim: int, output_dim: int,  net_arch: List[int], model_togpu=False):
         
         super().__init__()
-        self.high_policy = create_mlp(input_dim=input_dim, output_dim=output_dim, net_arch=net_arch)
-
+        if model_togpu:
+            self.high_policy = create_mlp(input_dim=input_dim, output_dim=output_dim, net_arch=net_arch).cuda()
+        else:
+            self.high_policy = create_mlp(input_dim=input_dim, output_dim=output_dim, net_arch=net_arch)
+            
     def forward(self, obs):
         return self.high_policy(obs)
 

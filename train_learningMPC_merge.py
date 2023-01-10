@@ -58,9 +58,11 @@ def main():
     NET_ARCH = [128, 128]
     nn_input_dim = len(obs)
     nn_output_dim = 4 # xy, heading + tra_time
+    if torch.cuda.is_available()
+        use_gpu = True
     model = DNN(input_dim=nn_input_dim,
                                 output_dim=nn_output_dim,
-                                net_arch=NET_ARCH,model_togpu=False)
+                                net_arch=NET_ARCH,model_togpu=use_gpu)
     
     learning_rate = 1e-4
     optimizer = optim.Adam(model.high_policy.parameters(), lr=learning_rate)
@@ -74,9 +76,9 @@ def main():
         project="crl_mpc_test",
         entity="yubinwang",
         # track hyperparameters and run metadata
-        config={
-        "learning_rate": learning_rate,
-        }
+        #config={
+        #"learning_rate": learning_rate,
+        #}
     )
 
     for episode_i in range(num_episode):
