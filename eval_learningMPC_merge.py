@@ -9,6 +9,9 @@ import matplotlib.animation as animation
 from functools import partial
 import argparse
 
+from pathlib import Path
+import os
+
 import torch
 
 from learning_mpc.merge.merge_env import MergeEnv
@@ -35,12 +38,24 @@ def eval_learningMPC(args):
     env = MergeEnv()
 
     obs=env.reset()
-    NET_ARCH = [128, 128]
-    nn_input_dim = len(obs)
-    nn_output_dim = 4 # xy, heading + tra_time
-    model = DNN(input_dim=nn_input_dim,
-                                output_dim=nn_output_dim,
-                                net_arch=NET_ARCH,model_togpu=False)
+
+    model_dir = Path('./models')
+
+    if not model_dir.exists():
+        run_num = 1
+    else:
+        exst_run_nums = [int(str(folder.name).split('run')[1]) for folder in
+                        model_dir.iterdir() if
+                        str(folder.name).startswith('run')]
+        if len(exst_run_nums) == 0:
+            run_num = 1
+        else:
+            run_num = max(exst_run_nums) 
+
+    curr_run = 'run%i' % run_num
+    run_dir = model_dir / curr_run
+
+    model = torch.load(run_dir / 'model.pth')
 
     worker = Worker_Eval(env)
 
