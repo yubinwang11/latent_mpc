@@ -184,7 +184,7 @@ def main():
                               "episode": episode_i,
                               "lr_decay": lr_decay.state_dict()}
 
-                path_checkpoint = "./" + "standardRL" + "/checkpoint.pth"
+                path_checkpoint = "./" + "models/" + "standardRL" + "/checkpoint.pth"
                 torch.save(checkpoint, path_checkpoint)
                 print('Saved model', end='\n')
                 #torch.save(best_model, run_dir / 'model.pth')

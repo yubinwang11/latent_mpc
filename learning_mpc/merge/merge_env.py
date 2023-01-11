@@ -247,22 +247,24 @@ class MergeEnv(object):
         # sparse reward for collision avoidance 
         if (collision):
             if self.vehicle_state[kvx] >= 0:
-                reward -= 5
+                reward -= 10
             else:
-                reward -= 2
+                reward -= 3
+        '''
+        else:
+            # dense reward for collision avoidance
+            # px of the right corner of left surr vehicle: self.surr_v_left_pos[0]
+            px_corner_lv = np.array([(self.chance_pos[0]-self.chance_len/2)])
+            px_corner_rv = np.array([(self.chance_pos[0]+self.chance_len/2)])
+
+            if self.vehicle_state[kpy] >= 0: # already merged
+                if self.vehicle_state[kpx] <= np.array(self.chance_pos[0]):
+                    #reward += self.vehicle_state[kpx] - px_corner_lv
+                    reward -= max(np.exp(px_corner_lv-self.vehicle_state[kpx]),10) #*5
+                else:
+                    reward -= max(np.exp(self.vehicle_state[kpx]-px_corner_rv),10) #* 5
+        '''
         
-        # dense reward for collision avoidance
-        # px of the right corner of left surr vehicle: self.surr_v_left_pos[0]
-        px_corner_lv = np.array([(self.chance_pos[0]-self.chance_len/2)])
-        px_corner_rv = np.array([(self.chance_pos[0]+self.chance_len/2)])
-
-        if self.vehicle_state[kpy] >= 0: # already merged
-            if self.vehicle_state[kpx] <= np.array(self.chance_pos[0]):
-                #reward += self.vehicle_state[kpx] - px_corner_lv
-                reward -= np.exp(px_corner_lv-self.vehicle_state[kpx]) #*5
-            else:
-                reward -= np.exp(self.vehicle_state[kpx]-px_corner_rv) #* 5
-
         # observation
         self.obs = []
         self.obs += self.vehicle_state[kpx:kphi+1] # px, py, heading of init pos
