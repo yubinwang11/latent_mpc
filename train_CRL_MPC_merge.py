@@ -153,42 +153,15 @@ def main():
         scaler.update()
 
         best_model = copy.deepcopy(model)
-
         lr_decay.step()
 
         if args.save_model:
 
-            model_dir = Path('./models')
-
             if episode_i > 0 and episode_i % args.save_model_window == 0: ##default 100
-            
-                model_dir = Path('./models')
-                if not model_dir.exists():
-                    run_num = 1
-                else:
-                    exst_run_nums = [int(str(folder.name).split('run')[1]) for folder in
-                                    model_dir.iterdir() if
-                                    str(folder.name).startswith('run')]
-                    if len(exst_run_nums) == 0:
-                        run_num = 1
-                    else:
-                        run_num = max(exst_run_nums) + 1 
-
-                curr_run = 'run%i' % run_num
-                run_dir = model_dir / curr_run
-
-                os.makedirs(run_dir)
-
                 print('Saving model', end='\n')
-                checkpoint = {"model": best_model.state_dict(),
-                              "optimizer": optimizer.state_dict(),
-                              "episode": episode_i,
-                              "lr_decay": lr_decay.state_dict()}
-
-                path_checkpoint = "./" + "models/" + "standardRL" + "/checkpoint.pth"
-                torch.save(checkpoint, path_checkpoint)
+                model_path = "./" + "models/" + "standardRL"
+                torch.save(best_model, model_path / 'best_model.pth')
                 print('Saved model', end='\n')
-                #torch.save(best_model, run_dir / 'model.pth')
 
     if args.run_wandb:
         wandb.finish()        

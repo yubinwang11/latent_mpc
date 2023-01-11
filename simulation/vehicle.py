@@ -43,7 +43,7 @@ class Bicycle_Dynamics(object):
         if curriculum_mode == 'general':
             # Sampling range of the vehicle's initial position
             self._xy_dist = np.array(
-                [ [-30, 15]]   # x
+                [ [0, 45]]   # x
             )
             # Sampling range of the vehicle's initial velocity
             self._vxy_dist = np.array(
@@ -53,7 +53,7 @@ class Bicycle_Dynamics(object):
         elif curriculum_mode == 'easy':
             # Sampling range of the vehicle's initial position
             self._xy_dist = np.array(
-                [ [-5, 5]]   # x
+                [ [25, 35]]   # x
             )
             # Sampling range of the vehicle's initial velocity
             self._vxy_dist = np.array(
@@ -63,7 +63,7 @@ class Bicycle_Dynamics(object):
         elif curriculum_mode == 'medium':
             # Sampling range of the vehicle's initial position
             self._xy_dist = np.array(
-                [ [-15, 12]]   # x
+                [ [15, 42]]   # x
             )
             # Sampling range of the vehicle's initial velocity
             self._vxy_dist = np.array(
@@ -73,7 +73,7 @@ class Bicycle_Dynamics(object):
         elif curriculum_mode == 'hard':
             # Sampling range of the vehicle's initial position
             self._xy_dist = np.array(
-                [ [-30, 15]]   # x
+                [ [0, 45]]   # x
             )
             # Sampling range of the vehicle's initial velocity
             self._vxy_dist = np.array(
@@ -173,6 +173,7 @@ class Bicycle_Dynamics(object):
         #if np.linalg.norm(other.position - self.position) > (self.diagonal + other.diagonal) / 2: 
             #return False,
         # Accurate rectangular check
+        #else:
         return are_polygons_intersecting(self.polygon(), other.polygon())
     
     def polygon(self):

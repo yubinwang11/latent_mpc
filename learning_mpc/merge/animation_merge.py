@@ -42,8 +42,8 @@ class SimVisual(object):
        # self.ax_2d = plt.figure()
         #
         self.ax_2d = self.fig.add_subplot() # [0:, 3:]
-        self.ax_2d.set_xlim([-50, 50]) #self.ax_2d.set_xlim([-1, 1])
-        self.ax_2d.set_ylim([-50, 50]) #self.ax_2d.set_ylim([-1, 1])
+        self.ax_2d.set_xlim([0, 120]) #self.ax_2d.set_xlim([-1, 1])
+        self.ax_2d.set_ylim([-60, 60]) #self.ax_2d.set_ylim([-1, 1])
         self.ax_2d.set_xlabel("x")
         self.ax_2d.set_ylabel("y")
         
@@ -65,9 +65,9 @@ class SimVisual(object):
 
         self.p_high_variable = self.ax_2d.scatter([], [], marker='o', color='g')
 
-        self.l_mainroad_up, = self.ax_2d.plot([-self.world_size,self.world_size], [self.lane_len,self.lane_len], 'black', linewidth=2)
-        self.l_mainroad_mid, = self.ax_2d.plot([-self.world_size,self.world_size], [0,0], 'black', linewidth=1)
-        self.l_mainroad_dw, = self.ax_2d.plot([-self.world_size,self.world_size], [-self.lane_len,-self.lane_len], 'black', linewidth=2)
+        self.l_mainroad_up, = self.ax_2d.plot([0,self.world_size], [self.lane_len,self.lane_len], 'black', linewidth=2)
+        self.l_mainroad_mid, = self.ax_2d.plot([0,self.world_size], [0,0], 'black', linewidth=1)
+        self.l_mainroad_dw, = self.ax_2d.plot([0,self.world_size], [-self.lane_len,-self.lane_len], 'black', linewidth=2)
         #self.l_mainroad_dw_lf, = self.ax_2d.plot([-self.world_size,-self.lane_len/2*4], [-self.lane_len/2,-self.lane_len/2], 'black', linewidth=2)
         #self.l_mainroad_dw_rt, = self.ax_2d.plot([self.lane_len/2*4,self.world_size], [-self.lane_len/2,-self.lane_len/2], 'black', linewidth=2)
 
@@ -109,6 +109,10 @@ class SimVisual(object):
         chance_pos = info["chance_pos"]
         f_v_pos = info["f_v_pos"]
         pred_vehicle_traj = info["pred_vehicle_traj"]
+        surr_v_left = info["surr_v_left"]
+        surr_v_right = info["surr_v_right"]
+        high_variable = info["high_variable"]
+
         #plan_dt = info["plan_dt"]
 
         
@@ -148,23 +152,27 @@ class SimVisual(object):
             self.l_vehicle_outline.set_data([vehicle_outline[0, :]],[vehicle_outline[1, :]])
             self.l_f_v_outline.set_data([ f_v_outline[0, :]],[f_v_outline[1, :]])
 
-            chance_lf_outline = np.array([[-self.world_size, -self.chance_len/2, -self.chance_len/2, -self.world_size,-self.world_size,],
+            #chance_lf_outline = np.array([[-self.world_size/2, -self.chance_len/2, -self.chance_len/2, -self.world_size/2,-self.world_size/2,],
+                        #[self.chance_wid/2+self.lane_len/2,self.chance_wid/2+self.lane_len/2, - self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, self.chance_wid/2+self.lane_len/2]])
+            chance_lf_outline = np.array([[surr_v_left.position[0]-surr_v_left.length/2, surr_v_left.position[0]+surr_v_left.length/2, surr_v_left.position[0]+surr_v_left.length/2, surr_v_left.position[0]-surr_v_left.length/2,surr_v_left.position[0]-surr_v_left.length/2,],
                         [self.chance_wid/2+self.lane_len/2,self.chance_wid/2+self.lane_len/2, - self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, self.chance_wid/2+self.lane_len/2]])
 
-            chance_rt_outline = np.array([[self.chance_len/2, self.world_size, self.world_size, self.chance_len/2,self.chance_len/2,],
+            #chance_rt_outline = np.array([[self.chance_len/2, self.world_size/2, self.world_size/2, self.chance_len/2,self.chance_len/2,],
+                        #[self.chance_wid/2+self.lane_len/2,self.chance_wid/2+self.lane_len/2, - self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, self.chance_wid/2+self.lane_len/2]])
+            chance_rt_outline = np.array([[surr_v_right.position[0]-surr_v_right.length/2, surr_v_right.position[0]+surr_v_right.length/2, surr_v_right.position[0]+surr_v_right.length/2, surr_v_right.position[0]-surr_v_right.length/2,surr_v_right.position[0]-surr_v_right.length/2],
                         [self.chance_wid/2+self.lane_len/2,self.chance_wid/2+self.lane_len/2, - self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, self.chance_wid/2+self.lane_len/2]])
-            
-            chance_lf_outline[0, :] += chance_pos[0]
+
+            #chance_lf_outline[0, :] += chance_pos[0]
             #chance_lf_outline[1, :] += chance_pos[1] 
 
-            chance_rt_outline[0, :] += chance_pos[0]
+            #chance_rt_outline[0, :] += chance_pos[0]
             #chance_rt_outline[1, :] += chance_pos[1] 
 
             self.l_chance_lf_outline.set_data([chance_lf_outline[0, :]],[chance_lf_outline[1, :]])
             self.l_chance_rt_outline.set_data([chance_rt_outline[0, :]],[chance_rt_outline[1, :]])
 
             #self.p_high_variable.set_data([self.env.high_variable_pos[0]],[self.env.high_variable_pos[1]])
-            self.p_high_variable = self.ax_2d.scatter(self.env.high_variable_pos[0], self.env.high_variable_pos[1], marker='o', color='g')
+            self.p_high_variable = self.ax_2d.scatter(high_variable[0], high_variable[1], marker='o', color='g')
            
             # plot quadrotor trajectory
             #self.l_vehicle_pos.set_data(vehicle_pos_arr[:, 0], vehicle_pos_arr[:, 1])

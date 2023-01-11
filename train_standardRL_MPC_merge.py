@@ -41,8 +41,6 @@ def arg_parser():
 def main():
 
     args = arg_parser().parse_args()
-    #if args.use_crl:
-        #curriculum_mode = curriculum_mode_list[0]
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -74,12 +72,11 @@ def main():
         project="crl_mpc_test",
         entity="yubinwang",
         # track hyperparameters and run metadata
-        #config={
+        config={
         #"learning_rate": learning_rate,
-        #}
+        "exp_decay": env.sigma,
+        }
     )
-
-    obs = None
 
     for episode_i in range(num_episode):
     
@@ -89,23 +86,23 @@ def main():
         worker = Worker_Train(env)
         worker_copy = copy.deepcopy(worker)
         
-        #obs = torch.tensor(obs, requires_grad=False, dtype=torch.float32)
-
         if torch.cuda.is_available():
             obs = torch.tensor(obs, requires_grad=False, dtype=torch.float32).to(device)
-            #obs.cuda()
             model.to(device)
-            #model.cuda()
         else:
             obs = torch.tensor(obs, requires_grad=False, dtype=torch.float32)
 
+        #obs = torch.nn.functional.normalize(obs)
         #with torch.no_grad():
+
         with autocast():
             high_variable = model.forward(obs)
+        
             scaler = GradScaler()
-        #with autocast():
-            z = high_variable #loss = -high_variable.sum()
-            #loss.requires_grad_(True)
+            z = high_variable
+
+            mean = obs.mean(); std = obs.std()
+            high_variable = high_variable*std + mean
 
             if torch.cuda.is_available():
                 high_variable = high_variable.cpu().detach().numpy().tolist()
@@ -123,71 +120,38 @@ def main():
             pertubed_ep_reward = worker_copy.run_episode(pertubed_high_variable, args) #run_episode(env,goal)
             #print(ep_reward); print(pertubed_ep_reward)
             if torch.cuda.is_available():
-                finite_diff_policy_grad = torch.tensor(pertubed_ep_reward - ep_reward).to(device)
+                finite_diff_policy_grad = torch.tensor((pertubed_ep_reward - ep_reward)/noise, dtype=torch.float32).to(device)
             else:
-                finite_diff_policy_grad = torch.tensor(pertubed_ep_reward - ep_reward)
+                finite_diff_policy_grad = torch.tensor((pertubed_ep_reward - ep_reward)/noise, dtype=torch.float32)
             
             loss = - model.compute_loss(finite_diff_policy_grad, z)
         
         optimizer.zero_grad()
         scaler.scale(loss).backward()
-        #loss.backward()
 
-        #for param in model.high_policy.parameters():
-            #print(param.grad.data)
-            #param.grad.data *= finite_diff_policy_grad
-            #print(param.grad.data)
         scaler.unscale_(optimizer)
-        grad_norm = torch.nn.utils.clip_grad_norm_(model.high_policy.parameters(), max_norm=10, norm_type=2)
-
-        #for param in model.high_policy.parameters():
-            #print(param.grad.data)
+        grad_norm = torch.nn.utils.clip_grad_norm_(model.high_policy.parameters(), max_norm=0.5, norm_type=2)
 
         scaler.step(optimizer)
         scaler.update()
 
         best_model = copy.deepcopy(model)
-
         lr_decay.step()
 
         if args.run_wandb:
             wandb.log({"episode reward": ep_reward})
             wandb.log({"z_loss": loss})
+            wandb.log({"travese_time": high_variable[-1]})
+            wandb.log({"py": high_variable[1]})
             wandb.watch(model)
 
         if args.save_model:
 
-            model_dir = Path('./models')
-
             if episode_i > 0 and episode_i % args.save_model_window == 0: ##default 100
-            
-                model_dir = Path('./models')
-                if not model_dir.exists():
-                    run_num = 1
-                else:
-                    exst_run_nums = [int(str(folder.name).split('run')[1]) for folder in
-                                    model_dir.iterdir() if
-                                    str(folder.name).startswith('run')]
-                    if len(exst_run_nums) == 0:
-                        run_num = 1
-                    else:
-                        run_num = max(exst_run_nums) + 1 
-
-                curr_run = 'run%i' % run_num
-                run_dir = model_dir / curr_run
-
-                os.makedirs(run_dir)
-
                 print('Saving model', end='\n')
-                checkpoint = {"model": best_model.state_dict(),
-                              "optimizer": optimizer.state_dict(),
-                              "episode": episode_i,
-                              "lr_decay": lr_decay.state_dict()}
-
-                path_checkpoint = "./" + "models/" + "standardRL" + "/checkpoint.pth"
-                torch.save(checkpoint, path_checkpoint)
+                model_path = "./" + "models/" + "standardRL"
+                torch.save(best_model, model_path / 'best_model.pth')
                 print('Saved model', end='\n')
-                #torch.save(best_model, run_dir / 'model.pth')
 
     if args.run_wandb:
         wandb.finish()        

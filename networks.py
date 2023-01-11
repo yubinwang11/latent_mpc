@@ -38,8 +38,14 @@ class DNN(nn.Module):
             self.high_policy = create_mlp(input_dim=input_dim, output_dim=output_dim, net_arch=net_arch)
 
     def forward(self, obs):
-        return self.high_policy(obs)
+            mean = obs.mean()
+            std = obs.std()
+            normalized_obs = (obs - mean)/std
+            z = self.high_policy(normalized_obs)
+            #z = normalized_z*std + mean
+            
+            return z
 
     def compute_loss(self, reward_grad, z):
-        return reward_grad * z.sum()
+        return torch.matmul(reward_grad, z)
 

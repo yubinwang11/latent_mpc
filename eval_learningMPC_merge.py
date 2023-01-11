@@ -34,34 +34,36 @@ def main():
     eval_learningMPC(args)
 
 def eval_learningMPC(args):
-
-    model_dir = Path('./models')
-
-    if not model_dir.exists():
-        run_num = 1
-    else:
-        exst_run_nums = [int(str(folder.name).split('run')[1]) for folder in
-                        model_dir.iterdir() if
-                        str(folder.name).startswith('run')]
-        if len(exst_run_nums) == 0:
-            run_num = 1
-        else:
-            run_num = max(exst_run_nums) 
-
-    curr_run = 'run%i' % run_num
-    run_dir = model_dir / curr_run
-
-    model = torch.load(run_dir / 'model.pth')
+    
 
     env_mode = 'general'
     env = MergeEnv(curriculum_mode=env_mode)
     obs=env.reset()
 
+    NET_ARCH = [128, 128, 128, 128]
+    nn_input_dim = len(obs)
+    nn_output_dim = 4 # xy, heading + tra_time
+    use_gpu = False
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    model = DNN(input_dim=nn_input_dim,
+                                output_dim=nn_output_dim,
+                                net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
+    
+    #model_path = "./" + "models/" + "standardRL"
+    #print('Loading Model...')
+    #checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
+    #model.load_state_dict(checkpoint['model'])
+    #model = checkpoint['model']
+
     worker = Worker_Eval(env)
 
     obs = torch.tensor(obs, requires_grad=False, dtype=torch.float32)
-
+    mean = obs.mean(); std = obs.std()
     high_variable = model.forward(obs)
+    high_variable = high_variable*std + mean
+
     high_variable = high_variable.detach().numpy().tolist()
 
     worker.run_episode(high_variable, args)

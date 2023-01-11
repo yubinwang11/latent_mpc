@@ -29,11 +29,6 @@ class High_MPC(object):
 
         self.lane_len = lane_len
         self.vehicle = Bicycle_Dynamics(self._dt)
-
-        # Vehicle constant (kinematics)        (# Quadrotor constant #self._w_max_yaw = 6.0 #self._w_max_xy = 6.0 #self._thrust_min = 2.0 #self._thrust_max = 20.0)
-        
-        #self.v_max = Vehicle.MAX_SPEED; self.v_min = -self.v_max
-        #self.omega_max = BicycleVehicle.MAX_ANGULAR_SPEED/40; self.omega_min = -self.omega_max   
         
         #
         # state dimension (px, py,           # vehicle position
@@ -45,14 +40,14 @@ class High_MPC(object):
         
         # cost matrix for tracking the goal point
         self._Q_goal = np.diag([
-            10, 10,  # delta_x, delta_y 100 100 
-            30, # delta_phi 10
+            100, 100,  # delta_x, delta_y 100 100 
+            10, # delta_phi 10
             1, 1, # delta_vx delta_vy
             0.1]) # delta_omega
         
         self._Q_gap = np.diag([
-            500, 500,  # delta_x, delta_y 100 100
-            50]) # delta_omega #0, 100, 100,  # delta_x, delta_y, delta_z
+            100, 100,  # delta_x, delta_y 100 100
+            10]) # delta_omega #0, 100, 100,  # delta_x, delta_y, delta_z
             #10, 10, 10, 10, # delta_qw, delta_qx, delta_qy, delta_qz
             #0, 10, 10]) # delta_vx, delta_vy, delta_vz
         # cost matrix for the action

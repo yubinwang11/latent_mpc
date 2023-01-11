@@ -17,14 +17,16 @@ class Worker_Train:
         t0 = time.time()
         arrived = False
         ep_reward = 0
-
+        step_i = 0
+        
         while t < self.env.sim_T:
             t = self.env.sim_dt * n
             n += 1
-
+            
             #print("current obs: ", obs)
             #print("current high_variable: ", high_variable)
-            obs, reward,  done, info = self.env.step(high_variable)
+            obs, reward,  done, info = self.env.step(high_variable, step_i)
+            step_i += 1
             ep_reward += reward
             print("current reward: ", reward, "ep_reward:", ep_reward)
         
@@ -54,14 +56,17 @@ class Worker_Eval:
         t0 = time.time()
         arrived = False
         ep_reward = 0
+        step_i = 0
 
         while t < self.env.sim_T:
             t = self.env.sim_dt * n
             n += 1
-
+        
             #print("current obs: ", obs)
             #print("current high_variable: ", high_variable)
-            obs, reward,  done, info = self.env.step(high_variable)
+            obs, reward,  done, info = self.env.step(high_variable, step_i)
+            step_i += 1
+
             ep_reward += reward
             print("current reward: ", reward, "ep_reward:", ep_reward)
         
