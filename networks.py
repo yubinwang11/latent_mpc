@@ -8,7 +8,7 @@ def create_mlp(
     input_dim: int,
     output_dim: int,
     net_arch: List[int],
-    activation_fn: Type[nn.Module] = nn.ReLU
+    activation_fn: Type[nn.Module] = nn.LeakyReLU
 ) -> List[nn.Module]:
 
     if len(net_arch) > 0:
@@ -39,4 +39,7 @@ class DNN(nn.Module):
 
     def forward(self, obs):
         return self.high_policy(obs)
+
+    def compute_loss(self, reward_grad, z):
+        return reward_grad * z.sum()
 

@@ -20,8 +20,9 @@ class Space(object):
 
 class MergeEnv(object):
 
-    def __init__(self):
+    def __init__(self, curriculum_mode = 'general'):
 
+        self.curriculum_mode = curriculum_mode
         self.plan_T = 5.0 # Prediction horizon for MPC and local planner
         self.plan_dt = 0.1 # Sampling time step for MPC and local planner
 
@@ -39,25 +40,86 @@ class MergeEnv(object):
         self.world_size = 40
         self.lane_len = 6
 
-        # Sampling range of the chance's initial position
-        self.c_xy_dist = np.array(
-            [ [-30, -15]]   # x
-        )
-        # Sampling range of the chance's initial velocity
-        self.c_vxy_dist = np.array(
-            [ [2.0, 10.0]  # vx
-            ] 
-        )
+        if curriculum_mode == 'general':
+            # Sampling range of the chance's initial position
+            self.c_xy_dist = np.array(
+                [ [-25, 15]]   # x
+            )
+            # Sampling range of the chance's initial velocity
+            self.c_vxy_dist = np.array(
+                [ [0.0, 10.0]  # vx
+                ] 
+            )
 
-        # Sampling range of the front vehicle's initial position
-        self.f_v_relxy_dist = np.array(
-            [ [5, 20]]   # x
-        )
-        # Sampling range of the front vehicle's initial velocity
-        self.f_v_vxy_dist = np.array(
-            [ [0.2, 3]  # vx
-            ] 
-        )
+            # Sampling range of the front vehicle's initial position
+            self.f_v_relxy_dist = np.array(
+                [ [5, 20]]   # x
+            )
+            # Sampling range of the front vehicle's initial velocity
+            self.f_v_vxy_dist = np.array(
+                [ [0.2, 5]  # vx
+                ] 
+            )
+        elif curriculum_mode == 'easy':
+            # Sampling range of the chance's initial position
+            self.c_xy_dist = np.array(
+                [ [-3, 3]]   # x
+            )
+            # Sampling range of the chance's initial velocity
+            self.c_vxy_dist = np.array(
+                [ [0.0, 2.0]  # vx
+                ] 
+            )
+
+            # Sampling range of the front vehicle's initial position
+            self.f_v_relxy_dist = np.array(
+                [ [10, 20]]   # x
+            )
+            # Sampling range of the front vehicle's initial velocity
+            self.f_v_vxy_dist = np.array(
+                [ [0.2, 5]  # vx
+                ] 
+            )
+        elif curriculum_mode == 'medium':
+            # Sampling range of the chance's initial position
+            self.c_xy_dist = np.array(
+                [ [-10, 10]]   # x
+            )
+            # Sampling range of the chance's initial velocity
+            self.c_vxy_dist = np.array(
+                [ [0.0, 4.0]  # vx
+                ] 
+            )
+
+            # Sampling range of the front vehicle's initial position
+            self.f_v_relxy_dist = np.array(
+                [ [10, 20]]   # x
+            )
+            # Sampling range of the front vehicle's initial velocity
+            self.f_v_vxy_dist = np.array(
+                [ [0.2, 5]  # vx
+                ] 
+            )
+        elif curriculum_mode == 'hard':
+            # Sampling range of the chance's initial position
+            self.c_xy_dist = np.array(
+                [ [-25, 15]]   # x
+            )
+            # Sampling range of the chance's initial velocity
+            self.c_vxy_dist = np.array(
+                [ [0.0, 10.0]  # vx
+                ] 
+            )
+
+            # Sampling range of the front vehicle's initial position
+            self.f_v_relxy_dist = np.array(
+                [ [10, 20]]   # x
+            )
+            # Sampling range of the front vehicle's initial velocity
+            self.f_v_vxy_dist = np.array(
+                [ [0.2, 5]  # vx
+                ] 
+            )
         # Chance Parameters
         self.chance_pos = [-10,self.lane_len/2] # [0, 2.0]
         self.chance_pos[0] = np.random.uniform(
@@ -66,7 +128,7 @@ class MergeEnv(object):
 
         self.chance_vel = np.random.uniform(
                 low=self.c_vxy_dist[0, 0], high=self.c_vxy_dist[0, 1])
-        self.chance_len = self.lane_len *2
+        self.chance_len = self.lane_len *2 #+ self.vehicle_length
         self.chance_wid = self.vehicle_width
         self.chance_vel = 2  # 0.5
 
@@ -74,7 +136,7 @@ class MergeEnv(object):
         self.high_variable_pos = None
         
         ## Planner 
-        self.sigma = 5 # 10
+        self.sigma = 10 # 10
 
         ## Reward for RL
         #self.reward = 0
@@ -106,21 +168,26 @@ class MergeEnv(object):
         self.t = 0
         # state for ODE
         #self.vehicle_state = self.vehicle.reset(self.vehicle_init_pos, self.vehicle_init_heading, self.vehicle_init_vx)
-        self.vehicle_state = self.vehicle.reset()
+        self.vehicle_state = self.vehicle.reset(curriculum_mode=self.curriculum_mode)
 
         initial_u = [0, 0]
         self.mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, lane_len = self.lane_len, init_state=self.vehicle_state, init_u=initial_u)
         
         # regenerate the relative distance between chance and ego-vehicle
-        if np.array(self.chance_pos[0])  - self.vehicle_state[kpx] <= 5.0:
-            self.chance_pos[0] = self.vehicle_state[kpx] + 5.0
+        #if np.array(self.chance_pos[0])  - self.vehicle_state[kpx] <= 5.0:
+            #self.chance_pos[0] = self.vehicle_state[kpx] + 5.0
             #self.chance_pos.tolist()
 
-        self.f_v_pos = [self.chance_pos[0]+np.random.uniform(
+
+        self.f_v_pos = [max(self.chance_pos[0],self.vehicle_state[kpx])+np.random.uniform(
                 low=self.f_v_relxy_dist[0, 0], high=self.f_v_relxy_dist[0, 1]), -self.lane_len/2]
         #self.f_v_pos = [np.random.uniform(low=self.f_v_xy_dist[0, 0], high=self.f_v_xy_dist[0, 1]), -self.lane_len/2]
         self.f_v_vel = np.random.uniform(
                 low=self.f_v_vxy_dist[0, 0], high=self.f_v_vxy_dist[0, 1])
+
+        #if self.vehicle_state[kpx] - np.array(self.chance_pos[0])  >= self.f_v_relxy_dist[0, 1]:
+            #self.f_v_pos[0] = self.vehicle_state[kpx] + 10.0
+            #self.f_v_pos.tolist()
 
         # observation, can be part of the state, e.g., postion
         # or a cartesian representation of the state
@@ -180,21 +247,21 @@ class MergeEnv(object):
         # sparse reward for collision avoidance 
         if (collision):
             if self.vehicle_state[kvx] >= 0:
-                reward -= 50
+                reward -= 5
             else:
-                reward -= 30
+                reward -= 2
         
         # dense reward for collision avoidance
         # px of the right corner of left surr vehicle: self.surr_v_left_pos[0]
         px_corner_lv = np.array([(self.chance_pos[0]-self.chance_len/2)])
         px_corner_rv = np.array([(self.chance_pos[0]+self.chance_len/2)])
 
-        if self.vehicle_state[kpy] >= 1/np.e: # already merged
-            weight = np.exp(-(self.vehicle_state[kpy]/self.lane_len/2))
+        if self.vehicle_state[kpy] >= 0: # already merged
             if self.vehicle_state[kpx] <= np.array(self.chance_pos[0]):
-                reward += self.vehicle_state[kpx] - px_corner_lv
+                #reward += self.vehicle_state[kpx] - px_corner_lv
+                reward -= np.exp(px_corner_lv-self.vehicle_state[kpx]) #*5
             else:
-                reward += -(self.vehicle_state[kpx] - px_corner_rv)
+                reward -= np.exp(self.vehicle_state[kpx]-px_corner_rv) #* 5
 
         # observation
         self.obs = []

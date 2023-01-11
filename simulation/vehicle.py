@@ -34,22 +34,53 @@ class Bicycle_Dynamics(object):
         self.Iz = 1536.7
         self.Lk = (self.lf*self.kf) - (self.lr*self.kr)
 
-        # Sampling range of the vehicle's initial position
-        self._xy_dist = np.array(
-            [ [-35, -10]]   # x
-        )
-        # Sampling range of the vehicle's initial velocity
-        self._vxy_dist = np.array(
-            [ [3.0, 10.0]  # vx
-            ] 
-        )
-
         #
         #self.reset()
         # self._t = 0.0
     
-    def reset(self, position=None, heading=None,  vx = None):
+    def reset(self, position=None, heading=None,  vx = None, curriculum_mode='general'):
         
+        if curriculum_mode == 'general':
+            # Sampling range of the vehicle's initial position
+            self._xy_dist = np.array(
+                [ [-30, 15]]   # x
+            )
+            # Sampling range of the vehicle's initial velocity
+            self._vxy_dist = np.array(
+                [ [0.0, 10.0]  # vx
+                ] 
+            )
+        elif curriculum_mode == 'easy':
+            # Sampling range of the vehicle's initial position
+            self._xy_dist = np.array(
+                [ [-5, 5]]   # x
+            )
+            # Sampling range of the vehicle's initial velocity
+            self._vxy_dist = np.array(
+                [ [2.0, 5.0]  # vx
+                ] 
+            )
+        elif curriculum_mode == 'medium':
+            # Sampling range of the vehicle's initial position
+            self._xy_dist = np.array(
+                [ [-15, 12]]   # x
+            )
+            # Sampling range of the vehicle's initial velocity
+            self._vxy_dist = np.array(
+                [ [1.0, 7.0]  # vx
+                ] 
+            )
+        elif curriculum_mode == 'hard':
+            # Sampling range of the vehicle's initial position
+            self._xy_dist = np.array(
+                [ [-30, 15]]   # x
+            )
+            # Sampling range of the vehicle's initial velocity
+            self._vxy_dist = np.array(
+                [ [0.0, 10.0]  # vx
+                ] 
+            )
+
         self._state = np.zeros(shape=self.s_dim) 
         if position is None:
             # self._state[kQuatW] = 1.0 #         

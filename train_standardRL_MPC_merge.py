@@ -28,11 +28,9 @@ from worker import Worker_Train
 
 def arg_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--use_crl', type=bool, default=False,
-                        help="Curriculum RL")
     parser.add_argument('--run_wandb', type=bool, default=True,
                         help="Monitor by wandb")
-    parser.add_argument('--episode_num', type=float, default=1000,
+    parser.add_argument('--episode_num', type=float, default=10000,
                         help="Number of episode")
     parser.add_argument('--save_model_window', type=float, default=32,
                         help="Play animation")
@@ -42,8 +40,6 @@ def arg_parser():
 
 def main():
 
-    #curriculum_mode_list = ['easy', 'medium', 'hard']
-
     args = arg_parser().parse_args()
     #if args.use_crl:
         #curriculum_mode = curriculum_mode_list[0]
@@ -52,10 +48,11 @@ def main():
 
     num_episode = args.episode_num
 
-    env = MergeEnv()
+    env_mode = 'general'
+    env = MergeEnv(curriculum_mode=env_mode)
 
     obs=env.reset()
-    NET_ARCH = [128, 128]
+    NET_ARCH = [128, 128, 128, 128]
     nn_input_dim = len(obs)
     nn_output_dim = 4 # xy, heading + tra_time
     use_gpu = False
@@ -107,45 +104,40 @@ def main():
             high_variable = model.forward(obs)
             scaler = GradScaler()
         #with autocast():
-            loss = -high_variable.sum()
+            z = high_variable #loss = -high_variable.sum()
             #loss.requires_grad_(True)
 
-        if torch.cuda.is_available():
-            high_variable = high_variable.cpu().detach().numpy().tolist()
-        else:
-            high_variable = high_variable.detach().numpy().tolist()
+            if torch.cuda.is_available():
+                high_variable = high_variable.cpu().detach().numpy().tolist()
+            else:
+                high_variable = high_variable.detach().numpy().tolist()
 
-        ep_reward = worker.run_episode(high_variable, args)
+            ep_reward = worker.run_episode(high_variable, args)
         
-        if args.run_wandb:
-            wandb.log({"episode reward": ep_reward})
-            wandb.log({"z_loss": loss})
-            wandb.watch(model)
+            pertubed_high_variable = np.array(high_variable)
+            noise_weight = np.random.rand()
+            noise = np.random.randn(len(pertubed_high_variable)) * noise_weight # 1.5
+            pertubed_high_variable += noise
+            pertubed_high_variable = pertubed_high_variable.tolist()
 
-        pertubed_high_variable = np.array(high_variable)
-        noise_weight = np.random.rand()
-        noise = np.random.randn(len(pertubed_high_variable)) * noise_weight # 1.5
-        pertubed_high_variable += noise
-        pertubed_high_variable = pertubed_high_variable.tolist()
-
-        pertubed_ep_reward = worker_copy.run_episode(pertubed_high_variable, args) #run_episode(env,goal)
-        #print(ep_reward); print(pertubed_ep_reward)
-        if torch.cuda.is_available():
-            finite_diff_policy_grad = torch.tensor(pertubed_ep_reward - ep_reward).to(device)
-        else:
-            finite_diff_policy_grad = torch.tensor(pertubed_ep_reward - ep_reward)
+            pertubed_ep_reward = worker_copy.run_episode(pertubed_high_variable, args) #run_episode(env,goal)
+            #print(ep_reward); print(pertubed_ep_reward)
+            if torch.cuda.is_available():
+                finite_diff_policy_grad = torch.tensor(pertubed_ep_reward - ep_reward).to(device)
+            else:
+                finite_diff_policy_grad = torch.tensor(pertubed_ep_reward - ep_reward)
+            
+            loss = - model.compute_loss(finite_diff_policy_grad, z)
         
         optimizer.zero_grad()
         scaler.scale(loss).backward()
         #loss.backward()
 
-        for param in model.high_policy.parameters():
+        #for param in model.high_policy.parameters():
             #print(param.grad.data)
-            param.grad.data *= finite_diff_policy_grad
+            #param.grad.data *= finite_diff_policy_grad
             #print(param.grad.data)
-
         scaler.unscale_(optimizer)
-            
         grad_norm = torch.nn.utils.clip_grad_norm_(model.high_policy.parameters(), max_norm=10, norm_type=2)
 
         #for param in model.high_policy.parameters():
@@ -157,6 +149,11 @@ def main():
         best_model = copy.deepcopy(model)
 
         lr_decay.step()
+
+        if args.run_wandb:
+            wandb.log({"episode reward": ep_reward})
+            wandb.log({"z_loss": loss})
+            wandb.watch(model)
 
         if args.save_model:
 

@@ -35,10 +35,6 @@ def main():
 
 def eval_learningMPC(args):
 
-    env = MergeEnv()
-
-    obs=env.reset()
-
     model_dir = Path('./models')
 
     if not model_dir.exists():
@@ -57,10 +53,13 @@ def eval_learningMPC(args):
 
     model = torch.load(run_dir / 'model.pth')
 
+    env_mode = 'general'
+    env = MergeEnv(curriculum_mode=env_mode)
+    obs=env.reset()
+
     worker = Worker_Eval(env)
 
-    obs = torch.tensor(obs, requires_grad=True, dtype=torch.float32)
-    #obs = torch.tensor(obs, requires_grad=True)
+    obs = torch.tensor(obs, requires_grad=False, dtype=torch.float32)
 
     high_variable = model.forward(obs)
     high_variable = high_variable.detach().numpy().tolist()

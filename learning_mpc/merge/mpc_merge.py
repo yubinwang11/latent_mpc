@@ -24,7 +24,7 @@ class High_MPC(object):
         self._dt = dt
         self._N = int(self._T/self._dt)
 
-        self.a_max = 1.5; self.a_min = -3 
+        self.a_max = 1.5 * 2; self.a_min = -3 * 2 
         self.delta_max = 0.6 ; self.delta_min = -0.6 
 
         self.lane_len = lane_len
@@ -152,9 +152,9 @@ class High_MPC(object):
         u_max = [self.a_max,  self.delta_max] #
         x_bound = np.inf #x_bound = ca.inf
         x_min = [-x_bound for _ in range(self._s_dim)]
-        x_min[1] = -self.lane_len + 2.3
+        x_min[1] = -self.lane_len + 2.5
         x_max = [x_bound  for _ in range(self._s_dim)]
-        x_max[1] = self.lane_len - 2.3
+        x_max[1] = self.lane_len - 2.5
 
         #
         g_min = [0 for _ in range(self._s_dim)]
