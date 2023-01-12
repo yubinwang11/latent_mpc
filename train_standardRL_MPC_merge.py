@@ -84,21 +84,18 @@ def main():
         obs=env.reset()
 
         worker = Worker_Train(env)
-        worker_copy = copy.deepcopy(worker)
+        worker_copy_list = [] 
         
         if torch.cuda.is_available():
-            obs = torch.tensor(obs, requires_grad=False, dtype=torch.float32).to(device)
+            obs = torch.tensor(obs, dtype=torch.float32).to(device)
             model.to(device)
         else:
-            obs = torch.tensor(obs, requires_grad=False, dtype=torch.float32)
-
-        #obs = torch.nn.functional.normalize(obs)
-        #with torch.no_grad():
+            obs = torch.tensor(obs, dtype=torch.float32)
 
         with autocast():
             high_variable = model.forward(obs)
         
-            scaler = GradScaler()
+            #scaler = GradScaler()
             z = high_variable
 
             mean = obs.mean(); std = obs.std()
@@ -109,37 +106,63 @@ def main():
             else:
                 high_variable = high_variable.detach().numpy().tolist()
 
+            for i in range (len(high_variable)):
+                worker_copy = copy.deepcopy(worker)
+                worker_copy_list.append(worker_copy)
+
             ep_reward = worker.run_episode(high_variable, args)
-        
-            pertubed_high_variable = np.array(high_variable)
-            noise_weight = np.random.rand()
-            noise = np.random.randn(len(pertubed_high_variable)) * noise_weight # 1.5
-            pertubed_high_variable += noise
-            pertubed_high_variable = pertubed_high_variable.tolist()
 
-            pertubed_ep_reward = worker_copy.run_episode(pertubed_high_variable, args) #run_episode(env,goal)
-            #print(ep_reward); print(pertubed_ep_reward)
             if torch.cuda.is_available():
-                finite_diff_policy_grad = torch.tensor((pertubed_ep_reward - ep_reward)/noise, dtype=torch.float32).to(device)
+                #finite_diff_policy_grad = torch.tensor((pertubed_ep_reward - ep_reward)/noise, dtype=torch.float32).to(device)
+                finite_diff_policy_grad = torch.tensor(np.zeros(len(high_variable)), dtype=torch.float32).to(device)
             else:
-                finite_diff_policy_grad = torch.tensor((pertubed_ep_reward - ep_reward)/noise, dtype=torch.float32)
-            
-            loss = - model.compute_loss(finite_diff_policy_grad, z)
-        
+                #finite_diff_policy_grad = torch.tensor((pertubed_ep_reward - ep_reward)/noise, dtype=torch.float32)
+                finite_diff_policy_grad = torch.tensor(np.zeros(len(high_variable)), dtype=torch.float32)
+            #pertubed_high_variable = np.array(high_variable)
+            #pertubed_high_variable = np.zeros(len(high_variable))
+            for k in range(len(high_variable)):
+                unit_k = np.zeros(len(high_variable))
+                unit_k[k] = 1
+                noise_weight = np.random.rand()
+                #noise = np.random.randn(len(pertubed_high_variable)) * noise_weight
+                noise = np.random.randn() * noise_weight # 1.5
+                noise_vec = unit_k * noise
+                pertubed_high_variable = high_variable + noise_vec
+                pertubed_high_variable = pertubed_high_variable.tolist()
+
+                pertubed_ep_reward_k = worker_copy_list[k].run_episode(pertubed_high_variable, args) #run_episode(env,goal)
+                finite_diff_policy_grad_k = (pertubed_ep_reward_k - ep_reward)/noise
+                finite_diff_policy_grad[k] = finite_diff_policy_grad_k
+                
+            loss = model.compute_loss(-finite_diff_policy_grad, z)
+            #loss = z.sum()
+
         optimizer.zero_grad()
-        scaler.scale(loss).backward()
 
-        scaler.unscale_(optimizer)
-        grad_norm = torch.nn.utils.clip_grad_norm_(model.high_policy.parameters(), max_norm=0.5, norm_type=2) # 0.5
+        #torch.autograd.set_detect_anomaly(True)
+        #with torch.autograd.detect_anomaly():
+            #scaler.scale(loss).backward()
+        loss.backward()
 
-        scaler.step(optimizer)
+        #for param in model.high_policy.parameters():
+            #print(param.grad)
+            #if param.grad is not None and torch.isnan(param.grad).any():
+                #print("nan gradient found")
 
-        scale = scaler.get_scale()
-        scaler.update()
+        #scaler.unscale_(optimizer)
+        #grad_norm = torch.nn.utils.clip_grad_norm_(model.high_policy.parameters(), max_norm=10, norm_type=2) # 0.5
+        #torch.nn.utils.clip_grad_value_(model.high_policy.parameters(), 0.5)
+        grad_norm = torch.nn.utils.clip_grad_norm_(model.high_policy.parameters(), max_norm=0.5, norm_type=2)
 
-        skip_lr_sched = (scale > scaler.get_scale())
-        if not skip_lr_sched:
-            lr_decay.step() #scheduler.step()
+        optimizer.step()
+        #scaler.step(optimizer)
+
+        #scale = scaler.get_scale()
+        #scaler.update()
+
+        #skip_lr_sched = (scale > scaler.get_scale())
+        #if not skip_lr_sched:
+        lr_decay.step() #scheduler.step()
         #lr_decay.step()
         best_model = copy.deepcopy(model)
 
@@ -149,6 +172,7 @@ def main():
             wandb.log({"travese_time": high_variable[-1]})
             wandb.log({"py": high_variable[1]})
             wandb.log({"episode": episode_i})
+            wandb.log({"grad_norm": grad_norm})
 
             wandb.watch(model, log='all', log_freq=1)
 
@@ -160,7 +184,7 @@ def main():
                 #torch.save(best_model, model_path / 'best_model.pth')
                 path_checkpoint = "./" + model_path + "/best_model.pth"
                 #torch.save(best_model, path_checkpoint)
-                torch.save(model.state_dict(), path_checkpoint)
+                torch.save(best_model.state_dict(), path_checkpoint)
                 print('Saved model', end='\n')
 
     if args.run_wandb:

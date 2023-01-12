@@ -33,6 +33,7 @@ class Worker_Train:
 
             if (done):
                 #plt.close()
+                print("==========episode of worker is finished==========")
                 break
                 
             #t_now = time.time()

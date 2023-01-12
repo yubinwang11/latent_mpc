@@ -28,7 +28,7 @@ from worker import Worker_Train
 
 def arg_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--run_wandb', type=bool, default=True,
+    parser.add_argument('--run_wandb', type=bool, default=False,
                         help="Monitor by wandb")
     parser.add_argument('--episode_num', type=float, default=10000,
                         help="Number of episode")

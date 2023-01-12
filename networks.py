@@ -8,7 +8,7 @@ def create_mlp(
     input_dim: int,
     output_dim: int,
     net_arch: List[int],
-    activation_fn: Type[nn.Module] = nn.Tanh #nn.LeakyReLU
+    activation_fn: Type[nn.Module] = nn.LeakyReLU #nn.LeakyReLU
 ) -> List[nn.Module]:
 
     if len(net_arch) > 0:
@@ -42,6 +42,7 @@ class DNN(nn.Module):
             std = obs.std()
             normalized_obs = (obs - mean)/std
             z = self.high_policy(normalized_obs)
+            #z = self.high_policy(obs)
             #z = normalized_z*std + mean
             
             return z

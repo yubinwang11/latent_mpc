@@ -220,7 +220,7 @@ class MergeEnv(object):
                 reward -= 10
             else:
                 reward -= 3
-
+        
         if step_i == 0:
             out_of_road_up, out_of_road_down = self._check_out_of_road(high_variable[kpy])
             if (out_of_road_up):
@@ -228,6 +228,7 @@ class MergeEnv(object):
             elif  (out_of_road_down):
                 reward -= np.linalg.norm(high_variable[kpy]- (-self.lane_len + self.vehicle_length/2))
         
+
         # observation
         self.obs = []
         self.obs += self.vehicle_state[kpx:kphi+1] # px, py, heading of init pos
