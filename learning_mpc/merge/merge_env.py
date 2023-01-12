@@ -26,7 +26,7 @@ class MergeEnv(object):
         self.plan_dt = 0.1 # Sampling time step for MPC and local planner
 
         # simulation parameters ....
-        self.sim_T = 10 #7.5 #1.5        # Episode length, seconds
+        self.sim_T = 12 #7.5 #1.5        # Episode length, seconds
         self.sim_dt = 0.1 #0.02      # simulation time step
         self.max_episode_steps = int(self.sim_T/self.sim_dt)
 

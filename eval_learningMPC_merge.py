@@ -52,10 +52,12 @@ def eval_learningMPC(args):
                                 net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
     
     #model_path = "./" + "models/" + "standardRL"
-    #print('Loading Model...')
+    print('Loading Model...')
     #checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
     #model.load_state_dict(checkpoint['model'])
     #model = checkpoint['model']
+    #model = Model() # 先初始化一个模型，这边的 Model() 指代你的 pytorch 模型
+    model.load_state_dict(torch.load(path))
 
     worker = Worker_Eval(env)
 

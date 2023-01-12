@@ -130,7 +130,7 @@ def main():
         scaler.scale(loss).backward()
 
         scaler.unscale_(optimizer)
-        grad_norm = torch.nn.utils.clip_grad_norm_(model.high_policy.parameters(), max_norm=10, norm_type=2) # 0.5
+        grad_norm = torch.nn.utils.clip_grad_norm_(model.high_policy.parameters(), max_norm=0.5, norm_type=2) # 0.5
 
         scaler.step(optimizer)
 
@@ -159,7 +159,8 @@ def main():
                 model_path = "models/standardRL"
                 #torch.save(best_model, model_path / 'best_model.pth')
                 path_checkpoint = "./" + model_path + "/best_model.pth"
-                torch.save(best_model, path_checkpoint)
+                #torch.save(best_model, path_checkpoint)
+                torch.save(model.state_dict(), path_checkpoint)
                 print('Saved model', end='\n')
 
     if args.run_wandb:

@@ -28,9 +28,9 @@ from worker import Worker_Train
 
 def arg_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--run_wandb', type=bool, default=False,
+    parser.add_argument('--run_wandb', type=bool, default=True,
                         help="Monitor by wandb")
-    parser.add_argument('--episode_num', type=float, default=1000,
+    parser.add_argument('--episode_num', type=float, default=10000,
                         help="Number of episode")
     parser.add_argument('--save_model_window', type=float, default=32,
                         help="Play animation")
@@ -40,17 +40,14 @@ def arg_parser():
 
 def main():
 
-    curriculum_mode_list = ['easy', 'medium', 'hard']
-
     args = arg_parser().parse_args()
-    #if args.use_crl:
-        #curriculum_mode = curriculum_mode_list[0]
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     num_episode = args.episode_num
 
-    env = MergeEnv()
+    env_mode = 'general'
+    env = MergeEnv(curriculum_mode=env_mode)
 
     obs=env.reset()
     NET_ARCH = [128, 128, 128, 128]
@@ -63,7 +60,7 @@ def main():
                                 output_dim=nn_output_dim,
                                 net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
 
-    learning_rate = 1e-4
+    learning_rate = 3e-4
     optimizer = optim.Adam(model.high_policy.parameters(), lr=learning_rate)
     DECAY_STEP = args.save_model_window # 32
     lr_decay = optim.lr_scheduler.StepLR(optimizer, step_size=DECAY_STEP, gamma=0.96)
@@ -75,92 +72,102 @@ def main():
         project="crl_mpc_test",
         entity="yubinwang",
         # track hyperparameters and run metadata
-        #config={
+        config={
         #"learning_rate": learning_rate,
-        #}
+        "exp_decay": env.sigma,
+        }
     )
 
-    obs = None
-
     for episode_i in range(num_episode):
-    
-        env = MergeEnv()
+        
+        if episode_i <= 500:
+            env_mode = 'easy'
+        elif 500 < episode_i <= 3000:
+            env_mode = 'medium'
+        else:
+            env_mode = 'hard'
+
+        env = MergeEnv(curriculum_mode=env_mode)
         obs=env.reset()
 
         worker = Worker_Train(env)
         worker_copy = copy.deepcopy(worker)
         
-        #obs = torch.tensor(obs, requires_grad=False, dtype=torch.float32)
-
         if torch.cuda.is_available():
             obs = torch.tensor(obs, requires_grad=False, dtype=torch.float32).to(device)
-            #obs.cuda()
             model.to(device)
-            #model.cuda()
         else:
             obs = torch.tensor(obs, requires_grad=False, dtype=torch.float32)
 
+        #obs = torch.nn.functional.normalize(obs)
         #with torch.no_grad():
+
         with autocast():
             high_variable = model.forward(obs)
-            scaler = GradScaler()
-        #with autocast():
-            loss = -high_variable.sum()
-            #loss.requires_grad_(True)
-
-        if torch.cuda.is_available():
-            high_variable = high_variable.cpu().detach().numpy().tolist()
-        else:
-            high_variable = high_variable.detach().numpy().tolist()
-
-        ep_reward = worker.run_episode(high_variable, args)
         
-        if args.run_wandb:
-            wandb.log({"episode reward": ep_reward})
-            wandb.log({"z_loss": loss})
-            wandb.watch(model)
+            scaler = GradScaler()
+            z = high_variable
 
-        pertubed_high_variable = np.array(high_variable)
-        noise_weight = np.random.rand()
-        noise = np.random.randn(len(pertubed_high_variable)) * noise_weight # 1.5
-        pertubed_high_variable += noise
-        pertubed_high_variable = pertubed_high_variable.tolist()
+            mean = obs.mean(); std = obs.std()
+            high_variable = high_variable*std + mean
 
-        pertubed_ep_reward = worker_copy.run_episode(pertubed_high_variable, args) #run_episode(env,goal)
-        #print(ep_reward); print(pertubed_ep_reward)
-        if torch.cuda.is_available():
-            finite_diff_policy_grad = torch.tensor(pertubed_ep_reward - ep_reward).to(device)
-        else:
-            finite_diff_policy_grad = torch.tensor(pertubed_ep_reward - ep_reward)
+            if torch.cuda.is_available():
+                high_variable = high_variable.cpu().detach().numpy().tolist()
+            else:
+                high_variable = high_variable.detach().numpy().tolist()
+
+            ep_reward = worker.run_episode(high_variable, args)
+        
+            pertubed_high_variable = np.array(high_variable)
+            noise_weight = np.random.rand()
+            noise = np.random.randn(len(pertubed_high_variable)) * noise_weight # 1.5
+            pertubed_high_variable += noise
+            pertubed_high_variable = pertubed_high_variable.tolist()
+
+            pertubed_ep_reward = worker_copy.run_episode(pertubed_high_variable, args) #run_episode(env,goal)
+            #print(ep_reward); print(pertubed_ep_reward)
+            if torch.cuda.is_available():
+                finite_diff_policy_grad = torch.tensor((pertubed_ep_reward - ep_reward)/noise, dtype=torch.float32).to(device)
+            else:
+                finite_diff_policy_grad = torch.tensor((pertubed_ep_reward - ep_reward)/noise, dtype=torch.float32)
+            
+            loss = - model.compute_loss(finite_diff_policy_grad, z)
         
         optimizer.zero_grad()
         scaler.scale(loss).backward()
-        #loss.backward()
-
-        for param in model.high_policy.parameters():
-            #print(param.grad.data)
-            param.grad.data *= finite_diff_policy_grad
-            #print(param.grad.data)
 
         scaler.unscale_(optimizer)
-            
-        grad_norm = torch.nn.utils.clip_grad_norm_(model.high_policy.parameters(), max_norm=10, norm_type=2)
-
-        #for param in model.high_policy.parameters():
-            #print(param.grad.data)
+        grad_norm = torch.nn.utils.clip_grad_norm_(model.high_policy.parameters(), max_norm=0.5, norm_type=2) # 0.5
 
         scaler.step(optimizer)
+
+        scale = scaler.get_scale()
         scaler.update()
 
+        skip_lr_sched = (scale > scaler.get_scale())
+        if not skip_lr_sched:
+            lr_decay.step() #scheduler.step()
+        #lr_decay.step()
         best_model = copy.deepcopy(model)
-        lr_decay.step()
+
+        if args.run_wandb:
+            wandb.log({"episode reward": ep_reward})
+            wandb.log({"z_loss": loss})
+            wandb.log({"travese_time": high_variable[-1]})
+            wandb.log({"py": high_variable[1]})
+            wandb.log({"episode": episode_i})
+
+            wandb.watch(model, log='all', log_freq=1)
 
         if args.save_model:
 
             if episode_i > 0 and episode_i % args.save_model_window == 0: ##default 100
                 print('Saving model', end='\n')
-                model_path = "./" + "models/" + "standardRL"
-                torch.save(best_model, model_path / 'best_model.pth')
+                model_path = "models/standardRL"
+                #torch.save(best_model, model_path / 'best_model.pth')
+                path_checkpoint = "./" + model_path + "/best_model.pth"
+                #torch.save(best_model, path_checkpoint)
+                torch.save(model.state_dict(), path_checkpoint)
                 print('Saved model', end='\n')
 
     if args.run_wandb:
