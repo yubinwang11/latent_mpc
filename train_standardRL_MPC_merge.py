@@ -130,7 +130,7 @@ def main():
         scaler.scale(loss).backward()
 
         scaler.unscale_(optimizer)
-        grad_norm = torch.nn.utils.clip_grad_norm_(model.high_policy.parameters(), max_norm=0.5, norm_type=2)
+        grad_norm = torch.nn.utils.clip_grad_norm_(model.high_policy.parameters(), max_norm=10, norm_type=2) # 0.5
 
         scaler.step(optimizer)
         scaler.update()
@@ -143,14 +143,18 @@ def main():
             wandb.log({"z_loss": loss})
             wandb.log({"travese_time": high_variable[-1]})
             wandb.log({"py": high_variable[1]})
-            wandb.watch(model)
+            wandb.log({"episode": episode_i})
+
+            wandb.watch(model, log='all', log_freq=1)
 
         if args.save_model:
 
             if episode_i > 0 and episode_i % args.save_model_window == 0: ##default 100
                 print('Saving model', end='\n')
-                model_path = "./" + "models/" + "standardRL"
-                torch.save(best_model, model_path / 'best_model.pth')
+                model_path = "models/standardRL"
+                #torch.save(best_model, model_path / 'best_model.pth')
+                path_checkpoint = "./" + model_path + "/best_model.pth"
+                torch.save(best_model, path_checkpoint)
                 print('Saved model', end='\n')
 
     if args.run_wandb:
