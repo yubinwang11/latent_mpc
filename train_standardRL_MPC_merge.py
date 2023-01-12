@@ -60,7 +60,7 @@ def main():
                                 output_dim=nn_output_dim,
                                 net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
 
-    learning_rate = 1e-4
+    learning_rate = 3e-4
     optimizer = optim.Adam(model.high_policy.parameters(), lr=learning_rate)
     DECAY_STEP = args.save_model_window # 32
     lr_decay = optim.lr_scheduler.StepLR(optimizer, step_size=DECAY_STEP, gamma=0.96)
@@ -133,10 +133,15 @@ def main():
         grad_norm = torch.nn.utils.clip_grad_norm_(model.high_policy.parameters(), max_norm=10, norm_type=2) # 0.5
 
         scaler.step(optimizer)
+
+        scale = scaler.get_scale()
         scaler.update()
 
+        skip_lr_sched = (scale > scaler.get_scale())
+        if not skip_lr_sched:
+            lr_decay.step() #scheduler.step()
+        #lr_decay.step()
         best_model = copy.deepcopy(model)
-        lr_decay.step()
 
         if args.run_wandb:
             wandb.log({"episode reward": ep_reward})

@@ -8,7 +8,7 @@ def create_mlp(
     input_dim: int,
     output_dim: int,
     net_arch: List[int],
-    activation_fn: Type[nn.Module] = nn.LeakyReLU
+    activation_fn: Type[nn.Module] = nn.Tanh #nn.LeakyReLU
 ) -> List[nn.Module]:
 
     if len(net_arch) > 0:
