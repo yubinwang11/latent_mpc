@@ -167,13 +167,7 @@ def main():
         best_model = copy.deepcopy(model)
 
         if args.run_wandb:
-            wandb.log({"episode reward": ep_reward})
-            wandb.log({"z_loss": loss})
-            wandb.log({"travese_time": high_variable[-1]})
-            wandb.log({"py": high_variable[1]})
-            wandb.log({"episode": episode_i})
-            wandb.log({"grad_norm": grad_norm})
-
+            wandb.log({"episode": episode_i, "episode reward": ep_reward, "z_loss": loss, "travese_time": high_variable[-1], "py": high_variable[1], "grad_norm": grad_norm})
             wandb.watch(model, log='all', log_freq=1)
 
         if args.save_model:

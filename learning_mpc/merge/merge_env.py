@@ -227,7 +227,9 @@ class MergeEnv(object):
                 reward -= np.linalg.norm(high_variable[kpy]- (self.lane_len - self.vehicle_length/2))
             elif  (out_of_road_down):
                 reward -= np.linalg.norm(high_variable[kpy]- (-self.lane_len + self.vehicle_length/2))
-        
+
+            if high_variable[-1] > self.sim_T or high_variable[-1] < 0:
+                reward -= min(abs(high_variable[-1]-self.sim_T), abs(high_variable[-1]-0))
 
         # observation
         self.obs = []
