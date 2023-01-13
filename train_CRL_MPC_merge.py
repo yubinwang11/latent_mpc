@@ -28,12 +28,12 @@ from worker import Worker_Train
 
 def arg_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--run_wandb', type=bool, default=False,
+    parser.add_argument('--run_wandb', type=bool, default=True,
                         help="Monitor by wandb")
-    parser.add_argument('--episode_num', type=float, default=10000,
+    parser.add_argument('--episode_num', type=float, default=1000,
                         help="Number of episode")
     parser.add_argument('--save_model_window', type=float, default=32,
-                        help="Play animation")
+                        help="The time gap of saving a model")
     parser.add_argument('--save_model', type=bool, default=True,
                         help="Save the model of nn")
     parser.add_argument('--load_model', type=bool, default=True,
