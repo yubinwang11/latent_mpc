@@ -26,7 +26,7 @@ class MergeEnv(object):
         self.plan_dt = 0.1 # Sampling time step for MPC and local planner
 
         # simulation parameters ....
-        self.sim_T = 12 #7.5 #1.5        # Episode length, seconds
+        self.sim_T = 15 #7.5 #1.5        # Episode length, seconds
         self.sim_dt = 0.1 #0.02      # simulation time step
         self.max_episode_steps = int(self.sim_T/self.sim_dt)
 
@@ -62,11 +62,11 @@ class MergeEnv(object):
         elif curriculum_mode == 'easy':
             # Sampling range of the chance's initial position
             self.c_xy_dist = np.array(
-                [ [27, 33]]   # x
+                [ [30, 33]]   # x
             )
             # Sampling range of the chance's initial velocity
             self.c_vxy_dist = np.array(
-                [ [1.0, 3.0]  # vx
+                [ [0.0, 0.0]  # vx
                 ] 
             )
 
@@ -133,7 +133,7 @@ class MergeEnv(object):
         self.high_variable_pos = None
         
         ## Planner 
-        self.sigma = 10 # 10
+        self.sigma = 3 # 10
 
         #self.goal = np.array([2, 3.0, 0, 3.0, 0.0, 0.0])
         self.goal = np.array([30,self.lane_len/2, 0, self.chance_vel, 0.0, 0.0])
@@ -217,9 +217,9 @@ class MergeEnv(object):
         # sparse reward for collision avoidance 
         if (collision):
             if self.vehicle_state[kvx] >= 0:
-                reward -= 10
+                reward -= 5
             else:
-                reward -= 3
+                reward -= 2
         
         if step_i == 0:
             out_of_road_up, out_of_road_down = self._check_out_of_road(high_variable[kpy])
@@ -255,11 +255,15 @@ class MergeEnv(object):
             }
 
         done = False
-        if np.linalg.norm(np.array(self.goal) - np.array(self.vehicle_state)) < 1.25:
+        if np.linalg.norm(np.array(self.goal[0:3]) - np.array(self.vehicle_state)[0:3]) < 0.2: #1.25
             done = True
+            
             reward += 100
         elif self.t >= (self.sim_T-self.sim_dt):
             done = True
+        
+        if (done):
+            reward -= current_t
 
         return self.obs, reward, done, info
     

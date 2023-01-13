@@ -46,8 +46,8 @@ class High_MPC(object):
             0.1]) # delta_omega
         
         self._Q_gap = np.diag([
-            100, 100,  # delta_x, delta_y 100 100
-            10]) # delta_omega #0, 100, 100,  # delta_x, delta_y, delta_z
+            500, 500,  # delta_x, delta_y 100 100
+            50]) # delta_omega #0, 100, 100,  # delta_x, delta_y, delta_z
             #10, 10, 10, 10, # delta_qw, delta_qx, delta_qy, delta_qz
             #0, 10, 10]) # delta_vx, delta_vy, delta_vz
         # cost matrix for the action

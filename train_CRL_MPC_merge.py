@@ -28,7 +28,7 @@ from worker import Worker_Train
 
 def arg_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--run_wandb', type=bool, default=True,
+    parser.add_argument('--run_wandb', type=bool, default=False,
                         help="Monitor by wandb")
     parser.add_argument('--episode_num', type=float, default=10000,
                         help="Number of episode")
@@ -36,6 +36,8 @@ def arg_parser():
                         help="Play animation")
     parser.add_argument('--save_model', type=bool, default=True,
                         help="Save the model of nn")
+    parser.add_argument('--load_model', type=bool, default=True,
+                        help="Load the trained model of nn")
     return parser
 
 def main():
@@ -65,6 +67,18 @@ def main():
     DECAY_STEP = args.save_model_window # 32
     lr_decay = optim.lr_scheduler.StepLR(optimizer, step_size=DECAY_STEP, gamma=0.96)
 
+    if args.load_model:
+        model_path = "./" + "models/" + "CRL/"
+        print('Loading Model...')
+        if torch.cuda.is_available():
+            checkpoint = torch.load(model_path + '/checkpoint.pth')
+        else:
+            checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
+        model.load_state_dict(checkpoint['model'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        lr_decay.load_state_dict(checkpoint['lr_decay'])
+        curr_episode = checkpoint['episode']
+        print("curr_episode set to ", curr_episode)
 
     if args.run_wandb:
         wandb.init(
@@ -179,7 +193,7 @@ def main():
         best_model = copy.deepcopy(model)
 
         if args.run_wandb:
-            wandb.log({"episode": episode_i, "episode reward": ep_reward, "z_loss": loss, "travese_time": high_variable[-1], "py": high_variable[1], "grad_norm": grad_norm})
+            wandb.log({"episode": episode_i, "episode reward": ep_reward, "z_loss": loss, "travese_time": high_variable[-1], "px":high_variable[0], "py": high_variable[1], "grad_norm": grad_norm})
             wandb.watch(model, log='all', log_freq=1)
 
         if args.save_model:

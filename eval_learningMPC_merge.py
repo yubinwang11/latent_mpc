@@ -21,7 +21,7 @@ from worker import Worker_Eval, Worker_Train
 
 def arg_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--visualization', type=bool, default=False,
+    parser.add_argument('--visualization', type=bool, default=True,
                         help="Play animation")
     parser.add_argument('--save_video', type=bool, default=False,
                         help="Save the animation as a video file")
@@ -34,9 +34,8 @@ def main():
     eval_learningMPC(args)
 
 def eval_learningMPC(args):
-    
 
-    env_mode = 'general'
+    env_mode = 'easy'
     env = MergeEnv(curriculum_mode=env_mode)
     obs=env.reset()
 
@@ -53,7 +52,7 @@ def eval_learningMPC(args):
     
     model_path = "./" + "models/" + "CRL/"
     print('Loading Model...')
-    checkpoint = torch.load(model_path + '/checkpoint.pth')
+    checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
     model.load_state_dict(checkpoint['model'])
 
     worker = Worker_Eval(env)
@@ -64,6 +63,7 @@ def eval_learningMPC(args):
     high_variable = high_variable*std + mean
 
     high_variable = high_variable.detach().numpy().tolist()
+    #high_variable[-1] = 5
 
     #worker.run_episode(high_variable, args)
 
