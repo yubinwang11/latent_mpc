@@ -63,15 +63,12 @@ class Worker_Eval:
             t = self.env.sim_dt * n
             n += 1
         
-            #print("current obs: ", obs)
-            #print("current high_variable: ", high_variable)
             obs, reward,  done, info = self.env.step(high_variable, step_i)
             step_i += 1
 
             ep_reward += reward
             print("current reward: ", reward, "ep_reward:", ep_reward)
         
-
             if (done):
                 #plt.close()
                 break
@@ -80,14 +77,10 @@ class Worker_Eval:
             #print(t_now - t0)
             #t0 = time.time()
             
-            
-            if args.visualization:
-                update = False
-                if t > self.env.sim_T:
-                        update = True
-                yield [info, t, update, ep_reward]
-            
-    
+            #if args.visualization:
+            update = False
+                #if t > self.env.sim_T:
+                        #update = True
+            yield [info, t, update, ep_reward]
+        
         #print("arrvied: ", arrived)
-    
-        return ep_reward

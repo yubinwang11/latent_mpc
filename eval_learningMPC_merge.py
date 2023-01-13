@@ -17,11 +17,11 @@ import torch
 from learning_mpc.merge.merge_env import MergeEnv
 from learning_mpc.merge.animation_merge import SimVisual
 from networks import DNN
-from worker import Worker_Eval
+from worker import Worker_Eval, Worker_Train
 
 def arg_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--visualization', type=bool, default=True,
+    parser.add_argument('--visualization', type=bool, default=False,
                         help="Play animation")
     parser.add_argument('--save_video', type=bool, default=False,
                         help="Save the animation as a video file")
@@ -51,38 +51,35 @@ def eval_learningMPC(args):
                                 output_dim=nn_output_dim,
                                 net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
     
-    #model_path = "./" + "models/" + "standardRL"
+    model_path = "./" + "models/" + "CRL/"
     print('Loading Model...')
-    #checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
-    #model.load_state_dict(checkpoint['model'])
-    #model = checkpoint['model']
-    #model = Model() # 先初始化一个模型，这边的 Model() 指代你的 pytorch 模型
-    model.load_state_dict(torch.load(path))
+    checkpoint = torch.load(model_path + '/checkpoint.pth')
+    model.load_state_dict(checkpoint['model'])
 
     worker = Worker_Eval(env)
 
-    obs = torch.tensor(obs, requires_grad=False, dtype=torch.float32)
+    obs = torch.tensor(obs, dtype=torch.float32)
     mean = obs.mean(); std = obs.std()
     high_variable = model.forward(obs)
     high_variable = high_variable*std + mean
 
     high_variable = high_variable.detach().numpy().tolist()
 
-    worker.run_episode(high_variable, args)
+    #worker.run_episode(high_variable, args)
 
-    if args.visualization:
-        sim_visual = SimVisual(env)
-        #
-        run_frame = partial(worker.run_episode, high_variable, args)
-        ani = animation.FuncAnimation(sim_visual.fig, sim_visual.update, frames=run_frame,
-                                    init_func=sim_visual.init_animate, interval=100, blit=True, repeat=False)
-        
-        plt.tight_layout()
-        plt.show()
+    #if args.visualization:
+    sim_visual = SimVisual(worker.env)
+    #
+    run_frame = partial(worker.run_episode, high_variable, args)
+    ani = animation.FuncAnimation(sim_visual.fig, sim_visual.update, frames=run_frame,
+                                init_func=sim_visual.init_animate, interval=100, blit=True, repeat=False)
+    
+    plt.tight_layout()
+    plt.show()
     
     if args.save_video:
         writer = animation.writers["ffmpeg"]
-        writer = writer(fps=10, metadata=dict(artist='Yubin Wang'), bitrate=1800)
+        writer = writer(fps=10, metadata=dict(artist='Me'), bitrate=1800)
         ani.save("learningMPC_merge.mp4", writer=writer)
 
     

@@ -28,7 +28,7 @@ from worker import Worker_Train
 
 def arg_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--run_wandb', type=bool, default=True,
+    parser.add_argument('--run_wandb', type=bool, default=False,
                         help="Monitor by wandb")
     parser.add_argument('--episode_num', type=float, default=10000,
                         help="Number of episode")
@@ -80,7 +80,9 @@ def main():
 
     for episode_i in range(num_episode):
     
-        env = MergeEnv()
+        env_mode = 'general'
+        env = MergeEnv(curriculum_mode=env_mode)
+
         obs=env.reset()
 
         worker = Worker_Train(env)
@@ -144,8 +146,8 @@ def main():
             #scaler.scale(loss).backward()
         loss.backward()
 
-        #for param in model.high_policy.parameters():
-            #print(param.grad)
+        for param in model.high_policy.parameters():
+            print(param.grad)
             #if param.grad is not None and torch.isnan(param.grad).any():
                 #print("nan gradient found")
 
@@ -173,12 +175,21 @@ def main():
         if args.save_model:
 
             if episode_i > 0 and episode_i % args.save_model_window == 0: ##default 100
-                print('Saving model', end='\n')
-                model_path = "models/standardRL"
+                #print('Saving model', end='\n')
+                model_path = "models/CRL"
                 #torch.save(best_model, model_path / 'best_model.pth')
-                path_checkpoint = "./" + model_path + "/best_model.pth"
+                #path_checkpoint = "./" + model_path + "/best_model.pth"
                 #torch.save(best_model, path_checkpoint)
-                torch.save(best_model.state_dict(), path_checkpoint)
+                #torch.save(best_model.state_dict(), path_checkpoint)
+                #print('Saved model', end='\n')
+                print('Saving model', end='\n')
+                checkpoint = {"model": model.state_dict(),
+                              "optimizer": optimizer.state_dict(),
+                              "episode": episode_i,
+                              "lr_decay": lr_decay.state_dict()}
+
+                path_checkpoint = "./" + model_path + "/checkpoint.pth"
+                torch.save(checkpoint, path_checkpoint)
                 print('Saved model', end='\n')
 
     if args.run_wandb:
@@ -186,4 +197,3 @@ def main():
     
 if __name__ == "__main__":
     main()
-    
