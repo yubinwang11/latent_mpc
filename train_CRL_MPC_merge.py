@@ -30,13 +30,13 @@ def arg_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--run_wandb', type=bool, default=True,
                         help="Monitor by wandb")
-    parser.add_argument('--episode_num', type=float, default=1000,
+    parser.add_argument('--episode_num', type=float, default=10000,
                         help="Number of episode")
     parser.add_argument('--save_model_window', type=float, default=32,
                         help="The time gap of saving a model")
     parser.add_argument('--save_model', type=bool, default=True,
                         help="Save the model of nn")
-    parser.add_argument('--load_model', type=bool, default=True,
+    parser.add_argument('--load_model', type=bool, default=False,
                         help="Load the trained model of nn")
     return parser
 
@@ -44,11 +44,11 @@ def main():
 
     args = arg_parser().parse_args()
 
-    device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda:3' if torch.cuda.is_available() else 'cpu')
 
     num_episode = args.episode_num
 
-    env_mode = 'medium'
+    env_mode = 'easy'
     env = MergeEnv(curriculum_mode=env_mode)
 
     obs=env.reset()
@@ -83,7 +83,7 @@ def main():
     if args.run_wandb:
         wandb.init(
         # set the wandb project where this run will be logged
-        project="crl_mpc_test",
+        project="crl_mpc_training",
         entity="yubinwang",
         # track hyperparameters and run metadata
         config={
@@ -96,7 +96,7 @@ def main():
 
     for episode_i in range(num_episode):
         
-        env_mode = 'medium'
+        env_mode = 'easy'
 
         #if episode_i <= 1000:
             #env_mode = 'easy'
@@ -105,6 +105,8 @@ def main():
            # env_mode = 'medium'
         #else:
             #env_mode = 'hard'
+        if episode_i >= 1000:
+            env_mode = 'medium'
         
         env = MergeEnv(curriculum_mode=env_mode)
         obs=env.reset()
@@ -178,7 +180,7 @@ def main():
         #scaler.unscale_(optimizer)
         #grad_norm = torch.nn.utils.clip_grad_norm_(model.high_policy.parameters(), max_norm=10, norm_type=2) # 0.5
         #torch.nn.utils.clip_grad_value_(model.high_policy.parameters(), 0.5)
-        grad_norm = torch.nn.utils.clip_grad_norm_(model.high_policy.parameters(), max_norm=0.5, norm_type=2)
+        grad_norm = torch.nn.utils.clip_grad_norm_(model.high_policy.parameters(), max_norm=10, norm_type=2)
 
         optimizer.step()
         #scaler.step(optimizer)

@@ -82,11 +82,11 @@ class MergeEnv(object):
         elif curriculum_mode == 'medium':
             # Sampling range of the chance's initial position
             self.c_xy_dist = np.array(
-                [ [40, 70]]   # x
+                [ [20, 40]]   # x
             )
             # Sampling range of the chance's initial velocity
             self.c_vxy_dist = np.array(
-                [ [0.0, 0]  # vx
+                [ [0.0, 4]  # vx
                 ] 
             )
 
@@ -236,6 +236,9 @@ class MergeEnv(object):
             else:
                 reward -= abs(high_variable[-1])
 
+            if high_variable[2] > np.pi/2 or high_variable[2] < -np.pi/2:
+                reward -= 5 * min(abs(high_variable[2]-np.pi/2),abs(high_variable[2]-(-np.pi/2)))
+
 
         # observation
         self.obs = []
@@ -265,7 +268,7 @@ class MergeEnv(object):
             done = True
             reward += 100
 
-            dist_x = np.linalg.norm(np.array(high_variable[0]) - np.array(self.chance_pos)[0])
+            dist_x = np.linalg.norm(np.array(high_variable[0])-np.array(self.chance_pos[0]))
             reward -= dist_x
             
         elif self.t >= (self.sim_T-self.sim_dt):
