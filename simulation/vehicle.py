@@ -63,7 +63,7 @@ class Bicycle_Dynamics(object):
         elif curriculum_mode == 'medium':
             # Sampling range of the vehicle's initial position
             self._xy_dist = np.array(
-                [ [15, 42]]   # x
+                [ [5, 15]]   # x
             )
             # Sampling range of the vehicle's initial velocity
             self._vxy_dist = np.array(

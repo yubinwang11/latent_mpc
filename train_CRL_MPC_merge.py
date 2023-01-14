@@ -48,7 +48,7 @@ def main():
 
     num_episode = args.episode_num
 
-    env_mode = 'general'
+    env_mode = 'medium'
     env = MergeEnv(curriculum_mode=env_mode)
 
     obs=env.reset()
@@ -92,21 +92,21 @@ def main():
         }
     )
 
+    #env = None
+
     for episode_i in range(num_episode):
         
-        env_mode = 'general'
+        env_mode = 'medium'
 
-        if episode_i <= 1000:
-            env_mode = 'easy'
+        #if episode_i <= 1000:
+            #env_mode = 'easy'
 
-        elif 1000 < episode_i <= 4000:
-            env_mode = 'medium'
-        else:
-            env_mode = 'hard'
+        #elif 1000 < episode_i <= 4000:
+           # env_mode = 'medium'
+        #else:
+            #env_mode = 'hard'
         
         env = MergeEnv(curriculum_mode=env_mode)
-        
-        env = MergeEnv()
         obs=env.reset()
 
         worker = Worker_Train(env)
@@ -149,9 +149,9 @@ def main():
             for k in range(len(high_variable)):
                 unit_k = np.zeros(len(high_variable))
                 unit_k[k] = 1
-                noise_weight = np.random.rand()
+                #noise_weight = np.random.rand()
                 #noise = np.random.randn(len(pertubed_high_variable)) * noise_weight
-                noise = np.random.randn() * noise_weight # 1.5
+                noise = np.random.randn() #* noise_weight # 1.5
                 noise_vec = unit_k * noise
                 pertubed_high_variable = high_variable + noise_vec
                 pertubed_high_variable = pertubed_high_variable.tolist()

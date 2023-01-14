@@ -28,7 +28,7 @@ class Worker_Train:
             obs, reward,  done, info = self.env.step(high_variable, step_i)
             step_i += 1
             ep_reward += reward
-            print("current reward: ", reward, "ep_reward:", ep_reward)
+            print("current time:", t, "current reward: ", reward, "ep_reward:", ep_reward)
         
 
             if (done):
@@ -67,7 +67,7 @@ class Worker_Eval:
             step_i += 1
 
             ep_reward += reward
-            print("current reward: ", reward, "ep_reward:", ep_reward)
+            print("current time:", t, "current reward: ", reward, "ep_reward:", ep_reward)
         
             if (done):
                 #plt.close()

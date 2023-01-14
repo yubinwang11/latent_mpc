@@ -82,11 +82,11 @@ class MergeEnv(object):
         elif curriculum_mode == 'medium':
             # Sampling range of the chance's initial position
             self.c_xy_dist = np.array(
-                [ [20, 40]]   # x
+                [ [40, 70]]   # x
             )
             # Sampling range of the chance's initial velocity
             self.c_vxy_dist = np.array(
-                [ [0.0, 4]  # vx
+                [ [0.0, 0]  # vx
                 ] 
             )
 
@@ -263,7 +263,6 @@ class MergeEnv(object):
         done = False
         if np.linalg.norm(np.array(self.goal[0:3]) - np.array(self.vehicle_state)[0:3]) < np.pi/2: #1.25
             done = True
-            
             reward += 100
         elif self.t >= (self.sim_T-self.sim_dt):
             done = True

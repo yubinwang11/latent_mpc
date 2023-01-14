@@ -35,7 +35,7 @@ def main():
 
 def eval_learningMPC(args):
 
-    env_mode = 'easy'
+    env_mode = 'medium'
     env = MergeEnv(curriculum_mode=env_mode)
     obs=env.reset()
 
@@ -63,7 +63,8 @@ def eval_learningMPC(args):
     high_variable = high_variable*std + mean
 
     high_variable = high_variable.detach().numpy().tolist()
-    #high_variable[-1] = 0.2
+    #high_variable[0] += 20
+    #high_variable[-1] = 3
     #print(high_variable[-1])
 
     #worker.run_episode(high_variable, args)
