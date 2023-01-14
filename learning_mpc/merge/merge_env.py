@@ -231,7 +231,11 @@ class MergeEnv(object):
             if high_variable[-1] > self.sim_T or high_variable[-1] < 0:
                 reward -= min(abs(high_variable[-1]-self.sim_T), abs(high_variable[-1]-0))
             
-            reward -= high_variable[-1]
+            if high_variable[-1] <= 0:
+                reward -= 5* abs(high_variable[-1])
+            else:
+                reward -= abs(high_variable[-1])
+
 
         # observation
         self.obs = []
@@ -257,7 +261,7 @@ class MergeEnv(object):
             }
 
         done = False
-        if np.linalg.norm(np.array(self.goal[0:3]) - np.array(self.vehicle_state)[0:3]) < 0.2: #1.25
+        if np.linalg.norm(np.array(self.goal[0:3]) - np.array(self.vehicle_state)[0:3]) < np.pi/2: #1.25
             done = True
             
             reward += 100
@@ -265,7 +269,7 @@ class MergeEnv(object):
             done = True
         
         if (done):
-            reward -= current_t
+            reward -= abs(current_t)
 
         return self.obs, reward, done, info
     

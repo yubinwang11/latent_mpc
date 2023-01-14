@@ -63,7 +63,8 @@ def eval_learningMPC(args):
     high_variable = high_variable*std + mean
 
     high_variable = high_variable.detach().numpy().tolist()
-    #high_variable[-1] = 5
+    #high_variable[-1] = 0.2
+    #print(high_variable[-1])
 
     #worker.run_episode(high_variable, args)
 
