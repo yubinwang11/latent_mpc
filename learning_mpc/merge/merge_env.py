@@ -264,6 +264,10 @@ class MergeEnv(object):
         if np.linalg.norm(np.array(self.goal[0:3]) - np.array(self.vehicle_state)[0:3]) < np.pi/2: #1.25
             done = True
             reward += 100
+
+            dist_x = np.linalg.norm(np.array(high_variable[0]) - np.array(self.chance_pos)[0])
+            reward -= dist_x
+            
         elif self.t >= (self.sim_T-self.sim_dt):
             done = True
         
