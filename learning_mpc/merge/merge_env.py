@@ -230,6 +230,8 @@ class MergeEnv(object):
 
             if high_variable[-1] > self.sim_T or high_variable[-1] < 0:
                 reward -= min(abs(high_variable[-1]-self.sim_T), abs(high_variable[-1]-0))
+            
+            reward -= high_variable[-1]
 
         # observation
         self.obs = []
