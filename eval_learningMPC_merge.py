@@ -35,7 +35,7 @@ def main():
 
 def eval_learningMPC(args):
 
-    env_mode = 'medium'
+    env_mode = 'challenging'
     env = MergeEnv(curriculum_mode=env_mode)
     obs=env.reset()
 
