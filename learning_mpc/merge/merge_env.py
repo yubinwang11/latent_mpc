@@ -82,11 +82,11 @@ class MergeEnv(object):
         elif curriculum_mode == 'medium':
             # Sampling range of the chance's initial position
             self.c_xy_dist = np.array(
-                [ [20, 40]]   # x
+                [ [40, 80]]   # x
             )
             # Sampling range of the chance's initial velocity
             self.c_vxy_dist = np.array(
-                [ [0.0, 4]  # vx
+                [ [0.0, 0]  # vx
                 ] 
             )
 
