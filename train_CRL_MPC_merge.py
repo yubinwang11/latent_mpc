@@ -36,7 +36,7 @@ def arg_parser():
                         help="The time gap of saving a model")
     parser.add_argument('--save_model', type=bool, default=True,
                         help="Save the model of nn")
-    parser.add_argument('--load_model', type=bool, default=False,
+    parser.add_argument('--load_model', type=bool, default=True,
                         help="Load the trained model of nn")
     return parser
 
@@ -44,11 +44,11 @@ def main():
 
     args = arg_parser().parse_args()
 
-    device = torch.device('cuda:3' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
 
     num_episode = args.episode_num
 
-    env_mode = 'easy'
+    env_mode = 'medium'
     env = MergeEnv(curriculum_mode=env_mode)
 
     obs=env.reset()
@@ -96,7 +96,7 @@ def main():
 
     for episode_i in range(num_episode):
         
-        env_mode = 'easy'
+        env_mode = 'medium'
 
         #if episode_i <= 1000:
             #env_mode = 'easy'
@@ -105,8 +105,8 @@ def main():
            # env_mode = 'medium'
         #else:
             #env_mode = 'hard'
-        if episode_i >= 1000:
-            env_mode = 'medium'
+        #if episode_i >= 1000:
+            #env_mode = 'medium'
         
         env = MergeEnv(curriculum_mode=env_mode)
         obs=env.reset()
