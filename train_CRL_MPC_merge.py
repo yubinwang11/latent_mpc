@@ -30,7 +30,7 @@ def arg_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--run_wandb', type=bool, default=True,
                         help="Monitor by wandb")
-    parser.add_argument('--episode_num', type=float, default=10000,
+    parser.add_argument('--episode_num', type=float, default=1000,
                         help="Number of episode")
     parser.add_argument('--save_model_window', type=float, default=32,
                         help="The time gap of saving a model")
@@ -48,7 +48,7 @@ def main():
 
     num_episode = args.episode_num
 
-    env_mode = 'medium'
+    env_mode = 'challenging'
     env = MergeEnv(curriculum_mode=env_mode)
 
     obs=env.reset()
@@ -96,7 +96,7 @@ def main():
 
     for episode_i in range(num_episode):
         
-        env_mode = 'medium'
+        env_mode = 'challenging'
 
         #if episode_i <= 1000:
             #env_mode = 'easy'
