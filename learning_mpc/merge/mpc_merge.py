@@ -24,7 +24,7 @@ class High_MPC(object):
         self._dt = dt
         self._N = int(self._T/self._dt)
 
-        self.a_max = 1.5 * 2; self.a_min = -3 * 2 
+        self.a_max = 1.5; self.a_min = -3
         self.delta_max = 0.6 ; self.delta_min = -0.6 
 
         self.lane_len = lane_len
@@ -47,6 +47,7 @@ class High_MPC(object):
         
         self._Q_gap = np.diag([
             500, 500,  # delta_x, delta_y 100 100
+            50,
             50]) # delta_omega #0, 100, 100,  # delta_x, delta_y, delta_z
             #10, 10, 10, 10, # delta_qw, delta_qx, delta_qy, delta_qz
             #0, 10, 10]) # delta_vx, delta_vy, delta_vz
@@ -62,7 +63,7 @@ class High_MPC(object):
             self._vehicle_u0 = [0.0, 0.0]
         else:
             self._vehicle_u0 = init_u
-        print(init_state)
+        #print(init_state)
         self._initDynamics()
 
     def _initDynamics(self,):
@@ -116,7 +117,7 @@ class High_MPC(object):
 
         # placeholder for the quadratic cost function
         Delta_s = ca.SX.sym("Delta_s", self._s_dim)
-        Delta_p = ca.SX.sym("Delta_p", 3)
+        Delta_p = ca.SX.sym("Delta_p", 4)
         Delta_u = ca.SX.sym("Delta_u", self._u_dim)        
         
         #        
@@ -155,7 +156,7 @@ class High_MPC(object):
         g_min = [0 for _ in range(self._s_dim)]
         g_max = [0 for _ in range(self._s_dim)]
 
-        P = ca.SX.sym("P", self._s_dim+(3+3)*1+self._s_dim)
+        P = ca.SX.sym("P", self._s_dim+(4+3)*1+self._s_dim)
         #P = ca.SX.sym("P", self._s_dim+self._s_dim)
         X = ca.SX.sym("X", self._s_dim, self._N+1)
         U = ca.SX.sym("U", self._u_dim, self._N)
@@ -182,9 +183,9 @@ class High_MPC(object):
             
             # retrieve time constant
             #idx_k = self._s_dim+self._s_dim+(self._s_dim+3)*(k)
-            idx_k = self._s_dim+3
+            idx_k = self._s_dim+4
             #idx_k_end = self._s_dim+(self._s_dim+3)*(k+1)\
-            idx_k_end = self._s_dim+3+3
+            idx_k_end = self._s_dim+4+3
             time_k = P[ idx_k : idx_k_end]
 
             # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -206,16 +207,19 @@ class High_MPC(object):
 
             
             if k >= self._N-1: # The goal postion.
-                delta_s_k = (X[:, k+1] - P[self._s_dim+(3+3)*1:])
+                delta_s_k = (X[:, k+1] - P[self._s_dim+(4+3)*1:])
                 cost_goal_k = f_cost_goal(delta_s_k)
             else:
+
+                '''
                 # cost for tracking the goal
                 delta_s_k = (X[:, k+1] - P[self._s_dim+(3+3)*1:])
                 cost_goal_k = f_cost_goal(delta_s_k)
+                '''
 
                 # cost for tracking the moving gap
-                delta_p_k = (X[0:3, k+1] - P[self._s_dim+(3+3)*0 : \
-                    self._s_dim+(3+3)*(0+1)-3]) 
+                delta_p_k = (X[0:4, k+1] - P[self._s_dim+(4+3)*0 : \
+                    self._s_dim+(4+3)*(0+1)-3]) 
                 cost_gap_k = f_cost_gap(delta_p_k) * weight
                 #print(cost_gap_k)
 

@@ -33,44 +33,45 @@ class SimVisual(object):
         self.frames = []
         #
         # create figure
-        self.fig = plt.figure(figsize=(15,15)) # 20 15
+        #self.fig = plt.figure(figsize=(15,15)) # 20 15、
+        self.fig = plt.figure(figsize=(12,12))
+        #self.fig.canvas.manager.window.showNormal()
         # and figure grid
         #self.gs = gridspec.GridSpec(nrows=4, ncols=10)
         #self.gs = gridspec.GridSpec(nrows=1, ncols=1)
         
         # Create layout of our plots
-       # self.ax_2d = plt.figure()
         #
-        self.ax_2d = self.fig.add_subplot() # [0:, 3:]
+        #self.ax_2d = self.fig.add_subplot() # [0:, 3:]
+        self.ax_2d = self.fig.add_subplot()
         self.ax_2d.set_xlim([0, 120]) #self.ax_2d.set_xlim([-1, 1])
         self.ax_2d.set_ylim([-60, 60]) #self.ax_2d.set_ylim([-1, 1])
         self.ax_2d.set_xlabel("x")
         self.ax_2d.set_ylabel("y")
         
         # Plot 2D coordinates,
-        self.l_vehicle_pos, = self.ax_2d.plot([], [], 'b-')
+        self.l_vehicle_pos, = self.ax_2d.plot([], [], 'k-')
         self.l_vehicle_pred_traj, = self.ax_2d.plot([], [], 'r*', markersize=4)
 
         self.l_vehicle_outline, = self.ax_2d.plot([], [], 'b', linewidth=3)
 
-        self.l_f_v_outline, = self.ax_2d.plot([], [], 'g', linewidth=3)
+        self.l_f_v_outline, = self.ax_2d.plot([], [], 'c', linewidth=3)
         #self.l_surrounding_v_outline, = self.ax_2d.plot([], [], 'r', linewidth=2)
-        self.l_chance_lf_outline, = self.ax_2d.plot([], [], 'r', linewidth=3)
-        self.l_chance_rt_outline, = self.ax_2d.plot([], [], 'r', linewidth=3)
+        self.l_chance_lf_outline, = self.ax_2d.plot([], [], 'g', linewidth=3)
+        self.l_chance_rt_outline, = self.ax_2d.plot([], [], 'g', linewidth=3)
         #self.surrounding_v_pos = self.env.surrounding_v_pos
         #self.surrounding_v_vel = self.env.surrounding_v_vel
         self.chance_pos = self.env.chance_pos
         self.chance_len = self.env.chance_len
         self.chance_wid = self.env.chance_wid
 
-        self.p_high_variable = self.ax_2d.scatter([], [], marker='o', color='g')
+        self.p_high_variable = self.ax_2d.scatter([], [],  marker='*', color='brown')
 
         self.l_mainroad_up, = self.ax_2d.plot([0,self.world_size], [self.lane_len,self.lane_len], 'black', linewidth=2)
         self.l_mainroad_mid, = self.ax_2d.plot([0,self.world_size], [0,0], 'black', linewidth=1)
         self.l_mainroad_dw, = self.ax_2d.plot([0,self.world_size], [-self.lane_len,-self.lane_len], 'black', linewidth=2)
         #self.l_mainroad_dw_lf, = self.ax_2d.plot([-self.world_size,-self.lane_len/2*4], [-self.lane_len/2,-self.lane_len/2], 'black', linewidth=2)
         #self.l_mainroad_dw_rt, = self.ax_2d.plot([self.lane_len/2*4,self.world_size], [-self.lane_len/2,-self.lane_len/2], 'black', linewidth=2)
-
         #
         # #
         self.reset_buffer()
@@ -87,16 +88,13 @@ class SimVisual(object):
         # Initialize MPC planned trajectory
         self.l_vehicle_pred_traj.set_data([], [])
 
-
         self.l_vehicle_outline.set_data([], [])
         self.l_f_v_outline.set_data([], [])
         #self.l_surrounding_v_outline.set_data([], [])
         self.l_chance_lf_outline.set_data([], [])
         self.l_chance_rt_outline.set_data([], [])
-        self.p_high_variable = self.ax_2d.scatter([], [], marker='o', color='y')
 
         #self.p_high_variable.set_data([],[])
-
 
         return self.l_vehicle_pos, self.l_vehicle_pred_traj, \
             self.l_vehicle_outline, self.l_chance_lf_outline, self.l_chance_rt_outline, self.p_high_variable, self.l_f_v_outline
@@ -172,15 +170,18 @@ class SimVisual(object):
             self.l_chance_rt_outline.set_data([chance_rt_outline[0, :]],[chance_rt_outline[1, :]])
 
             #self.p_high_variable.set_data([self.env.high_variable_pos[0]],[self.env.high_variable_pos[1]])
-            self.p_high_variable = self.ax_2d.scatter(high_variable[0], high_variable[1], marker='o', color='g')
+            self.p_high_variable = self.ax_2d.scatter(high_variable[0], high_variable[1], marker='*', color='brown')
            
             # plot quadrotor trajectory
-            #self.l_vehicle_pos.set_data(vehicle_pos_arr[:, 0], vehicle_pos_arr[:, 1])
+            self.l_vehicle_pos.set_data(vehicle_pos_arr[:, 0], vehicle_pos_arr[:, 1])
+
             # plot mpc plan trajectory
             self.l_vehicle_pred_traj.set_data(pred_vehicle_traj[:, 0], pred_vehicle_traj[:, 1])
 
 
         return  self.l_vehicle_pred_traj, \
-                self.l_vehicle_outline, self.l_chance_lf_outline, self.l_chance_rt_outline, self.p_high_variable, self.l_f_v_outline #, self.l_surrounding_v_outline #self.l_vehicle_pos, self.l_vehicle_pred_traj, \
+                self.l_vehicle_outline, self.l_chance_lf_outline, self.l_chance_rt_outline, self.p_high_variable, self.l_f_v_outline,\
+                self.l_vehicle_pos
+                #, self.l_surrounding_v_outline #self.l_vehicle_pos, self.l_vehicle_pred_traj, \
             
     

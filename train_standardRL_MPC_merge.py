@@ -50,7 +50,7 @@ def main():
 
     num_episode = args.episode_num
 
-    env_mode = 'hard'
+    env_mode = 'general'
     env = MergeEnv(curriculum_mode=env_mode)
 
     obs=env.reset()
@@ -62,7 +62,7 @@ def main():
                                 output_dim=nn_output_dim,
                                 net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
     optimizer = optim.Adam(model.high_policy.parameters(), lr=learning_rate)
-    lr_decay = optim.lr_scheduler.StepLR(optimizer, step_size=DECAY_STEP, gamma=0.96)
+    lr_decay = optim.lr_scheduler.StepLR(optimizer, step_size=DECAY_STEP, gamma=decay_gamma)
 
     if args.load_model:
         model_path = "./" + "models/" + "standardRL/"
@@ -91,7 +91,10 @@ def main():
 
     for episode_i in range(num_episode):
         
-        env_mode = 'hard'
+        print("===========================================================")    
+        print("episode is :", episode_i)
+
+        env_mode = 'general'
 
         env = MergeEnv(curriculum_mode=env_mode)
         obs=env.reset()
@@ -176,7 +179,7 @@ def main():
         best_model = copy.deepcopy(model)
 
         if args.run_wandb:
-            wandb.log({"episode": episode_i, "episode reward": ep_reward, "z_loss": loss, "travese_time": high_variable[-1], "px":high_variable[0], "py": high_variable[1], "phi": high_variable[2], "vx": high_variable[3],"grad_norm": grad_norm})
+            wandb.log({"episode": episode_i, "reward": ep_reward, "loss": loss, "travese time": high_variable[-1], "position_x":high_variable[0], "position_y": high_variable[1], "heading": high_variable[2], "speed": high_variable[3],"grad_norm": grad_norm})
             #wandb.watch(model, log='all', log_freq=1)
 
         if args.save_model:
@@ -185,7 +188,7 @@ def main():
                 #print('Saving model', end='\n')
                 model_path = "models/CRL"
                 print('Saving model', end='\n')
-                checkpoint = {"model": model.state_dict(),
+                checkpoint = {"model": best_model.state_dict(),
                               "optimizer": optimizer.state_dict(),
                               "episode": episode_i,
                               "lr_decay": lr_decay.state_dict()}
@@ -193,7 +196,6 @@ def main():
                 path_checkpoint = "./" + model_path + "/checkpoint.pth"
                 torch.save(checkpoint, path_checkpoint)
                 print('Saved model', end='\n')
-
 
     if args.run_wandb:
         wandb.finish()        

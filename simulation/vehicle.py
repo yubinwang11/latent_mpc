@@ -43,47 +43,7 @@ class Bicycle_Dynamics(object):
         if curriculum_mode == 'general':
             # Sampling range of the vehicle's initial position
             self._xy_dist = np.array(
-                [ [0, 45]]   # x
-            )
-            # Sampling range of the vehicle's initial velocity
-            self._vxy_dist = np.array(
-                [ [0.0, 10.0]  # vx
-                ] 
-            )
-        elif curriculum_mode == 'easy':
-            # Sampling range of the vehicle's initial position
-            self._xy_dist = np.array(
-                [ [20, 28]]   # x
-            )
-            # Sampling range of the vehicle's initial velocity
-            self._vxy_dist = np.array(
-                [ [2.0, 5.0]  # vx
-                ] 
-            )
-        elif curriculum_mode == 'medium':
-            # Sampling range of the vehicle's initial position
-            self._xy_dist = np.array(
-                [ [5, 30]]   # x
-            )
-            # Sampling range of the vehicle's initial velocity
-            self._vxy_dist = np.array(
-                [ [1.0, 7.0]  # vx
-                ] 
-            )
-        elif curriculum_mode == 'challenging':
-            # Sampling range of the vehicle's initial position
-            self._xy_dist = np.array(
-                [ [5, 30]]   # x
-            )
-            # Sampling range of the vehicle's initial velocity
-            self._vxy_dist = np.array(
-                [ [1.0, 7.0]  # vx
-                ] 
-            )
-        elif curriculum_mode == 'hard':
-            # Sampling range of the vehicle's initial position
-            self._xy_dist = np.array(
-                [ [0, 45]]   # x
+                [ [5, 35 ]]   # x
             )
             # Sampling range of the vehicle's initial velocity
             self._vxy_dist = np.array(

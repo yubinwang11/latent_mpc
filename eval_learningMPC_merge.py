@@ -17,7 +17,9 @@ import torch
 from learning_mpc.merge.merge_env import MergeEnv
 from learning_mpc.merge.animation_merge import SimVisual
 from networks import DNN
-from worker import Worker_Eval, Worker_Train
+from worker import Worker_Eval
+
+from parameters import *
 
 def arg_parser():
     parser = argparse.ArgumentParser()
@@ -30,18 +32,15 @@ def arg_parser():
 def main():
 
     args = arg_parser().parse_args()
-
     eval_learningMPC(args)
 
 def eval_learningMPC(args):
 
-    env_mode = 'challenging'
+    env_mode = 'general'
     env = MergeEnv(curriculum_mode=env_mode)
     obs=env.reset()
 
-    NET_ARCH = [128, 128, 128, 128]
     nn_input_dim = len(obs)
-    nn_output_dim = 4 # xy, heading + tra_time
     use_gpu = False
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -50,10 +49,10 @@ def eval_learningMPC(args):
                                 output_dim=nn_output_dim,
                                 net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
     
-    model_path = "./" + "models/" + "CRL/"
-    print('Loading Model...')
-    checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
-    model.load_state_dict(checkpoint['model'])
+    #model_path = "./" + "models/" + "CRL/"
+    #print('Loading Model...')
+    #checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
+    #model.load_state_dict(checkpoint['model'])
 
     worker = Worker_Eval(env)
 
@@ -63,11 +62,8 @@ def eval_learningMPC(args):
     high_variable = high_variable*std + mean
 
     high_variable = high_variable.detach().numpy().tolist()
-    #high_variable[0] += 20
-    #high_variable[-1] = 3
-    #print(high_variable[-1])
 
-    #worker.run_episode(high_variable, args)
+    worker.run_episode(high_variable, args)
 
     #if args.visualization:
     sim_visual = SimVisual(worker.env)

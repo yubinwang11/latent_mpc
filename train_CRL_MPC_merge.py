@@ -26,6 +26,9 @@ from learning_mpc.merge.animation_merge import SimVisual
 from networks import DNN
 from worker import Worker_Train
 
+from parameters import *
+
+
 def arg_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--run_wandb', type=bool, default=True,
@@ -62,7 +65,6 @@ def main():
                                 output_dim=nn_output_dim,
                                 net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
 
-    learning_rate = 3e-4
     optimizer = optim.Adam(model.high_policy.parameters(), lr=learning_rate)
     DECAY_STEP = args.save_model_window # 32
     lr_decay = optim.lr_scheduler.StepLR(optimizer, step_size=DECAY_STEP, gamma=0.96)
