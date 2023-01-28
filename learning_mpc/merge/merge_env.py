@@ -88,7 +88,80 @@ class MergeEnv(object):
             # Chance Parameters
             self.chance_pos = [self.vehicle_state[kpx]+np.random.uniform(
                     low=self.c_xy_reldist[0, 0], high=self.c_xy_reldist[0, 1]),self.lane_len/2] # [0, 2.0]
+            
+        elif self.curriculum_mode == 'easy':
+            # Sampling range of the chance's initial position
+            self.c_xy_reldist = np.array(
+                [ [5, 10]]   # x
+            )
+            # Sampling range of the chance's initial velocity
+            self.c_vxy_dist = np.array(
+                [ [0, 0]  # vx
+                ] 
+            )
+            # Sampling range of the front vehicle's initial position
+            self.f_v_relxy_dist = np.array(
+                [ [15, 30]]   # x
+            )
+            # Sampling range of the front vehicle's initial velocity
+            self.f_v_vxy_dist = np.array(
+                [ [0.5, 3]  # vx
+                ] 
+            )
 
+            # Chance Parameters
+            self.chance_pos = [self.vehicle_state[kpx]+np.random.uniform(
+                    low=self.c_xy_reldist[0, 0], high=self.c_xy_reldist[0, 1]),self.lane_len/2] # [0, 2.0]
+
+        elif self.curriculum_mode == 'medium':
+            # Sampling range of the chance's initial position
+            self.c_xy_reldist = np.array(
+                [ [10, 30]]   # x
+            )
+            # Sampling range of the chance's initial velocity
+            self.c_vxy_dist = np.array(
+                [ [0, 3]  # vx
+                ] 
+            )
+            # Sampling range of the front vehicle's initial position
+            self.f_v_relxy_dist = np.array(
+                [ [15, 30]]   # x
+            )
+            # Sampling range of the front vehicle's initial velocity
+            self.f_v_vxy_dist = np.array(
+                [ [0.5, 3]  # vx
+                ] 
+            )
+
+            # Chance Parameters
+            self.chance_pos = [self.vehicle_state[kpx]+np.random.uniform(
+                    low=self.c_xy_reldist[0, 0], high=self.c_xy_reldist[0, 1]),self.lane_len/2] # [0, 2.0]
+        
+        elif self.curriculum_mode == 'hard':
+            # Sampling range of the chance's initial position
+            self.c_xy_reldist = np.array(
+                [ [10, 30]]   # x
+            )
+            # Sampling range of the chance's initial velocity
+            self.c_vxy_dist = np.array(
+                [ [3, 6]  # vx
+                ] 
+            )
+            # Sampling range of the front vehicle's initial position
+            self.f_v_relxy_dist = np.array(
+                [ [15, 30]]   # x
+            )
+            # Sampling range of the front vehicle's initial velocity
+            self.f_v_vxy_dist = np.array(
+                [ [0.5, 3]  # vx
+                ] 
+            )
+
+            # Chance Parameters
+            self.chance_pos = [self.vehicle_state[kpx]+np.random.uniform(
+                    low=self.c_xy_reldist[0, 0], high=self.c_xy_reldist[0, 1]),self.lane_len/2] # [0, 2.0]
+            
+            
         self.chance_vel = np.random.uniform(
                 low=self.c_vxy_dist[0, 0], high=self.c_vxy_dist[0, 1])
         

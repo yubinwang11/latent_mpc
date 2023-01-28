@@ -1,5 +1,5 @@
 """
-Standard MPC for Autonomous Driving
+Learning MPC for Autonomous Driving
 """
 
 import numpy as np
@@ -49,10 +49,10 @@ def eval_learningMPC(args):
                                 output_dim=nn_output_dim,
                                 net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
     
-    #model_path = "./" + "models/" + "standardRL/"
-    #print('Loading Model...')
-    #checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
-    #model.load_state_dict(checkpoint['model'])
+    model_path = "./" + "models/" + "standardRL/"
+    print('Loading Model...')
+    checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
+    model.load_state_dict(checkpoint['model'])
 
     worker = Worker_Eval(env)
 
