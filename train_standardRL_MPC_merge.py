@@ -46,7 +46,7 @@ def main():
 
     args = arg_parser().parse_args()
 
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
 
     num_episode = args.episode_num
 
@@ -186,7 +186,7 @@ def main():
 
             if episode_i > 0 and episode_i % args.save_model_window == 0: ##default 100
                 #print('Saving model', end='\n')
-                model_path = "models/CRL"
+                model_path = "models/standardRL"
                 print('Saving model', end='\n')
                 checkpoint = {"model": best_model.state_dict(),
                               "optimizer": optimizer.state_dict(),
