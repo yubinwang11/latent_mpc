@@ -40,16 +40,17 @@ class Bicycle_Dynamics(object):
     
     def reset(self, position=None, heading=None,  vx = None, curriculum_mode='general'):
         
-        if curriculum_mode == 'general':
-            # Sampling range of the vehicle's initial position
-            self._xy_dist = np.array(
-                [ [5, 35 ]]   # x
-            )
-            # Sampling range of the vehicle's initial velocity
-            self._vxy_dist = np.array(
-                [ [0.0, 10.0]  # vx
-                ] 
-            )
+        #if curriculum_mode == 'general':
+        
+        # Sampling range of the vehicle's initial position
+        self._xy_dist = np.array(
+            [ [5, 35 ]]   # x
+        )
+        # Sampling range of the vehicle's initial velocity
+        self._vxy_dist = np.array(
+            [ [0.0, 10.0]  # vx
+            ] 
+        )
 
         self._state = np.zeros(shape=self.s_dim) 
         if position is None:
