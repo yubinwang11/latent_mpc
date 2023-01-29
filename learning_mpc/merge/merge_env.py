@@ -45,7 +45,7 @@ class MergeEnv(object):
         self.high_variable_pos = None
         
         ## Planner 
-        self.sigma = 3 # 10
+        self.sigma = 2 # 10
     
         self.action_space = Space(
             low=np.array([-3.0, -0.6]), #low=np.array([-3.0]),
@@ -72,7 +72,7 @@ class MergeEnv(object):
             )
             # Sampling range of the chance's initial velocity
             self.c_vxy_dist = np.array(
-                [ [3.0, 6.0]  # vx
+                [ [2.0, 5.0]  # vx
                 ] 
             )
             # Sampling range of the front vehicle's initial position
@@ -92,7 +92,7 @@ class MergeEnv(object):
         elif self.curriculum_mode == 'easy':
             # Sampling range of the chance's initial position
             self.c_xy_reldist = np.array(
-                [ [5, 10]]   # x
+                [ [5, 55]]   # x
             )
             # Sampling range of the chance's initial velocity
             self.c_vxy_dist = np.array(
@@ -120,7 +120,7 @@ class MergeEnv(object):
             )
             # Sampling range of the chance's initial velocity
             self.c_vxy_dist = np.array(
-                [ [0, 3]  # vx
+                [ [0, 2]  # vx
                 ] 
             )
             # Sampling range of the front vehicle's initial position
@@ -144,7 +144,7 @@ class MergeEnv(object):
             )
             # Sampling range of the chance's initial velocity
             self.c_vxy_dist = np.array(
-                [ [3, 6]  # vx
+                [ [2, 5]  # vx
                 ] 
             )
             # Sampling range of the front vehicle's initial position
@@ -235,17 +235,17 @@ class MergeEnv(object):
         if step_i == 0:
             out_of_road_up, out_of_road_down = self._check_out_of_road(high_variable[kpy])
             if (out_of_road_up):
-                reward -= np.linalg.norm(high_variable[kpy]- (self.lane_len - self.vehicle_length/2))
+                reward -= 2* np.linalg.norm(high_variable[kpy]- (self.lane_len - self.vehicle_length/2))
             elif  (out_of_road_down):
-                reward -= np.linalg.norm(high_variable[kpy]- (-self.lane_len + self.vehicle_length/2))
+                reward -= 2* np.linalg.norm(high_variable[kpy]- (-self.lane_len + self.vehicle_length/2))
 
             if high_variable[-1] > self.sim_T or high_variable[-1] < 0:
-                reward -= min(abs(high_variable[-1]-self.sim_T), abs(high_variable[-1]-0))
+                reward -= 5 * min(abs(high_variable[-1]-self.sim_T), abs(high_variable[-1]-0))
             
-            if high_variable[-1] <= 0:
-                reward -= 5* abs(high_variable[-1])
-            else:
-                reward -= abs(high_variable[-1])
+            #if high_variable[-1] <= 0:
+                #reward -= 5* abs(high_variable[-1])
+            #else:
+            reward -= abs(high_variable[-1])
 
             if high_variable[2] > np.pi/2 or high_variable[2] < -np.pi/2:
                 reward -= 5 * min(abs(high_variable[2]-np.pi/2),abs(high_variable[2]-(-np.pi/2)))
@@ -277,7 +277,7 @@ class MergeEnv(object):
             }
 
         done = False
-        if np.linalg.norm(np.array(self.goal[0:3]) - np.array(self.vehicle_state)[0:3]) < np.pi/2: #1.25
+        if np.linalg.norm(np.array(self.goal[0:3]) - np.array(self.vehicle_state)[0:3]) < np.pi/3: #1.25
             done = True
             reward += 100
 
@@ -288,7 +288,7 @@ class MergeEnv(object):
             done = True
         
         if (done):
-            reward -= abs(current_t)
+            reward -= 3* abs(current_t)
 
         return self.obs, reward, done, info
     

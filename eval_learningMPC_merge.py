@@ -36,7 +36,7 @@ def main():
 
 def eval_learningMPC(args):
 
-    env_mode = 'general'
+    env_mode = 'easy'
     env = MergeEnv(curriculum_mode=env_mode)
     obs=env.reset()
 
@@ -49,7 +49,7 @@ def eval_learningMPC(args):
                                 output_dim=nn_output_dim,
                                 net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
     
-    model_path = "./" + "models/" + "standardRL/"
+    model_path = "./" + "models/" + "CRL/"
     print('Loading Model...')
     checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
     model.load_state_dict(checkpoint['model'])

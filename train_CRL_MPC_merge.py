@@ -97,10 +97,10 @@ def main():
         if episode_i <= 200:
             env_mode = 'easy'
         
-        elif 100 < episode_i <= 500:
+        elif 200 < episode_i <= 600:
             env_mode = 'medium'
 
-        elif 500 < episode_i <= 1000:
+        elif 600 < episode_i <= 1000:
             env_mode = 'hard'
         
         env = MergeEnv(curriculum_mode=env_mode)
