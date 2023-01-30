@@ -45,7 +45,7 @@ class MergeEnv(object):
         self.high_variable_pos = None
         
         ## Planner 
-        self.sigma = 3 # 10
+        self.sigma = 1 # 10
     
         self.action_space = Space(
             low=np.array([-3.0, -0.6]), #low=np.array([-3.0]),
@@ -292,8 +292,8 @@ class MergeEnv(object):
             done = True
             reward += 100
 
-            dist_x = np.linalg.norm(np.array(high_variable[0])-np.array(self.chance_pos[0]))
-            reward -= dist_x
+            #dist_x = np.linalg.norm(np.array(high_variable[0])-np.array(self.chance_pos[0]))
+            #reward -= dist_x
             
         elif self.t >= (self.sim_T-self.sim_dt):
             done = True

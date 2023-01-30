@@ -24,7 +24,7 @@ class High_MPC(object):
         self._dt = dt
         self._N = int(self._T/self._dt)
 
-        self.a_max = 1.5 *2; self.a_min = -3 *2
+        self.a_max = 1.5; self.a_min = -3
         self.delta_max = 0.6 ; self.delta_min = -0.6 
 
         self.lane_len = lane_len

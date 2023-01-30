@@ -94,10 +94,10 @@ def main():
         print("===========================================================")    
         print("episode is :", episode_i)
 
-        if episode_i <= 200:
+        if episode_i <= 100:
             env_mode = 'easy'
         
-        elif 200 < episode_i <= 600:
+        elif 200 < episode_i <= 300:
             env_mode = 'medium'
 
         elif 600 < episode_i <= 1000:
