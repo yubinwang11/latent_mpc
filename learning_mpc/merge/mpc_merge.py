@@ -211,11 +211,11 @@ class High_MPC(object):
                 cost_goal_k = f_cost_goal(delta_s_k)
             else:
 
-                '''
+                ## tricks for training acceleration
                 # cost for tracking the goal
-                delta_s_k = (X[:, k+1] - P[self._s_dim+(3+3)*1:])
+                delta_s_k = (X[:, k+1] - P[self._s_dim+(4+3)*1:])
                 cost_goal_k = f_cost_goal(delta_s_k)
-                '''
+                ''''''
 
                 # cost for tracking the moving gap
                 delta_p_k = (X[0:4, k+1] - P[self._s_dim+(4+3)*0 : \
