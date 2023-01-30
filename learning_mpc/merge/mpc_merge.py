@@ -14,7 +14,7 @@ class High_MPC(object):
     """
     Nonlinear MPC
     """
-    def __init__(self, T, dt, lane_len=6, init_state=None, init_u=None):
+    def __init__(self, T, dt, lane_len=6, init_state=None, init_u=None, stimulate=True):
         """
         Nonlinear MPC for vehicle control        
         """
@@ -24,7 +24,7 @@ class High_MPC(object):
         self._dt = dt
         self._N = int(self._T/self._dt)
 
-        self.a_max = 1.5; self.a_min = -3
+        self.a_max = 1.5 *2; self.a_min = -3 *2
         self.delta_max = 0.6 ; self.delta_min = -0.6 
 
         self.lane_len = lane_len
@@ -64,6 +64,7 @@ class High_MPC(object):
         else:
             self._vehicle_u0 = init_u
         #print(init_state)
+        self.stimulate = stimulate
         self._initDynamics()
 
     def _initDynamics(self,):
@@ -210,12 +211,14 @@ class High_MPC(object):
                 delta_s_k = (X[:, k+1] - P[self._s_dim+(4+3)*1:])
                 cost_goal_k = f_cost_goal(delta_s_k)
             else:
-
-                ## tricks for training acceleration
-                # cost for tracking the goal
-                delta_s_k = (X[:, k+1] - P[self._s_dim+(4+3)*1:])
-                cost_goal_k = f_cost_goal(delta_s_k)
-                ''''''
+                
+                if (self.stimulate):
+                    ## tricks for training acceleration
+                    # cost for tracking the goal
+                    ''''''
+                    delta_s_k = (X[:, k+1] - P[self._s_dim+(4+3)*1:])
+                    cost_goal_k = f_cost_goal(delta_s_k)
+                    
 
                 # cost for tracking the moving gap
                 delta_p_k = (X[0:4, k+1] - P[self._s_dim+(4+3)*0 : \

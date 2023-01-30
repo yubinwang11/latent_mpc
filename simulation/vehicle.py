@@ -48,7 +48,7 @@ class Bicycle_Dynamics(object):
         )
         # Sampling range of the vehicle's initial velocity
         self._vxy_dist = np.array(
-            [ [0.0, 10.0]  # vx
+            [ [3.0, 8.0]  # vx
             ] 
         )
 

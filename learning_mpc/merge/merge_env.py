@@ -19,7 +19,7 @@ class Space(object):
 
 class MergeEnv(object):
 
-    def __init__(self, curriculum_mode = 'general'):
+    def __init__(self, curriculum_mode = 'general', eval = False):
 
         self.curriculum_mode = curriculum_mode
         self.plan_T = 5.0 # Prediction horizon for MPC and local planner
@@ -45,7 +45,7 @@ class MergeEnv(object):
         self.high_variable_pos = None
         
         ## Planner 
-        self.sigma = 2 # 10
+        self.sigma = 3 # 10
     
         self.action_space = Space(
             low=np.array([-3.0, -0.6]), #low=np.array([-3.0]),
@@ -53,6 +53,8 @@ class MergeEnv(object):
         )
 
         # reset the environment
+        self.eval = eval
+        self.end_con = np.inf
     
     def seed(self, seed):
         np.random.seed(seed=seed)
@@ -63,7 +65,11 @@ class MergeEnv(object):
         self.vehicle_state = self.vehicle.reset(curriculum_mode=self.curriculum_mode)
 
         initial_u = [0, 0]
-        self.mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, lane_len = self.lane_len, init_state=self.vehicle_state, init_u=initial_u)
+
+        if (self.eval):
+            self.mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, lane_len = self.lane_len, init_state=self.vehicle_state, init_u=initial_u,stimulate=False)
+        else:
+            self.mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, lane_len = self.lane_len, init_state=self.vehicle_state, init_u=initial_u)
 
         if self.curriculum_mode == 'general':
             # Sampling range of the chance's initial position
@@ -77,7 +83,7 @@ class MergeEnv(object):
             )
             # Sampling range of the front vehicle's initial position
             self.f_v_relxy_dist = np.array(
-                [ [15, 30]]   # x
+                [ [15, 25]]   # x
             )
             # Sampling range of the front vehicle's initial velocity
             self.f_v_vxy_dist = np.array(
@@ -89,10 +95,12 @@ class MergeEnv(object):
             self.chance_pos = [self.vehicle_state[kpx]+np.random.uniform(
                     low=self.c_xy_reldist[0, 0], high=self.c_xy_reldist[0, 1]),self.lane_len/2] # [0, 2.0]
             
+            self.end_con = np.pi
+            
         elif self.curriculum_mode == 'easy':
             # Sampling range of the chance's initial position
             self.c_xy_reldist = np.array(
-                [ [5, 55]]   # x
+                [ [15, 55]]   # x
             )
             # Sampling range of the chance's initial velocity
             self.c_vxy_dist = np.array(
@@ -101,7 +109,7 @@ class MergeEnv(object):
             )
             # Sampling range of the front vehicle's initial position
             self.f_v_relxy_dist = np.array(
-                [ [15, 30]]   # x
+                [ [15, 25]]   # x
             )
             # Sampling range of the front vehicle's initial velocity
             self.f_v_vxy_dist = np.array(
@@ -112,20 +120,21 @@ class MergeEnv(object):
             # Chance Parameters
             self.chance_pos = [self.vehicle_state[kpx]+np.random.uniform(
                     low=self.c_xy_reldist[0, 0], high=self.c_xy_reldist[0, 1]),self.lane_len/2] # [0, 2.0]
+            self.end_con = np.pi / 4
 
         elif self.curriculum_mode == 'medium':
             # Sampling range of the chance's initial position
             self.c_xy_reldist = np.array(
-                [ [10, 30]]   # x
+                [ [15, 40]]   # x
             )
             # Sampling range of the chance's initial velocity
             self.c_vxy_dist = np.array(
-                [ [0, 2]  # vx
+                [ [0.5, 2]  # vx
                 ] 
             )
             # Sampling range of the front vehicle's initial position
             self.f_v_relxy_dist = np.array(
-                [ [15, 30]]   # x
+                [ [15, 25]]   # x
             )
             # Sampling range of the front vehicle's initial velocity
             self.f_v_vxy_dist = np.array(
@@ -136,6 +145,7 @@ class MergeEnv(object):
             # Chance Parameters
             self.chance_pos = [self.vehicle_state[kpx]+np.random.uniform(
                     low=self.c_xy_reldist[0, 0], high=self.c_xy_reldist[0, 1]),self.lane_len/2] # [0, 2.0]
+            self.end_con = np.pi / 3
         
         elif self.curriculum_mode == 'hard':
             # Sampling range of the chance's initial position
@@ -149,7 +159,7 @@ class MergeEnv(object):
             )
             # Sampling range of the front vehicle's initial position
             self.f_v_relxy_dist = np.array(
-                [ [15, 30]]   # x
+                [ [15, 25]]   # x
             )
             # Sampling range of the front vehicle's initial velocity
             self.f_v_vxy_dist = np.array(
@@ -160,6 +170,7 @@ class MergeEnv(object):
             # Chance Parameters
             self.chance_pos = [self.vehicle_state[kpx]+np.random.uniform(
                     low=self.c_xy_reldist[0, 0], high=self.c_xy_reldist[0, 1]),self.lane_len/2] # [0, 2.0]
+            self.end_con = np.pi
             
             
         self.chance_vel = np.random.uniform(
@@ -250,8 +261,8 @@ class MergeEnv(object):
             if high_variable[2] > np.pi/2 or high_variable[2] < -np.pi/2:
                 reward -= 5 * min(abs(high_variable[2]-np.pi/2),abs(high_variable[2]-(-np.pi/2)))
 
-            if high_variable[3] > 3 * self.chance_vel or high_variable[3] < 0:
-                reward -= 3 * min(abs(high_variable[3]-0),abs(high_variable[3]- 3* self.chance_vel))
+            #if high_variable[3] > 3 * self.chance_vel or high_variable[3] < 0:
+                #reward -= 3 * min(abs(high_variable[3]-0),abs(high_variable[3]- 3* self.chance_vel))
 
         # observation
         self.obs = []
@@ -277,7 +288,7 @@ class MergeEnv(object):
             }
 
         done = False
-        if np.linalg.norm(np.array(self.goal[0:3]) - np.array(self.vehicle_state)[0:3]) < np.pi/3: #1.25
+        if np.linalg.norm(np.array(self.goal[0:3]) - np.array(self.vehicle_state)[0:3]) < np.pi/1.2: #1.25
             done = True
             reward += 100
 
@@ -288,7 +299,7 @@ class MergeEnv(object):
             done = True
         
         if (done):
-            reward -= 3* abs(current_t)
+            reward -= abs(current_t)
 
         return self.obs, reward, done, info
     

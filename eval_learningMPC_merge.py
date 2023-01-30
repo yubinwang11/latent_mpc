@@ -36,8 +36,8 @@ def main():
 
 def eval_learningMPC(args):
 
-    env_mode = 'easy'
-    env = MergeEnv(curriculum_mode=env_mode)
+    env_mode = 'hard'
+    env = MergeEnv(curriculum_mode=env_mode, eval=True)
     obs=env.reset()
 
     nn_input_dim = len(obs)
