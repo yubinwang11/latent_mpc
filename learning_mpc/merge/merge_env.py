@@ -261,6 +261,10 @@ class MergeEnv(object):
             if high_variable[2] > np.pi/2 or high_variable[2] < -np.pi/2:
                 reward -= 5 * min(abs(high_variable[2]-np.pi/2),abs(high_variable[2]-(-np.pi/2)))
 
+            if np.array(high_variable[0]) <= np.array(self.chance_pos[0] + self.vehicle_length/2):
+                dist_x = np.linalg.norm(np.array(high_variable[0])-np.array(self.chance_pos[0]+ self.vehicle_length/2))
+                reward -= dist_x
+
             #if high_variable[3] > 3 * self.chance_vel or high_variable[3] < 0:
                 #reward -= 3 * min(abs(high_variable[3]-0),abs(high_variable[3]- 3* self.chance_vel))
 
