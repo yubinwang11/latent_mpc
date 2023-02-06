@@ -22,6 +22,7 @@ from worker import Worker_Eval
 from parameters import *
 
 def arg_parser():
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('--visualization', type=bool, default=True,
                         help="Play animation")
@@ -49,7 +50,7 @@ def eval_learningMPC(args):
                                 output_dim=nn_output_dim,
                                 net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
     
-    model_path = "./" + "models/" + "standardRL/"
+    model_path = "./" + "models/" + "CRL/"
     print('Loading Model...')
     checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
     model.load_state_dict(checkpoint['model'])
@@ -62,16 +63,15 @@ def eval_learningMPC(args):
     high_variable = high_variable*std + mean
 
     high_variable = high_variable.detach().numpy().tolist()
-
     worker.run_episode(high_variable, args)
 
     #if args.visualization:
     sim_visual = SimVisual(worker.env)
-    #
+#
     run_frame = partial(worker.run_episode, high_variable, args)
     ani = animation.FuncAnimation(sim_visual.fig, sim_visual.update, frames=run_frame,
                                 init_func=sim_visual.init_animate, interval=100, blit=True, repeat=False)
-    
+
     plt.tight_layout()
     plt.show()
     

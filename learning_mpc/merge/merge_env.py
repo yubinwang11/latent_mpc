@@ -150,16 +150,17 @@ class MergeEnv(object):
         elif self.curriculum_mode == 'hard':
             # Sampling range of the chance's initial position
             self.c_xy_reldist = np.array(
-                [ [10, 30]]   # x
+               [ [10, 25]
+                  ]   # x
             )
             # Sampling range of the chance's initial velocity
             self.c_vxy_dist = np.array(
-                [ [2, 4]  # vx
+                [ [3, 4]  # vx
                 ] 
             )
             # Sampling range of the front vehicle's initial position
             self.f_v_relxy_dist = np.array(
-                [ [15, 25]]   # x
+                [ [25, 35]]   # x
             )
             # Sampling range of the front vehicle's initial velocity
             self.f_v_vxy_dist = np.array(
@@ -170,8 +171,7 @@ class MergeEnv(object):
             # Chance Parameters
             self.chance_pos = [self.vehicle_state[kpx]+np.random.uniform(
                     low=self.c_xy_reldist[0, 0], high=self.c_xy_reldist[0, 1]),self.lane_len/2] # [0, 2.0]
-            self.end_con = np.pi
-            
+            self.end_con = np.pi/1.2
             
         self.chance_vel = np.random.uniform(
                 low=self.c_vxy_dist[0, 0], high=self.c_vxy_dist[0, 1])
@@ -196,6 +196,9 @@ class MergeEnv(object):
         self.obs += self.goal[kpx:kpy+1] # px, py of goal
         self.obs += self.chance_pos[kpx:kpy+1] # px, py of chance pos
         self.obs +=[self.chance_vel]
+
+        self.collided = False
+        self.success = False
         
         return self.obs
 
@@ -238,6 +241,8 @@ class MergeEnv(object):
         collision = self.vehicle._is_colliding(self.surr_v_left) or self.vehicle._is_colliding(self.surr_v_right) or self.vehicle._is_colliding(self.f_v) 
         # sparse reward for collision avoidance 
         if (collision):
+            self.collided = collision
+
             if self.vehicle_state[kvx] >= 0:
                 reward -= 5
             else:
@@ -292,9 +297,12 @@ class MergeEnv(object):
             }
 
         done = False
-        if np.linalg.norm(np.array(self.goal[0:3]) - np.array(self.vehicle_state)[0:3]) < np.pi/1.2: #1.25
+        if np.linalg.norm(np.array(self.goal[0:3]) - np.array(self.vehicle_state)[0:3]) < self.end_con: #1.25
             done = True
             reward += 100
+
+            if self.collided == False:
+                self.success = True
 
             #dist_x = np.linalg.norm(np.array(high_variable[0])-np.array(self.chance_pos[0]))
             #reward -= dist_x

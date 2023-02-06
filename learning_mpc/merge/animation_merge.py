@@ -34,7 +34,7 @@ class SimVisual(object):
         #
         # create figure
         #self.fig = plt.figure(figsize=(15,15)) # 20 15、
-        self.fig = plt.figure(figsize=(12,12))
+        self.fig = plt.figure(figsize=(12,6))
         #self.fig.canvas.manager.window.showNormal()
         # and figure grid
         #self.gs = gridspec.GridSpec(nrows=4, ncols=10)
@@ -45,7 +45,7 @@ class SimVisual(object):
         #self.ax_2d = self.fig.add_subplot() # [0:, 3:]
         self.ax_2d = self.fig.add_subplot()
         self.ax_2d.set_xlim([0, 120]) #self.ax_2d.set_xlim([-1, 1])
-        self.ax_2d.set_ylim([-60, 60]) #self.ax_2d.set_ylim([-1, 1])
+        self.ax_2d.set_ylim([-30, 30]) #self.ax_2d.set_ylim([-1, 1])
         self.ax_2d.set_xlabel("x")
         self.ax_2d.set_ylabel("y")
         
@@ -55,10 +55,10 @@ class SimVisual(object):
 
         self.l_vehicle_outline, = self.ax_2d.plot([], [], 'b', linewidth=3)
 
-        self.l_f_v_outline, = self.ax_2d.plot([], [], 'c', linewidth=3)
+        self.l_f_v_outline, = self.ax_2d.plot([], [], 'g', linewidth=3)
         #self.l_surrounding_v_outline, = self.ax_2d.plot([], [], 'r', linewidth=2)
-        self.l_chance_lf_outline, = self.ax_2d.plot([], [], 'g', linewidth=3)
-        self.l_chance_rt_outline, = self.ax_2d.plot([], [], 'g', linewidth=3)
+        self.l_trafficflow_left, = self.ax_2d.plot([], [], 'g', linewidth=3)
+        self.l_trafficflow_right, = self.ax_2d.plot([], [], 'g', linewidth=3)
         #self.surrounding_v_pos = self.env.surrounding_v_pos
         #self.surrounding_v_vel = self.env.surrounding_v_vel
         self.chance_pos = self.env.chance_pos
@@ -91,13 +91,15 @@ class SimVisual(object):
         self.l_vehicle_outline.set_data([], [])
         self.l_f_v_outline.set_data([], [])
         #self.l_surrounding_v_outline.set_data([], [])
-        self.l_chance_lf_outline.set_data([], [])
-        self.l_chance_rt_outline.set_data([], [])
+
+        self.l_trafficflow_left.set_data([], [])
+        self.l_trafficflow_right.set_data([], [])
 
         #self.p_high_variable.set_data([],[])
 
         return self.l_vehicle_pos, self.l_vehicle_pred_traj, \
-            self.l_vehicle_outline, self.l_chance_lf_outline, self.l_chance_rt_outline, self.p_high_variable, self.l_f_v_outline
+            self.l_vehicle_outline, self.p_high_variable, self.l_f_v_outline, \
+            self.l_trafficflow_left, self.l_trafficflow_right
 
     def update(self, data_info):
         info, t, update = data_info[0], data_info[1], data_info[2]
@@ -150,25 +152,39 @@ class SimVisual(object):
             self.l_vehicle_outline.set_data([vehicle_outline[0, :]],[vehicle_outline[1, :]])
             self.l_f_v_outline.set_data([ f_v_outline[0, :]],[f_v_outline[1, :]])
 
-            #chance_lf_outline = np.array([[-self.world_size/2, -self.chance_len/2, -self.chance_len/2, -self.world_size/2,-self.world_size/2,],
-                        #[self.chance_wid/2+self.lane_len/2,self.chance_wid/2+self.lane_len/2, - self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, self.chance_wid/2+self.lane_len/2]])
-            chance_lf_outline = np.array([[surr_v_left.position[0]-surr_v_left.length/2, surr_v_left.position[0]+surr_v_left.length/2, surr_v_left.position[0]+surr_v_left.length/2, surr_v_left.position[0]-surr_v_left.length/2,surr_v_left.position[0]-surr_v_left.length/2,],
-                        [self.chance_wid/2+self.lane_len/2,self.chance_wid/2+self.lane_len/2, - self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, self.chance_wid/2+self.lane_len/2]])
+            trafficflow_gap_len = self.vehicle_length + 3
+            left_trafficflow_len = abs(self.chance_pos[0] - self.chance_len/2)
+            left_trafficflow_vehicle_num = int(left_trafficflow_len // trafficflow_gap_len)
+            right_trafficflow_len = abs(self.world_size - (self.chance_pos[0] + self.chance_len/2))
+            right_trafficflow_vehicle_num = int(right_trafficflow_len // trafficflow_gap_len)
 
-            #chance_rt_outline = np.array([[self.chance_len/2, self.world_size/2, self.world_size/2, self.chance_len/2,self.chance_len/2,],
-                        #[self.chance_wid/2+self.lane_len/2,self.chance_wid/2+self.lane_len/2, - self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, self.chance_wid/2+self.lane_len/2]])
-            chance_rt_outline = np.array([[surr_v_right.position[0]-surr_v_right.length/2, surr_v_right.position[0]+surr_v_right.length/2, surr_v_right.position[0]+surr_v_right.length/2, surr_v_right.position[0]-surr_v_right.length/2,surr_v_right.position[0]-surr_v_right.length/2],
-                        [self.chance_wid/2+self.lane_len/2,self.chance_wid/2+self.lane_len/2, - self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, self.chance_wid/2+self.lane_len/2]])
+            trafficflow_left_outline = []
+            for num_left in range(left_trafficflow_vehicle_num):
+                center_left = (self.chance_pos[0] - self.chance_len/2) - self.vehicle_length/2
+                center_left -= num_left * trafficflow_gap_len
+                trafficflow_left_vehicle = np.array([[center_left+self.vehicle_length/2, center_left+self.vehicle_length/2, center_left-self.vehicle_length/2, center_left-self.vehicle_length/2,center_left+self.vehicle_length/2,center_left+self.vehicle_length/2,center_left-self.vehicle_length/2,center_left-self.vehicle_length/2,],
+                        [self.lane_len/2, -self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, +self.chance_wid/2+self.lane_len/2, +self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, self.lane_len/2]])
+                trafficflow_left_outline.append(trafficflow_left_vehicle)
+                #self.l_trafficflow_left_fill = plt.fill(np.array(trafficflow_left_vehicle[0]), np.array(trafficflow_left_vehicle[1]), color ='g')
 
-            #chance_lf_outline[0, :] += chance_pos[0]
-            #chance_lf_outline[1, :] += chance_pos[1] 
+            trafficflow_left_outline = np.array(trafficflow_left_outline)
+            #self.l_trafficflow_left.set_data([trafficflow_left_outline[:,0, :]],[trafficflow_left_outline[:,1, :]])
+            self.l_trafficflow_left.set_data([trafficflow_left_outline[:,0, :]],[trafficflow_left_outline[:,1, :]])
 
-            #chance_rt_outline[0, :] += chance_pos[0]
-            #chance_rt_outline[1, :] += chance_pos[1] 
+            trafficflow_right_outline = []
+            for num_right in range(right_trafficflow_vehicle_num):
+                center_right = (self.chance_pos[0] + self.chance_len/2) + self.vehicle_length/2
+                center_right += num_right * trafficflow_gap_len
+                trafficflow_right_vehicle = np.array([[center_right-self.vehicle_length/2, center_right-self.vehicle_length/2, center_right+self.vehicle_length/2, center_right+self.vehicle_length/2,center_right-self.vehicle_length/2,center_right-self.vehicle_length/2,center_right+self.vehicle_length/2,center_right+self.vehicle_length/2,],
+                        [self.lane_len/2, +self.chance_wid/2+self.lane_len/2, +self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, +self.chance_wid/2+self.lane_len/2, +self.chance_wid/2+self.lane_len/2, self.lane_len/2]])
+                trafficflow_right_outline.append(trafficflow_right_vehicle)
+                #self.l_trafficflow_left_fill = plt.fill(np.array(trafficflow_left_vehicle[0]), np.array(trafficflow_left_vehicle[1]), color ='g')
 
-            self.l_chance_lf_outline.set_data([chance_lf_outline[0, :]],[chance_lf_outline[1, :]])
-            self.l_chance_rt_outline.set_data([chance_rt_outline[0, :]],[chance_rt_outline[1, :]])
+            trafficflow_right_outline = np.array(trafficflow_right_outline)
+            #self.l_trafficflow_left.set_data([trafficflow_left_outline[:,0, :]],[trafficflow_left_outline[:,1, :]])
+            self.l_trafficflow_right.set_data([trafficflow_right_outline[:,0, :]],[trafficflow_right_outline[:,1, :]])
 
+    
             #self.p_high_variable.set_data([self.env.high_variable_pos[0]],[self.env.high_variable_pos[1]])
             self.p_high_variable = self.ax_2d.scatter(high_variable[0], high_variable[1], marker='*', color='brown')
            
@@ -180,8 +196,9 @@ class SimVisual(object):
 
 
         return  self.l_vehicle_pred_traj, \
-                self.l_vehicle_outline, self.l_chance_lf_outline, self.l_chance_rt_outline, self.p_high_variable, self.l_f_v_outline,\
-                self.l_vehicle_pos
+                self.l_vehicle_outline, self.p_high_variable, self.l_f_v_outline,\
+                self.l_vehicle_pos, self.l_trafficflow_left, self.l_trafficflow_right \
+                #self.l_trafficflow_left_fill
                 #, self.l_surrounding_v_outline #self.l_vehicle_pos, self.l_vehicle_pred_traj, \
             
     
