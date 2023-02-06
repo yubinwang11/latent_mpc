@@ -32,7 +32,7 @@ def arg_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--run_wandb', type=bool, default=True,
                         help="Monitor by wandb")
-    parser.add_argument('--episode_num', type=float, default=1000,
+    parser.add_argument('--episode_num', type=float, default=500,
                         help="Number of episode")
     parser.add_argument('--save_model_window', type=float, default=32,
                         help="The time gap of saving a model")

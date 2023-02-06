@@ -154,7 +154,7 @@ class MergeEnv(object):
             )
             # Sampling range of the chance's initial velocity
             self.c_vxy_dist = np.array(
-                [ [2, 5]  # vx
+                [ [2, 4]  # vx
                 ] 
             )
             # Sampling range of the front vehicle's initial position
