@@ -26,7 +26,7 @@ def arg_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--visualization', type=bool, default=True,
                         help="Play animation")
-    parser.add_argument('--save_video', type=bool, default=False,
+    parser.add_argument('--save_video', type=bool, default=True,
                         help="Save the animation as a video file")
     return parser
 
@@ -36,6 +36,8 @@ def main():
     eval_learningMPC(args)
 
 def eval_learningMPC(args):
+
+    eval_mode = 'human-expert' # CRL,standardRL or human-expert
 
     env_mode = 'hard'
     env = MergeEnv(curriculum_mode=env_mode, eval=False)
@@ -50,10 +52,23 @@ def eval_learningMPC(args):
                                 output_dim=nn_output_dim,
                                 net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
     
-    model_path = "./" + "models/" + "CRL/"
-    print('Loading Model...')
-    checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
-    model.load_state_dict(checkpoint['model'])
+    use_learning = True
+
+    if eval_mode == 'CRL':
+        model_path = "./" + "models/" + "CRL/"
+        print('Loading Model...')
+        checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
+        model.load_state_dict(checkpoint['model'])
+
+    elif eval_mode == 'standardRL':
+        model_path = "./" + "models/" + "CRL/"
+        print('Loading Model...')
+        checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
+        model.load_state_dict(checkpoint['model'])\
+    
+    else:
+        use_learning = False
+        pass
 
     worker = Worker_Eval(env)
 
@@ -63,6 +78,15 @@ def eval_learningMPC(args):
     high_variable = high_variable*std + mean
 
     high_variable = high_variable.detach().numpy().tolist()
+
+    if not (use_learning):
+        # decision varaibles are designed by human-expert experience
+        high_variable[0] = obs.detach().numpy().tolist()[5]
+        high_variable[1] = -env.lane_len/2
+        high_variable[2] = 0
+        high_variable[3] = 10
+        high_variable[4] = 2
+
     worker.run_episode(high_variable, args)
 
     #if args.visualization:
@@ -73,12 +97,12 @@ def eval_learningMPC(args):
                                 init_func=sim_visual.init_animate, interval=100, blit=True, repeat=False)
 
     plt.tight_layout()
-    plt.show()
+    #plt.show()
     
     if args.save_video:
         writer = animation.writers["ffmpeg"]
         writer = writer(fps=10, metadata=dict(artist='Me'), bitrate=1800)
-        ani.save("learningMPC_merge.mp4", writer=writer)
+        ani.save("trail.mp4", writer=writer)
 
     
 if __name__ == "__main__":

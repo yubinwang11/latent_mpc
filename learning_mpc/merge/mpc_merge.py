@@ -24,6 +24,7 @@ class High_MPC(object):
         self._dt = dt
         self._N = int(self._T/self._dt)
 
+        #self.a_max = 1.5 * 1.5 ; self.a_min = -3 * 1.5
         self.a_max = 1.5 * 1.5 ; self.a_min = -3 * 1.5
         self.delta_max = 0.6 ; self.delta_min = -0.6 
 
@@ -52,7 +53,8 @@ class High_MPC(object):
             #10, 10, 10, 10, # delta_qw, delta_qx, delta_qy, delta_qz
             #0, 10, 10]) # delta_vx, delta_vy, delta_vz
         # cost matrix for the action
-        self._Q_u = np.diag([0.1, 0.1]) # a, delta
+        self._Q_u = np.diag([0.1, 0.1]) # a, delta self._Q_u = np.diag([0.1, 0.1]) # a, delta
+        self._Q_delta_u = np.diag([10, 10]) # delta_a, delta_steer
 
         # initial state and control action
         if init_state is None:
@@ -119,17 +121,20 @@ class High_MPC(object):
         # placeholder for the quadratic cost function
         Delta_s = ca.SX.sym("Delta_s", self._s_dim)
         Delta_p = ca.SX.sym("Delta_p", 4)
-        Delta_u = ca.SX.sym("Delta_u", self._u_dim)        
+        Delta_u = ca.SX.sym("Delta_u", self._u_dim)
+        Delta_delta_u = ca.SX.sym("Delta_delta_u", self._u_dim)      
         
         #        
         cost_goal = Delta_s.T @ self._Q_goal @ Delta_s 
         cost_gap = Delta_p.T @ self._Q_gap @ Delta_p 
         cost_u = Delta_u.T @ self._Q_u @ Delta_u
+        cost_delta_u = Delta_delta_u.T @ self._Q_delta_u @ Delta_delta_u
 
         #
         f_cost_goal = ca.Function('cost_goal', [Delta_s], [cost_goal])
         f_cost_gap = ca.Function('cost_gap', [Delta_p], [cost_gap])
         f_cost_u = ca.Function('cost_u', [Delta_u], [cost_u])
+        f_cost_delta_u = ca.Function('cost_delta_u', [Delta_delta_u], [cost_delta_u])
 
         #
         # # # # # # # # # # # # # # # # # # # # 
@@ -229,7 +234,14 @@ class High_MPC(object):
             delta_u_k = U[:, k]-[0, 0] #delta_u_k = U[:, k]-[self._gz, 0, 0, 0]
             cost_u_k = f_cost_u(delta_u_k)
 
-            self.mpc_obj = self.mpc_obj + cost_goal_k + cost_u_k +  cost_gap_k 
+            if k > 0:
+                delta_delta_u_k = U[:, k]-U[:, k-1]
+            else:
+                delta_delta_u_k = U[:, k]-[0, 0]
+            
+            cost_delta_u_k = f_cost_delta_u(delta_delta_u_k)
+
+            self.mpc_obj = self.mpc_obj + cost_goal_k + cost_u_k +  cost_gap_k + cost_delta_u_k 
 
             # New NLP variable for state at end of interval
             self.nlp_w += [X[:, k+1]]
