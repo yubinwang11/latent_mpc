@@ -83,7 +83,7 @@ class MergeEnv(object):
             )
             # Sampling range of the front vehicle's initial position
             self.f_v_relxy_dist = np.array(
-                [ [15, 25]]   # x
+                [ [25, 35]]   # x
             )
             # Sampling range of the front vehicle's initial velocity
             self.f_v_vxy_dist = np.array(
@@ -150,12 +150,12 @@ class MergeEnv(object):
         elif self.curriculum_mode == 'hard':
             # Sampling range of the chance's initial position
             self.c_xy_reldist = np.array(
-               [ [10, 25]
+               [ [10, 30]
                   ]   # x
             )
             # Sampling range of the chance's initial velocity
             self.c_vxy_dist = np.array(
-                [ [3, 4]  # vx
+                [ [2, 4]  # vx
                 ] 
             )
             # Sampling range of the front vehicle's initial position
