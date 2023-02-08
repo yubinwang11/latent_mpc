@@ -43,8 +43,8 @@ class SimVisual(object):
         #
         self.ax_2d = self.fig.add_subplot(self.gs[:2, :])
         #self.ax_2d = self.fig.add_subplot()
-        self.ax_2d.set_xlim([0, 120]) #self.ax_2d.set_xlim([-1, 1])
-        self.ax_2d.set_ylim([-40, 40]) #self.ax_2d.set_ylim([-1, 1])
+        self.ax_2d.set_xlim([12, 87]) #self.ax_2d.set_xlim([-1, 1])
+        self.ax_2d.set_ylim([-25, 25]) #self.ax_2d.set_ylim([-1, 1])
         self.ax_2d.set_xlabel("x")
         self.ax_2d.set_ylabel("y")
         
@@ -55,9 +55,9 @@ class SimVisual(object):
         self.ax_act.set_ylim([self.act_min, self.act_max])
         self.ax_act.set_xlim([0, self.t_max/2-1.5])
 
-        self.l_acc, = self.ax_act.plot([], [], '-k', label='acceleration', linewidth=2)
-        self.l_steer, = self.ax_act.plot([], [], '-r', label='steer angle', linewidth=2)
-        self.ax_act.legend( handles=[self.l_acc, self.l_steer], fontsize=13, loc=1)
+        self.l_acc, = self.ax_act.plot([], [], '-b', label='acceleration', linewidth=3)
+        self.l_steer, = self.ax_act.plot([], [], '-r', label='steer angle', linewidth=3)
+        self.ax_act.legend( handles=[self.l_acc, self.l_steer], fontsize=25, loc=1)
 
         '''
         self.pos_min, self.pos_max = 0, 80
@@ -73,15 +73,15 @@ class SimVisual(object):
 
 
         # Plot 2D coordinates,
-        self.l_vehicle_pos, = self.ax_2d.plot([], [], 'k-', linewidth=2)
-        self.l_vehicle_pred_traj, = self.ax_2d.plot([], [], 'r*', markersize=3)
+        self.l_vehicle_pos, = self.ax_2d.plot([], [], 'k-', linewidth=3)
+        self.l_vehicle_pred_traj, = self.ax_2d.plot([], [], 'r*', markersize=4)
 
-        self.l_vehicle_outline, = self.ax_2d.plot([], [], 'b', linewidth=3)
+        self.l_vehicle_outline, = self.ax_2d.plot([], [], 'b', linewidth=4)
 
-        self.l_f_v_outline, = self.ax_2d.plot([], [], 'g', linewidth=3)
+        self.l_f_v_outline, = self.ax_2d.plot([], [], 'g', linewidth=4)
         #self.l_surrounding_v_outline, = self.ax_2d.plot([], [], 'r', linewidth=2)
-        self.l_trafficflow_left, = self.ax_2d.plot([], [], 'g', linewidth=3)
-        self.l_trafficflow_right, = self.ax_2d.plot([], [], 'g', linewidth=3)
+        self.l_trafficflow_left, = self.ax_2d.plot([], [], 'g', linewidth=4)
+        self.l_trafficflow_right, = self.ax_2d.plot([], [], 'g', linewidth=4)
         #self.surrounding_v_pos = self.env.surrounding_v_pos
         #self.surrounding_v_vel = self.env.surrounding_v_vel
         self.chance_pos = self.env.chance_pos
@@ -90,9 +90,9 @@ class SimVisual(object):
 
         self.p_high_variable = self.ax_2d.scatter([], [],  marker='*', color='brown')
 
-        self.l_mainroad_up, = self.ax_2d.plot([0,self.world_size], [self.lane_len,self.lane_len], 'black', linewidth=2)
-        self.l_mainroad_mid, = self.ax_2d.plot([0,self.world_size], [0,0], 'black', linewidth=1, linestyle='dashed')
-        self.l_mainroad_dw, = self.ax_2d.plot([0,self.world_size], [-self.lane_len,-self.lane_len], 'black', linewidth=2)
+        self.l_mainroad_up, = self.ax_2d.plot([0,self.world_size], [self.lane_len,self.lane_len], 'black', linewidth=3)
+        self.l_mainroad_mid, = self.ax_2d.plot([0,self.world_size], [0,0], 'black', linewidth=2, linestyle='dashed')
+        self.l_mainroad_dw, = self.ax_2d.plot([0,self.world_size], [-self.lane_len,-self.lane_len], 'black', linewidth=3)
         #self.l_mainroad_dw_lf, = self.ax_2d.plot([-self.world_size,-self.lane_len/2*4], [-self.lane_len/2,-self.lane_len/2], 'black', linewidth=2)
         #self.l_mainroad_dw_rt, = self.ax_2d.plot([self.lane_len/2*4,self.world_size], [-self.lane_len/2,-self.lane_len/2], 'black', linewidth=2)
         #
@@ -216,13 +216,17 @@ class SimVisual(object):
 
     
             #self.p_high_variable.set_data([self.env.high_variable_pos[0]],[self.env.high_variable_pos[1]])
-            self.p_high_variable = self.ax_2d.scatter(high_variable[0], high_variable[1], marker='*', color='brown')
+            self.p_high_variable = self.ax_2d.scatter(high_variable[0], high_variable[1], marker='*', color='brown', s=300)
            
             # plot quadrotor trajectory
             self.l_vehicle_pos.set_data(vehicle_pos_arr[:, 0], vehicle_pos_arr[:, 1])
 
             # plot mpc plan trajectory
             self.l_vehicle_pred_traj.set_data(pred_vehicle_traj[:, 0], pred_vehicle_traj[:, 1])
+
+            # save eps fig
+            #plt.savefig('./1.pdf', dpi=300)
+            self.fig.savefig('./1.png', dpi=600)
 
         return  self.l_vehicle_pred_traj, \
                 self.l_vehicle_outline, self.p_high_variable, self.l_f_v_outline,\
