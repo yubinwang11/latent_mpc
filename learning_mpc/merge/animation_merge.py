@@ -224,8 +224,6 @@ class SimVisual(object):
             # plot mpc plan trajectory
             self.l_vehicle_pred_traj.set_data(pred_vehicle_traj[:, 0], pred_vehicle_traj[:, 1])
 
-            plt.savefig('./1.eps', dpi=300)
-
         return  self.l_vehicle_pred_traj, \
                 self.l_vehicle_outline, self.p_high_variable, self.l_f_v_outline,\
                 self.l_vehicle_pos, self.l_trafficflow_left, self.l_trafficflow_right, \

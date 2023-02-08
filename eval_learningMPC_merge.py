@@ -26,7 +26,7 @@ def arg_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--visualization', type=bool, default=True,
                         help="Play animation")
-    parser.add_argument('--save_video', type=bool, default=False,
+    parser.add_argument('--save_video', type=bool, default=True,
                         help="Save the animation as a video file")
     return parser
 
