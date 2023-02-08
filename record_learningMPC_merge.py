@@ -37,6 +37,8 @@ def main():
 
 def eval_learningMPC(args):
 
+    eval_mode = 'human-expert' # CRL,standardRL or human-expert
+
     sample_num = 100
     success_sample = 0
 
@@ -54,10 +56,21 @@ def eval_learningMPC(args):
                                     output_dim=nn_output_dim,
                                     net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
         
-        model_path = "./" + "models/" + "CRL/"
-        print('Loading Model...')
-        checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
-        model.load_state_dict(checkpoint['model'])
+        if eval_mode == 'CRL':
+            model_path = "./" + "models/" + "CRL/"
+            print('Loading Model...')
+            checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
+            model.load_state_dict(checkpoint['model'])
+
+        elif eval_mode == 'standardRL':
+            model_path = "./" + "models/" + "standardRL/"
+            print('Loading Model...')
+            checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
+            model.load_state_dict(checkpoint['model'])\
+    
+    else:
+        use_learning = False
+        pass
 
         worker = Worker_Record(env)
 
@@ -67,6 +80,16 @@ def eval_learningMPC(args):
         high_variable = high_variable*std + mean
 
         high_variable = high_variable.detach().numpy().tolist()
+
+
+        if not (use_learning):
+            # decision varaibles are designed by human-expert experience
+            high_variable[0] = obs.detach().numpy().tolist()[5]
+            high_variable[1] = -env.lane_len/2
+            high_variable[2] = 0
+            high_variable[3] = 10
+            high_variable[4] = 2
+
         worker.run_episode(high_variable, args)
 
         if (worker.env.success):

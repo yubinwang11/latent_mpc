@@ -61,7 +61,7 @@ def eval_learningMPC(args):
         model.load_state_dict(checkpoint['model'])
 
     elif eval_mode == 'standardRL':
-        model_path = "./" + "models/" + "CRL/"
+        model_path = "./" + "models/" + "standardRL/"
         print('Loading Model...')
         checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
         model.load_state_dict(checkpoint['model'])\
