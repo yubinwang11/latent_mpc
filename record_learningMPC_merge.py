@@ -37,7 +37,9 @@ def main():
 
 def eval_learningMPC(args):
 
-    eval_mode = 'human-expert' # CRL,standardRL or human-expert
+    use_learning = True
+
+    eval_mode = 'standardRL' # CRL,standardRL or human-expert
 
     sample_num = 100
     success_sample = 0
@@ -68,9 +70,9 @@ def eval_learningMPC(args):
             checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
             model.load_state_dict(checkpoint['model'])\
     
-    else:
-        use_learning = False
-        pass
+        else:
+            use_learning = False
+            pass
 
         worker = Worker_Record(env)
 
@@ -80,7 +82,6 @@ def eval_learningMPC(args):
         high_variable = high_variable*std + mean
 
         high_variable = high_variable.detach().numpy().tolist()
-
 
         if not (use_learning):
             # decision varaibles are designed by human-expert experience

@@ -50,7 +50,7 @@ def main():
 
     num_episode = args.episode_num
 
-    env_mode = 'general'
+    env_mode = 'hard'
     env = MergeEnv(curriculum_mode=env_mode)
 
     obs=env.reset()
