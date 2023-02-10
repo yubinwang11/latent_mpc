@@ -12,6 +12,9 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 import math
 from math import cos, sin, tan
 import copy
+
+import os
+from pathlib import Path
 #
 from common.vehicle_index import *
 
@@ -57,7 +60,7 @@ class SimVisual(object):
 
         self.l_acc, = self.ax_act.plot([], [], '-b', label='acceleration', linewidth=3)
         self.l_steer, = self.ax_act.plot([], [], '-r', label='steer angle', linewidth=3)
-        self.ax_act.legend( handles=[self.l_acc, self.l_steer], fontsize=25, loc=1)
+        self.ax_act.legend( handles=[self.l_acc, self.l_steer], fontsize=30, loc=1)
 
         '''
         self.pos_min, self.pos_max = 0, 80
@@ -74,7 +77,7 @@ class SimVisual(object):
 
         # Plot 2D coordinates,
         self.l_vehicle_pos, = self.ax_2d.plot([], [], 'k-', linewidth=3)
-        self.l_vehicle_pred_traj, = self.ax_2d.plot([], [], 'r*', markersize=4)
+        self.l_vehicle_pred_traj, = self.ax_2d.plot([], [], 'r*', markersize=5)
 
         self.l_vehicle_outline, = self.ax_2d.plot([], [], 'b', linewidth=4)
 
@@ -138,7 +141,7 @@ class SimVisual(object):
         surr_v_left = info["surr_v_left"]
         surr_v_right = info["surr_v_right"]
         high_variable = info["high_variable"]
-
+        current_t = info["current_t"]
         #plan_dt = info["plan_dt"]
 
         
@@ -226,7 +229,9 @@ class SimVisual(object):
 
             # save eps fig
             #plt.savefig('./1.pdf', dpi=300)
-            self.fig.savefig('./1.png', dpi=600)
+            eval_dir = Path('./figs')
+            fig_name = '%i' % (current_t*10)
+            self.fig.savefig(eval_dir / fig_name, dpi=600)
 
         return  self.l_vehicle_pred_traj, \
                 self.l_vehicle_outline, self.p_high_variable, self.l_f_v_outline,\

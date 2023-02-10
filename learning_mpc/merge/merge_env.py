@@ -288,6 +288,7 @@ class MergeEnv(object):
             "f_v_pos": self.f_v_pos,
             "act": _act, 
             "pred_vehicle_traj": pred_traj, 
+            "current_t": current_t,
             "plan_dt": self.plan_dt,
             "surr_v_left": self.surr_v_left,
             "surr_v_right": self.surr_v_right,

@@ -106,7 +106,7 @@ def eval_learningMPC(args):
         writer = writer(fps=10, metadata=dict(artist='Me'), bitrate=1800)
         ani.save("trail.mp4", writer=writer)
         #sim_visual.fig.savefig('./1.pdf', dpi=300)
-        sim_visual.fig.savefig('./test.png') 
+        #sim_visual.fig.savefig('./test.png') 
 
     
 if __name__ == "__main__":
