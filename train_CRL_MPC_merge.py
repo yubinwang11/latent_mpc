@@ -50,7 +50,7 @@ def main():
 
     num_episode = args.episode_num
 
-    env_mode = 'general'
+    env_mode = 'hard'
     env = MergeEnv(curriculum_mode=env_mode)
 
     obs=env.reset()
@@ -186,7 +186,10 @@ def main():
         best_model = copy.deepcopy(model)
 
         if args.run_wandb:
-            wandb.log({"episode": episode_i, "reward": ep_reward, "loss": loss, "travese time": high_variable[-1], "position_x":high_variable[0], "position_y": high_variable[1], "heading": high_variable[2], "speed": high_variable[3],"grad_norm": grad_norm})
+            wandb.log({"episode": episode_i, "reward": ep_reward, "loss": loss, "travese time": high_variable[-1], "position_x":high_variable[0], "position_y": high_variable[1], \
+                       "heading": high_variable[2], "speed": high_variable[3],"vy": high_variable[4],"omega": high_variable[5],\
+                       "Q_x":high_variable[6], "Q_y": high_variable[7], "Q_heading": high_variable[8], "Q_vx": high_variable[9],"Q_vy": high_variable[10],"Q_omega": high_variable[11],\
+                        "grad_norm": grad_norm})
             #wandb.watch(model, log='all', log_freq=1)
 
         if args.save_model:

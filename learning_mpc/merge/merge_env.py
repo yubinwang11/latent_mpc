@@ -55,6 +55,8 @@ class MergeEnv(object):
         # reset the environment
         self.eval = eval
         self.end_con = np.inf
+
+        self.mpc = None
     
     def seed(self, seed):
         np.random.seed(seed=seed)
@@ -64,12 +66,7 @@ class MergeEnv(object):
         # state for ODE
         self.vehicle_state = self.vehicle.reset(curriculum_mode=self.curriculum_mode)
 
-        initial_u = [0, 0]
-
-        if (self.eval):
-            self.mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, lane_len = self.lane_len, init_state=self.vehicle_state, init_u=initial_u,stimulate=False)
-        else:
-            self.mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, lane_len = self.lane_len, init_state=self.vehicle_state, init_u=initial_u)
+        self.initial_u = [0, 0]
 
         if self.curriculum_mode == 'general':
             # Sampling range of the chance's initial position
@@ -204,6 +201,16 @@ class MergeEnv(object):
 
     def step(self, high_variable, step_i):
         
+        value_Qmax = high_variable[6:12]
+
+        if self.mpc is None: 
+            if (self.eval):
+                self.mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, Qmax = value_Qmax, lane_len = self.lane_len, init_state=self.vehicle_state, init_u=self.initial_u,stimulate=False)
+            else:
+                self.mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, Qmax = value_Qmax, lane_len = self.lane_len, init_state=self.vehicle_state, init_u=self.initial_u)
+        else:
+            pass
+
         reward = 0
         self.t += self.sim_dt
         
@@ -215,7 +222,8 @@ class MergeEnv(object):
         goal_state = self.goal
         
         current_t = self.t
-        tra_state = high_variable[kpx:kvx+1] + [current_t, high_variable[-1], self.sigma]
+
+        tra_state = high_variable[kpx:6] + [current_t, high_variable[-1], self.sigma]
 
         ref_traj = vehicle_state + tra_state + goal_state
 
