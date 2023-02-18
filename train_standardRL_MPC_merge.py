@@ -46,7 +46,7 @@ def main():
 
     args = arg_parser().parse_args()
 
-    device = torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda:3' if torch.cuda.is_available() else 'cpu')
 
     num_episode = args.episode_num
 
@@ -86,6 +86,7 @@ def main():
         config={
         #"learning_rate": learning_rate,
         "exp_decay": env.sigma,
+        "init_lr": learning_rate,
         }
     )
 
@@ -94,7 +95,7 @@ def main():
         print("===========================================================")    
         print("episode is :", episode_i)
 
-        env_mode = 'general'
+        env_mode = 'hard'
 
         env = MergeEnv(curriculum_mode=env_mode)
         obs=env.reset()

@@ -19,7 +19,7 @@ class Space(object):
 
 class MergeEnv(object):
 
-    def __init__(self, curriculum_mode = 'general', eval = False):
+    def __init__(self, curriculum_mode = 'hard', eval = False):
 
         self.curriculum_mode = curriculum_mode
         self.plan_T = 5.0 # Prediction horizon for MPC and local planner
@@ -248,38 +248,43 @@ class MergeEnv(object):
 
         collision = self.vehicle._is_colliding(self.surr_v_left) or self.vehicle._is_colliding(self.surr_v_right) or self.vehicle._is_colliding(self.f_v) 
         # sparse reward for collision avoidance 
+        
         if (collision):
             self.collided = collision
 
-            if self.vehicle_state[kvx] >= 0:
-                reward -= 5
-            else:
-                reward -= 2
+            if self.curriculum_mode == 'medium':
+                reward -= abs(vehicle_state[kvx])
+            elif self.curriculum_mode == 'hard':
+                reward -= 2 * abs(vehicle_state[kvx])
         
-        if step_i == 0:
-            out_of_road_up, out_of_road_down = self._check_out_of_road(high_variable[kpy])
-            if (out_of_road_up):
-                reward -= 2* np.linalg.norm(high_variable[kpy]- (self.lane_len - self.vehicle_length/2))
-            elif  (out_of_road_down):
-                reward -= 2* np.linalg.norm(high_variable[kpy]- (-self.lane_len + self.vehicle_length/2))
+        if self.curriculum_mode == 'easy':
+            if step_i == 0:
+                out_of_road_up, out_of_road_down = self._check_out_of_road(high_variable[kpy])
+                if (out_of_road_up):
+                    reward -= 2* np.linalg.norm(high_variable[kpy]- (self.lane_len - self.vehicle_length/2))
+                elif  (out_of_road_down):
+                    reward -= 2* np.linalg.norm(high_variable[kpy]- (-self.lane_len + self.vehicle_length/2))
 
-            if high_variable[-1] > self.sim_T or high_variable[-1] < 0:
-                reward -= 5 * min(abs(high_variable[-1]-self.sim_T), abs(high_variable[-1]-0))
-            
-            #if high_variable[-1] <= 0:
-                #reward -= 5* abs(high_variable[-1])
-            #else:
-            reward -= abs(high_variable[-1])
+                if high_variable[-1] > self.sim_T or high_variable[-1] < 0:
+                    reward -= 5 * min(abs(high_variable[-1]-self.sim_T), abs(high_variable[-1]-0))
+                
+                #if high_variable[-1] <= 0:
+                    #reward -= 5* abs(high_variable[-1])
+                #else:
+                reward -= abs(high_variable[-1])
 
-            if high_variable[2] > np.pi/2 or high_variable[2] < -np.pi/2:
-                reward -= 5 * min(abs(high_variable[2]-np.pi/2),abs(high_variable[2]-(-np.pi/2)))
+                if high_variable[2] > np.pi/2 or high_variable[2] < -np.pi/2:
+                    reward -= 5 * min(abs(high_variable[2]-np.pi/2),abs(high_variable[2]-(-np.pi/2)))
 
-            if np.array(high_variable[0]) <= np.array(self.chance_pos[0] + self.vehicle_length/2):
-                dist_x = np.linalg.norm(np.array(high_variable[0])-np.array(self.chance_pos[0]+ self.vehicle_length/2))
-                reward -= dist_x
+                if np.array(high_variable[0]) <= np.array(self.chance_pos[0] + self.vehicle_length/2):
+                    dist_x = np.linalg.norm(np.array(high_variable[0])-np.array(self.chance_pos[0]+ self.vehicle_length/2))
+                    reward -= dist_x
 
-            #if high_variable[3] > 3 * self.chance_vel or high_variable[3] < 0:
-                #reward -= 3 * min(abs(high_variable[3]-0),abs(high_variable[3]- 3* self.chance_vel))
+                #if high_variable[3] > 3 * self.chance_vel or high_variable[3] < 0:
+                    #reward -= 3 * min(abs(high_variable[3]-0),abs(high_variable[3]- 3* self.chance_vel))
+                for i in range(6):
+                    if high_variable[6+i] <= 0:
+                        reward -= abs(high_variable[6+i])
 
         # observation
         self.obs = []
@@ -306,9 +311,15 @@ class MergeEnv(object):
             }
 
         done = False
+
+        # target reward for each curriculum
         if np.linalg.norm(np.array(self.goal[0:3]) - np.array(self.vehicle_state)[0:3]) < self.end_con: #1.25
             done = True
-            reward += 100
+
+            if self.curriculum_mode == 'medium':
+                reward += 100
+            elif self.curriculum_mode == 'hard':
+                reward += 100
 
             if self.collided == False:
                 self.success = True
@@ -319,8 +330,8 @@ class MergeEnv(object):
         elif self.t >= (self.sim_T-self.sim_dt):
             done = True
         
-        if (done):
-            reward -= abs(current_t)
+        #if (done):
+            #reward -= abs(current_t)
 
         return self.obs, reward, done, info
     
