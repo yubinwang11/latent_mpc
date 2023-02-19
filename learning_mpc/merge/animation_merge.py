@@ -76,7 +76,7 @@ class SimVisual(object):
         self.ax_speed = self.fig.add_subplot(self.gs[6:8, :])
         self.ax_speed.grid(True)
         self.ax_speed.set_ylim([-5, 15])
-        self.ax_speed.set_xlim([0, self.t_max/2])
+        self.ax_speed.set_xlim([0, self.t_max/2+3])
         plt.xticks(size = 20) # ontproperties = 'Times New Roman', 
         plt.yticks(size = 20)
 
@@ -87,7 +87,7 @@ class SimVisual(object):
         self.ax_act = self.fig.add_subplot(self.gs[8:10, :])
         self.ax_act.grid(True)
         self.ax_act.set_ylim([self.act_min-5, self.act_max+5])
-        self.ax_act.set_xlim([0, self.t_max/2])
+        self.ax_act.set_xlim([0, self.t_max/2+4])
         plt.xticks(size = 20) # ontproperties = 'Times New Roman', 
         plt.yticks(size = 20)
 

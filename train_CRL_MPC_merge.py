@@ -30,7 +30,7 @@ from parameters import *
 
 def arg_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--run_wandb', type=bool, default=True,
+    parser.add_argument('--run_wandb', type=bool, default=False,
                         help="Monitor by wandb")
     parser.add_argument('--episode_num', type=float, default=500,
                         help="Number of episode")
@@ -40,6 +40,8 @@ def arg_parser():
                         help="Save the model of nn")
     parser.add_argument('--load_model', type=bool, default=False,
                         help="Load the trained model of nn")
+    parser.add_argument('--use_SE3', type=bool, default=True,
+                        help="Baselines")
     return parser
 
 def main():
@@ -58,9 +60,16 @@ def main():
     use_gpu = False
     if torch.cuda.is_available():
         use_gpu = True
+        
+    if (args.use_SE3):
+        nn_output_dim=4
+    else:
+        nn_output_dim = 13
+
     model = DNN(input_dim=nn_input_dim,
                                 output_dim=nn_output_dim,
                                 net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
+
     optimizer = optim.Adam(model.high_policy.parameters(), lr=learning_rate)
     lr_decay = optim.lr_scheduler.StepLR(optimizer, step_size=DECAY_STEP, gamma=decay_gamma)
 
@@ -87,6 +96,7 @@ def main():
         #"learning_rate": learning_rate,
         "exp_decay": env.sigma,
         "init_lr": learning_rate,
+        "nn_output_dim": nn_output_dim,
         }
     )
 
@@ -104,7 +114,7 @@ def main():
         elif 200 < episode_i <= 500:
             env_mode = 'hard'
         
-        env = MergeEnv(curriculum_mode=env_mode)
+        env = MergeEnv(curriculum_mode=env_mode, use_SE3=args.use_SE3)
         obs=env.reset()
 
         worker = Worker_Train(env)
@@ -187,17 +197,25 @@ def main():
         best_model = copy.deepcopy(model)
 
         if args.run_wandb:
-            wandb.log({"episode": episode_i, "reward": ep_reward, "loss": loss, "travese time": high_variable[-1], "position_x":high_variable[0], "position_y": high_variable[1], \
-                       "heading": high_variable[2], "speed": high_variable[3],"vy": high_variable[4],"omega": high_variable[5],\
-                       "Q_x":high_variable[6], "Q_y": high_variable[7], "Q_heading": high_variable[8], "Q_vx": high_variable[9],"Q_vy": high_variable[10],"Q_omega": high_variable[11],\
-                        "grad_norm": grad_norm})
-            #wandb.watch(model, log='all', log_freq=1)
+            if not (args.use_SE3):
+                wandb.log({"episode": episode_i, "reward": ep_reward, "loss": loss, "travese time": high_variable[-1], "position_x":high_variable[0], "position_y": high_variable[1], \
+                        "heading": high_variable[2], "speed": high_variable[3],"vy": high_variable[4],"omega": high_variable[5],\
+                        "Q_x":high_variable[6], "Q_y": high_variable[7], "Q_heading": high_variable[8], "Q_vx": high_variable[9],"Q_vy": high_variable[10],"Q_omega": high_variable[11],\
+                            "grad_norm": grad_norm})
+                #wandb.watch(model, log='all', log_freq=1)
+            elif (args.use_SE3):
+                wandb.log({"episode": episode_i, "reward": ep_reward, "loss": loss, "travese time": high_variable[-1], "position_x":high_variable[0], "position_y": high_variable[1], \
+                        "heading": high_variable[2],  "grad_norm": grad_norm})
+                #wandb.watch(model, log='all', log_freq=1)
 
         if args.save_model:
 
             if episode_i > 0 and episode_i % args.save_model_window == 0: ##default 100
                 #print('Saving model', end='\n')
-                model_path = "models/CRL"
+                if not (args.use_SE3):
+                    model_path = "models/augmented/CRL"
+                else:
+                    model_path = "models/SE3/CRL"
                 print('Saving model', end='\n')
                 checkpoint = {"model": best_model.state_dict(),
                               "optimizer": optimizer.state_dict(),

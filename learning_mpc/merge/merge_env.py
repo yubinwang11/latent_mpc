@@ -19,7 +19,7 @@ class Space(object):
 
 class MergeEnv(object):
 
-    def __init__(self, curriculum_mode = 'hard', eval = False):
+    def __init__(self, curriculum_mode = 'hard', eval = False, use_SE3=False):
 
         self.curriculum_mode = curriculum_mode
         self.plan_T = 5.0 # Prediction horizon for MPC and local planner
@@ -40,6 +40,7 @@ class MergeEnv(object):
         self.lane_len = 6
 
         self.curriculum_mode = curriculum_mode
+        self.use_SE3 = use_SE3
 
         ## High_Level Variable
         self.high_variable_pos = None
@@ -201,20 +202,21 @@ class MergeEnv(object):
 
     def step(self, high_variable, step_i):
         
-        value_Qmax = high_variable[6:12]
+        if not (self.use_SE3):
+            value_Qmax = high_variable[6:12]
+        else:
+            value_Qmax = [100, 100, 10]
 
         if self.mpc is None: 
             if (self.eval):
-                self.mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, Qmax = value_Qmax, lane_len = self.lane_len, init_state=self.vehicle_state, init_u=self.initial_u,stimulate=False)
+                self.mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, Qmax = value_Qmax, lane_len = self.lane_len, init_state=self.vehicle_state, init_u=self.initial_u,stimulate=False, use_SE3=self.use_SE3)
             else:
-                self.mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, Qmax = value_Qmax, lane_len = self.lane_len, init_state=self.vehicle_state, init_u=self.initial_u)
+                self.mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, Qmax = value_Qmax, lane_len = self.lane_len, init_state=self.vehicle_state, init_u=self.initial_u, use_SE3=self.use_SE3)
         else:
             pass
 
         reward = 0
         self.t += self.sim_dt
-        
-        #self.high_variable_pos = high_variable[kpx:kpy+1]
 
         print("===========================================================")    
         #
@@ -223,7 +225,10 @@ class MergeEnv(object):
         
         current_t = self.t
 
-        tra_state = high_variable[kpx:6] + [current_t, high_variable[-1], self.sigma]
+        if not (self.use_SE3):
+            tra_state = high_variable[kpx:6] + [current_t, high_variable[-1], self.sigma]
+        else:
+            tra_state = high_variable[kpx:3] + [current_t, high_variable[-1], self.sigma]
 
         ref_traj = vehicle_state + tra_state + goal_state
 
@@ -268,9 +273,6 @@ class MergeEnv(object):
                 if high_variable[-1] > self.sim_T or high_variable[-1] < 0:
                     reward -= 5 * min(abs(high_variable[-1]-self.sim_T), abs(high_variable[-1]-0))
                 
-                #if high_variable[-1] <= 0:
-                    #reward -= 5* abs(high_variable[-1])
-                #else:
                 reward -= abs(high_variable[-1])
 
                 if high_variable[2] > np.pi/2 or high_variable[2] < -np.pi/2:
@@ -280,11 +282,10 @@ class MergeEnv(object):
                     dist_x = np.linalg.norm(np.array(high_variable[0])-np.array(self.chance_pos[0]+ self.vehicle_length/2))
                     reward -= dist_x
 
-                #if high_variable[3] > 3 * self.chance_vel or high_variable[3] < 0:
-                    #reward -= 3 * min(abs(high_variable[3]-0),abs(high_variable[3]- 3* self.chance_vel))
-                for i in range(6):
-                    if high_variable[6+i] <= 0:
-                        reward -= abs(high_variable[6+i])
+                if not (self.use_SE3):
+                    for i in range(6):
+                        if high_variable[6+i] <= 0:
+                            reward -= abs(high_variable[6+i])
 
         # observation
         self.obs = []
