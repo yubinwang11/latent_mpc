@@ -157,7 +157,7 @@ class MergeEnv(object):
             )
             # Sampling range of the front vehicle's initial position
             self.f_v_relxy_dist = np.array(
-                [ [25, 35]]   # x
+                [ [20, 25]]   # x 25 35
             )
             # Sampling range of the front vehicle's initial velocity
             self.f_v_vxy_dist = np.array(
@@ -168,7 +168,7 @@ class MergeEnv(object):
             # Chance Parameters
             self.chance_pos = [self.vehicle_state[kpx]+np.random.uniform(
                     low=self.c_xy_reldist[0, 0], high=self.c_xy_reldist[0, 1]),self.lane_len/2] # [0, 2.0]
-            self.end_con = np.pi/1.2
+            self.end_con = np.pi/2 # 1.2
             
         self.chance_vel = np.random.uniform(
                 low=self.c_vxy_dist[0, 0], high=self.c_vxy_dist[0, 1])
@@ -313,7 +313,8 @@ class MergeEnv(object):
         done = False
 
         # target reward for each curriculum
-        if np.linalg.norm(np.array(self.goal[0:3]) - np.array(self.vehicle_state)[0:3]) < self.end_con: #1.25
+        dist2desti = 0.5 * np.linalg.norm(np.array(self.goal[0:2]) - np.array(self.vehicle_state)[0:2]) + 5 * np.linalg.norm(np.array(self.goal[2]) - np.array(self.vehicle_state)[2])
+        if dist2desti < self.end_con: #1.25
             done = True
 
             if self.curriculum_mode == 'medium':
