@@ -28,6 +28,8 @@ def arg_parser():
                         help="Play animation")
     parser.add_argument('--save_video', type=bool, default=False,
                         help="Save the animation as a video file")
+    parser.add_argument('--use_SE3', type=bool, default=False,
+                        help="Baselines")     
     return parser
 
 def main():
@@ -40,11 +42,16 @@ def eval_learningMPC(args):
     eval_mode = 'CRL' # CRL,standardRL or human-expert
 
     env_mode = 'hard'
-    env = MergeEnv(curriculum_mode=env_mode, eval=False)
+    env = MergeEnv(curriculum_mode=env_mode, eval=False, use_SE3=args.use_SE3)
     obs=env.reset()
 
     nn_input_dim = len(obs)
     use_gpu = False
+
+    if (args.use_SE3):
+        nn_output_dim=4
+    else:
+        nn_output_dim = 13
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -55,17 +62,23 @@ def eval_learningMPC(args):
     use_learning = True
 
     if eval_mode == 'CRL':
-        model_path = "./" + "models/augmented/" + "CRL/"
-        print('Loading Model...')
-        checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
-        model.load_state_dict(checkpoint['model'])
+            if not (args.use_SE3):
+                model_path = "./" + "models/augmented/" + "CRL/"
+            else:
+                model_path = "./" + "models/SE3/" + "CRL/"
+            print('Loading Model...')
+            checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
+            model.load_state_dict(checkpoint['model'])
 
     elif eval_mode == 'standardRL':
-        model_path = "./" + "models/" + "standardRL/"
+        if not (args.use_SE3):
+            model_path = "./" + "models/augmented/" + "standardRL/"
+        else:
+            model_path = "./" + "models/SE3/" + "standardRL/"
         print('Loading Model...')
         checkpoint = torch.load(model_path + '/checkpoint.pth', map_location=torch.device('cpu'))
         model.load_state_dict(checkpoint['model'])\
-    
+
     else:
         use_learning = False
         pass
@@ -81,11 +94,19 @@ def eval_learningMPC(args):
 
     if not (use_learning):
         # decision varaibles are designed by human-expert experience
-        high_variable[0] = obs.detach().numpy().tolist()[5]
-        high_variable[1] = -env.lane_len/2
-        high_variable[2] = 0
-        high_variable[3] = 10
-        high_variable[4] = 2
+        high_variable[0] = obs.detach().numpy().tolist()[5] # px
+        high_variable[1] = -env.lane_len/2 # py
+        high_variable[2] = 0 # heading
+        high_variable[3] = 10 # vx
+        high_variable[4] = 0.5 # vy
+        high_variable[5] = 0 # omega
+        high_variable[6] = 500 # Qx
+        high_variable[7] = 500 # Qy
+        high_variable[8] = 50 # Qpsi
+        high_variable[9] = 10 # Qvx
+        high_variable[10] = 10 # Qvy
+        high_variable[11] = 10 # Qomega
+        high_variable[-1] = 2 # t
 
     worker.run_episode(high_variable, args)
 
