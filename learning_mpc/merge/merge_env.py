@@ -268,6 +268,7 @@ class MergeEnv(object):
         if self.curriculum_mode == 'easy':
             if step_i == 0:
                 out_of_road_up, out_of_road_down = self._check_out_of_road(high_variable[kpy])
+                
                 if (out_of_road_up):
                     reward -= 2* np.linalg.norm(high_variable[kpy]- (self.lane_len - self.vehicle_length/2))
                 elif  (out_of_road_down):
