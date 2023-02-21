@@ -30,7 +30,7 @@ from parameters import *
 
 def arg_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--run_wandb', type=bool, default=False,
+    parser.add_argument('--run_wandb', type=bool, default=True,
                         help="Monitor by wandb")
     parser.add_argument('--episode_num', type=float, default=500,
                         help="Number of episode")
@@ -53,7 +53,7 @@ def main():
     num_episode = args.episode_num
 
     env_mode = 'hard'
-    env = MergeEnv(curriculum_mode=env_mode)
+    env = MergeEnv(curriculum_mode=env_mode, use_SE3=args.use_SE3)
 
     obs=env.reset()
     nn_input_dim = len(obs)

@@ -30,7 +30,7 @@ from parameters import *
 
 def arg_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--run_wandb', type=bool, default=False,
+    parser.add_argument('--run_wandb', type=bool, default=True,
                         help="Monitor by wandb")
     parser.add_argument('--episode_num', type=float, default=500,
                         help="Number of episode")
@@ -40,7 +40,7 @@ def arg_parser():
                         help="Save the model of nn")
     parser.add_argument('--load_model', type=bool, default=False,
                         help="Load the trained model of nn")
-    parser.add_argument('--use_SE3', type=bool, default=True,
+    parser.add_argument('--use_SE3', type=bool, default=False,
                         help="Baselines")
     return parser
 
@@ -53,7 +53,7 @@ def main():
     num_episode = args.episode_num
 
     env_mode = 'hard'
-    env = MergeEnv(curriculum_mode=env_mode)
+    env = MergeEnv(curriculum_mode=env_mode, use_SE3=args.use_SE3)
 
     obs=env.reset()
     nn_input_dim = len(obs)
@@ -74,7 +74,7 @@ def main():
     lr_decay = optim.lr_scheduler.StepLR(optimizer, step_size=DECAY_STEP, gamma=decay_gamma)
 
     if args.load_model:
-        model_path = "./" + "models/" + "CRL/"
+        model_path = "./" + "models/augmented" + "CRL/"
         print('Loading Model...')
         if torch.cuda.is_available():
             checkpoint = torch.load(model_path + '/checkpoint.pth')

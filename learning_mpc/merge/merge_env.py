@@ -46,7 +46,10 @@ class MergeEnv(object):
         self.high_variable_pos = None
         
         ## Planner 
-        self.sigma = 1 # 10
+        if not (self.use_SE3):
+            self.sigma = 1 # 10
+        else:
+            self.sigma = 10
     
         self.action_space = Space(
             low=np.array([-3.0, -0.6]), #low=np.array([-3.0]),
