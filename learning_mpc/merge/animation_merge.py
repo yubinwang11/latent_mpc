@@ -44,63 +44,22 @@ class SimVisual(object):
         #
         # create figure
         #self.fig = plt.figure(figsize=(15,15)) # 20 15、
-        self.fig = plt.figure(figsize=(15,15))
+        self.fig = plt.figure(figsize=(20,20))
         # and figure grid
         self.gs = gridspec.GridSpec(nrows=10, ncols=1)
         #self.gs = gridspec.GridSpec(nrows=1, ncols=1)
         
         # Create layout of our plots
         #
-        self.ax_2d = self.fig.add_subplot(self.gs[:5, :])
-        self.ax_2d.grid(True)
+        ax_2d = self.fig.add_subplot(self.gs[:5, :])
+        ax_2d.grid(True)
         #self.ax_2d = self.fig.add_subplot()
-        self.ax_2d.set_xlim([20, 72]) #self.ax_2d.set_xlim([-1, 1])
-        self.ax_2d.set_ylim([-13, 13]) #self.ax_2d.set_ylim([-1, 1]) 25 25
-        self.ax_2d.set_xlabel("${p_x} (m)$", fontsize=20)
-        self.ax_2d.set_ylabel("${p_y} (m)$", fontsize=20)
+        ax_2d.set_xlim([20, 72]) #self.ax_2d.set_xlim([-1, 1])
+        ax_2d.set_ylim([-13, 13]) #self.ax_2d.set_ylim([-1, 1]) 25 25
+        ax_2d.set_xlabel("${p_x} (m)$", fontsize=20)
+        ax_2d.set_ylabel("${p_y} (m)$", fontsize=20)
         plt.xticks(size = 20) # ontproperties = 'Times New Roman', 
         plt.yticks(size = 20)
-
-        self.art = self.ax_2d.scatter([],[],c=[])
-        self.cax = self.fig.add_subplot(self.gs[5, :])
-        self.cmap = mpl.cm.winter
-        self.norm = mpl.colors.Normalize(vmin=-3, vmax=15)
-        self.cb = mpl.colorbar.ColorbarBase(self.cax, cmap=self.cmap,  norm=self.norm, orientation='horizontal') 
-        self.cax.set_xlabel("${v_x} (m/s)$", fontsize=20)
-        plt.xticks(size = 20) # ontproperties = 'Times New Roman', 
-        plt.yticks(size = 20)
-        
-        self.act_min = -6; self.act_max = 3
-        self.t_min, self.t_max = 0, env.sim_T
-
-        self.ax_speed = self.fig.add_subplot(self.gs[6:8, :])
-        self.ax_speed.grid(True)
-        self.ax_speed.set_ylim([-5, 15])
-        self.ax_speed.set_xlim([0, self.t_max/2+1])
-        plt.xticks(size = 20) # ontproperties = 'Times New Roman', 
-        plt.yticks(size = 20)
-
-        self.l_vx, = self.ax_speed.plot([], [], 'royalblue', label='${v_x}$', linewidth=3)
-        self.l_vy, = self.ax_speed.plot([], [], 'darkorange', label='${v_y}$', linewidth=3)
-        self.ax_speed.legend( handles=[self.l_vx, self.l_vy], fontsize=25, loc=0)
-
-        self.ax_act = self.fig.add_subplot(self.gs[8:10, :])
-        self.ax_act.grid(True)
-        self.ax_act.set_ylim([self.act_min-5, self.act_max+5])
-        self.ax_act.set_xlim([0, self.t_max/2+2])
-        plt.xticks(size = 20) # ontproperties = 'Times New Roman', 
-        plt.yticks(size = 20)
-
-        self.ax_speed.set_xlabel("Time ($s$)", fontsize=20)
-        self.ax_speed.set_ylabel("Speed ($m/s$)", fontsize=20)
-
-
-        self.l_acc, = self.ax_act.plot([], [], 'crimson', label='${a} (m/s^2)$ ', linewidth=3)
-        self.l_steer, = self.ax_act.plot([], [], 'goldenrod', label='${\delta} (rad)$', linewidth=3)
-        self.ax_act.legend( handles=[self.l_acc, self.l_steer], fontsize=25, loc=4)
-
-        self.ax_act.set_xlabel("Time ($s$)", fontsize=20)
-        self.ax_act.set_ylabel("Actions", fontsize=20)
 
         '''
         self.pos_min, self.pos_max = 0, 80
@@ -118,13 +77,13 @@ class SimVisual(object):
         #self.l_vehicle_pos, = self.ax_2d.plot([], [], 'royalblue', linewidth=3)
         #self.l_vehicle_pred_traj, = self.ax_2d.plot([], [], 'darkorange', marker = '*',  markersize=5)
         #self.l_vehicle_pred_traj, = self.ax_2d.plot([], [], color = 'darkorange', marker = '*',  markersize=5)
-        self.l_vehicle_pred_traj, = self.ax_2d.plot([], [], 'r*',  markersize=7)
+        self.l_vehicle_pred_traj, = ax_2d.plot([], [], 'r*',  markersize=7)
 
-        self.l_vehicle_outline, = self.ax_2d.plot([], [], 'royalblue', linewidth=3)
+        self.l_vehicle_outline, = ax_2d.plot([], [], 'royalblue', linewidth=3)
 
-        self.l_f_v_outline, = self.ax_2d.plot([], [], 'darkorange', linewidth=3)
-        self.l_trafficflow_left, = self.ax_2d.plot([], [], 'darkorange', linewidth=3)
-        self.l_trafficflow_right, = self.ax_2d.plot([], [], 'darkorange', linewidth=3)
+        self.l_f_v_outline, = ax_2d.plot([], [], 'darkorange', linewidth=3)
+        self.l_trafficflow_left, = ax_2d.plot([], [], 'darkorange', linewidth=3)
+        self.l_trafficflow_right, = ax_2d.plot([], [], 'darkorange', linewidth=3)
 
         self.chance_pos = self.env.chance_pos
         self.chance_len = self.env.chance_len
@@ -155,11 +114,11 @@ class SimVisual(object):
         self.l_trafficflow_left.set_data([], [])
         self.l_trafficflow_right.set_data([], [])
 
-        self.l_acc.set_data([], [])
-        self.l_steer.set_data([], [])
+        #self.l_acc.set_data([], [])
+        #self.l_steer.set_data([], [])
 
-        self.l_vx.set_data([], [])
-        self.l_vy.set_data([], [])
+        #self.l_vx.set_data([], [])
+        #self.l_vy.set_data([], [])
 
         #self.p_high_variable.set_data([],[])
         #self.l_vehicle_fill = self.ax_2d.fill([],[], facecolor='g', alpha=0.5)
@@ -167,7 +126,7 @@ class SimVisual(object):
         return self.l_vehicle_pred_traj, \
             self.l_vehicle_outline, self.l_f_v_outline, \
             self.l_trafficflow_left, self.l_trafficflow_right, \
-            self.l_acc, self.l_steer, self.l_vx, self.l_vy
+            #self.l_acc, self.l_steer, self.l_vx, self.l_vy
             #self.l_vehicle_fill, 
     
     def update(self, data_info):
@@ -200,25 +159,71 @@ class SimVisual(object):
         if len(self.ts) == 0:
             self.init_animate()
         else:
-            
-            self.ax_2d.clear()
+            self.fig = plt.figure(figsize=(15,15))
+            self.gs = gridspec.GridSpec(nrows=10, ncols=1)
+            ax_2d = self.fig.add_subplot(self.gs[:5, :])
 
-            self.ax_2d = self.fig.add_subplot(self.gs[:5, :])
-            self.ax_2d.grid(True)
-            #self.ax_2d = self.fig.add_subplot()
-            self.ax_2d.set_xlim([20, 72]) #self.ax_2d.set_xlim([-1, 1])
-            self.ax_2d.set_ylim([-13, 13]) #self.ax_2d.set_ylim([-1, 1]) 25 25
-            self.ax_2d.set_xlabel("${p_x} (m)$", fontsize=20)
-            self.ax_2d.set_ylabel("${p_y} (m)$", fontsize=20)
+            ax_2d.grid(True)
+            ax_2d.set_xlim([12, 64]) #self.ax_2d.set_xlim([-1, 1]) 20 72
+            ax_2d.set_ylim([-13, 13]) #self.ax_2d.set_ylim([-1, 1]) 25 25 -13 13
+            ax_2d.set_xlabel("${p_x} (m)$", fontsize=20)
+            ax_2d.set_ylabel("${p_y} (m)$", fontsize=20)
+            plt.xticks(size = 20) # ontproperties = 'Times New Roman', 
+            plt.yticks(size = 20)
+        
+            self.l_mainroad_up, = ax_2d.plot([0,self.world_size], [self.lane_len,self.lane_len], 'black', linewidth=3)
+            self.l_mainroad_mid, = ax_2d.plot([0,self.world_size], [0,0], 'black', linewidth=2, linestyle='dashed')
+            self.l_mainroad_dw, = ax_2d.plot([0,self.world_size], [-self.lane_len,-self.lane_len], 'black', linewidth=3)
+
+            self.l_vehicle_pred_traj, = ax_2d.plot([], [], 'r*',  markersize=7)
+            self.l_vehicle_pred_traj.set_data([], [])
+
+            self.art = ax_2d.scatter([],[],c=[])
+            self.cax = self.fig.add_subplot(self.gs[5, :])
+            self.cmap = mpl.cm.winter
+            self.norm = mpl.colors.Normalize(vmin=-3, vmax=15)
+            self.cb = mpl.colorbar.ColorbarBase(self.cax, cmap=self.cmap,  norm=self.norm, orientation='horizontal') 
+            self.cax.set_xlabel("${v_x} (m/s)$", fontsize=20)
             plt.xticks(size = 20) # ontproperties = 'Times New Roman', 
             plt.yticks(size = 20)
 
-            self.l_mainroad_up, = self.ax_2d.plot([0,self.world_size], [self.lane_len,self.lane_len], 'black', linewidth=3)
-            self.l_mainroad_mid, = self.ax_2d.plot([0,self.world_size], [0,0], 'black', linewidth=2, linestyle='dashed')
-            self.l_mainroad_dw, = self.ax_2d.plot([0,self.world_size], [-self.lane_len,-self.lane_len], 'black', linewidth=3)
+            self.ax_speed = self.fig.add_subplot(self.gs[6:8, :])
+            self.ax_speed.grid(True)
+            self.ax_speed.set_ylim([-5, 15])
+            self.ax_speed.set_xlim([0, self.t_max/2+1])
+            plt.xticks(size = 20) # ontproperties = 'Times New Roman', 
+            plt.yticks(size = 20)
 
-            self.l_vehicle_pred_traj, = self.ax_2d.plot([], [], 'r*',  markersize=7)
-            self.l_vehicle_pred_traj.set_data([], [])
+            self.l_vx, = self.ax_speed.plot([], [], 'royalblue', label='${v_x}$', linewidth=3)
+            self.l_vy, = self.ax_speed.plot([], [], 'darkorange', label='${v_y}$', linewidth=3)
+            self.ax_speed.legend( handles=[self.l_vx, self.l_vy], fontsize=25, loc=0)
+
+            self.act_min = -6; self.act_max = 3
+            self.t_min, self.t_max = 0, self.env.sim_T
+
+            self.ax_act = self.fig.add_subplot(self.gs[8:10, :])
+            self.ax_act.grid(True)
+            self.ax_act.set_ylim([self.act_min-5, self.act_max+5])
+            self.ax_act.set_xlim([0, self.t_max/2+2])
+            plt.xticks(size = 20) # ontproperties = 'Times New Roman', 
+            plt.yticks(size = 20)
+
+            self.ax_speed.set_xlabel("Time ($s$)", fontsize=20)
+            self.ax_speed.set_ylabel("Speed ($m/s$)", fontsize=20)
+
+
+            self.l_acc, = self.ax_act.plot([], [], 'crimson', label='${a} (m/s^2)$ ', linewidth=3)
+            self.l_steer, = self.ax_act.plot([], [], 'goldenrod', label='${\delta} (rad)$', linewidth=3)
+            self.ax_act.legend( handles=[self.l_acc, self.l_steer], fontsize=25, loc=4)
+
+            self.ax_act.set_xlabel("Time ($s$)", fontsize=20)
+            self.ax_act.set_ylabel("Actions", fontsize=20)
+
+            self.l_acc.set_data([], [])
+            self.l_steer.set_data([], [])
+
+            self.l_vx.set_data([], [])
+            self.l_vy.set_data([], [])
 
             vehicle_act_arr = np.array(self.vehicle_cmd)
             self.l_acc.set_data(self.ts, vehicle_act_arr[:, 0])
@@ -226,6 +231,7 @@ class SimVisual(object):
 
             self.l_vx.set_data(self.ts, self.vehicle_vx)
             self.l_vy.set_data(self.ts, self.vehicle_vy)
+
 
             vehicle_pos_arr = np.array(self.vehicle_pos)
             #
@@ -250,16 +256,16 @@ class SimVisual(object):
             #self.ego_v_img = self.ego_v_img.rotate(yaw*57.3,expand=True)
             #self.ego_v_img = scipy.ndimage.rotate(self.ego_v_img,yaw*57.3)
             #self.ax_2d.clear(self.ego_v)
-            self.ego_v = self.ax_2d.imshow(self.ego_v_img, interpolation='none',
+            self.ego_v = ax_2d.imshow(self.ego_v_img, interpolation='none',
                                                                 origin='lower',  extent=(vehicle_pos_arr[-1, 0]-self.vehicle_length/1.8,vehicle_pos_arr[-1, 0]+self.vehicle_length/1.8,\
                                                                 vehicle_pos_arr[-1, 1]-self.vehicle_width/1.8,vehicle_pos_arr[-1, 1]+self.vehicle_width/1.8), clip_on=True)
             #self.ego_v = self.ax_2d.imshow(self.ego_v_img.rotate(yaw*57.3,expand=True),  extent=(vehicle_pos_arr[-1, 0]-self.vehicle_length/1.3,vehicle_pos_arr[-1, 0]+self.vehicle_length/1.3,\
                                                                 #vehicle_pos_arr[-1, 1]-self.vehicle_width/1.3,vehicle_pos_arr[-1, 1]+self.vehicle_width/1.3))
             #print(yaw)
-            trans_data =  mtransforms.Affine2D().rotate_deg_around(vehicle_pos_arr[-1, 0], vehicle_pos_arr[-1, 1], np.rad2deg(yaw)) + self.ax_2d.transData
+            trans_data =  mtransforms.Affine2D().rotate_deg_around(vehicle_pos_arr[-1, 0], vehicle_pos_arr[-1, 1], np.rad2deg(yaw)) + ax_2d.transData
             self.ego_v.set_transform(trans_data)
 
-            self.f_v = self.ax_2d.imshow(self.f_v_img, extent=(f_v_pos[0]-self.vehicle_length/1.8,f_v_pos[0]+self.vehicle_length/1.8,-self.vehicle_width/1.8-self.lane_len/2,+self.vehicle_width/1.8-self.lane_len/2))
+            self.f_v = ax_2d.imshow(self.f_v_img, extent=(f_v_pos[0]-self.vehicle_length/1.8,f_v_pos[0]+self.vehicle_length/1.8,-self.vehicle_width/1.8-self.lane_len/2,+self.vehicle_width/1.8-self.lane_len/2))
 
             trafficflow_gap_len = self.vehicle_length + 3.5
             left_trafficflow_len = abs(self.chance_pos[0] - self.chance_len/2)
@@ -279,7 +285,7 @@ class SimVisual(object):
                 #self.flow_v_left=self.ax_2d.imshow(self.flow_v_img, extent=(center_left-self.vehicle_length/1.3,center_left+self.vehicle_length/1.3,-self.vehicle_width/1.3+self.lane_len/2,+self.vehicle_width/1.3+self.lane_len/2))
                 img_path = random.choice(self.surr_v_color_list)
                 self.flow_v_img = Image.open(img_path)
-                self.flow_v = self.ax_2d.imshow(self.flow_v_img, extent=(center_left-self.vehicle_length/1.8,center_left+self.vehicle_length/1.8,-self.vehicle_width/1.8+self.lane_len/2,+self.vehicle_width/1.8+self.lane_len/2))
+                self.flow_v = ax_2d.imshow(self.flow_v_img, extent=(center_left-self.vehicle_length/1.8,center_left+self.vehicle_length/1.8,-self.vehicle_width/1.8+self.lane_len/2,+self.vehicle_width/1.8+self.lane_len/2))
                 self.flow_v_list.append(self.flow_v)
 
             #trafficflow_left_outline = np.array(trafficflow_left_outline)
@@ -296,7 +302,7 @@ class SimVisual(object):
                 #self.l_trafficflow_left_fill = plt.fill(np.array(trafficflow_left_vehicle[0]), np.array(trafficflow_left_vehicle[1]), color ='g')
                 img_path = random.choice(self.surr_v_color_list)
                 self.flow_v_img = Image.open(img_path)
-                self.flow_v =self.ax_2d.imshow(self.flow_v_img, extent=(center_right-self.vehicle_length/1.8,center_right+self.vehicle_length/1.8,-self.vehicle_width/1.8+self.lane_len/2,+self.vehicle_width/1.8+self.lane_len/2))
+                self.flow_v = ax_2d.imshow(self.flow_v_img, extent=(center_right-self.vehicle_length/1.8,center_right+self.vehicle_length/1.8,-self.vehicle_width/1.8+self.lane_len/2,+self.vehicle_width/1.8+self.lane_len/2))
                 self.flow_v_list.append(self.flow_v)
 
             #trafficflow_right_outline = np.array(trafficflow_right_outline)
@@ -307,7 +313,7 @@ class SimVisual(object):
             #self.p_high_variable = self.ax_2d.scatter(high_variable[0], high_variable[1], marker='*', color='brown', s=300)
            
             # plot quadrotor trajectory
-            self.l_vehicle_pos = self.ax_2d.scatter(vehicle_pos_arr[:, 0], vehicle_pos_arr[:, 1], c=self.vehicle_vx, cmap='winter', edgecolors='none')
+            self.l_vehicle_pos = ax_2d.scatter(vehicle_pos_arr[:, 0], vehicle_pos_arr[:, 1], c=self.vehicle_vx, cmap='winter', edgecolors='none')
             data = np.hstack((vehicle_pos_arr[:, 0][:,np.newaxis], vehicle_pos_arr[:, 1][:,np.newaxis]))
             self.art.set_offsets(data)
             self.art.set_color(self.cmap(self.norm(self.vehicle_vx))) 
@@ -322,7 +328,10 @@ class SimVisual(object):
             #plt.savefig('./1.pdf', dpi=300)
             eval_dir = Path('./figs')
             fig_name = '%i' % (current_t*10)
+            plt.tight_layout()
             self.fig.savefig(eval_dir / fig_name, dpi=600)
+
+            ax_2d.clear()
 
         if len(self.flow_v_list) == 13:
             return  self.l_vehicle_pred_traj,  \

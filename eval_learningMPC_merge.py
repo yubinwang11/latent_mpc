@@ -26,7 +26,7 @@ def arg_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--visualization', type=bool, default=True,
                         help="Play animation")
-    parser.add_argument('--save_video', type=bool, default=False,
+    parser.add_argument('--save_video', type=bool, default=True,
                         help="Save the animation as a video file")
     parser.add_argument('--use_SE3', type=bool, default=False,
                         help="Baselines")     
@@ -59,7 +59,7 @@ def eval_learningMPC(args):
                                 output_dim=nn_output_dim,
                                 net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
     
-    use_learning = True
+    use_learning = False
 
     if eval_mode == 'CRL':
             if not (args.use_SE3):
@@ -119,7 +119,7 @@ def eval_learningMPC(args):
 
 
     plt.tight_layout()
-    plt.show()
+    #plt.show()
     #plt.savefig('./1.eps', dpi=300)
     
     if args.save_video:
