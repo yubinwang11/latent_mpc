@@ -45,6 +45,7 @@ def eval_learningMPC(args):
 
     sample_num = 100
     success_sample = 0
+    collision_sample = 100
 
     for i in range(sample_num):
         env_mode = 'hard'
@@ -114,12 +115,18 @@ def eval_learningMPC(args):
 
         worker.run_episode(high_variable, args)
 
+        if (worker.env.collided):
+            collision_sample += 1
+            print("collision num :", collision_sample, "total num :", i+1)
+
         if (worker.env.success):
             success_sample += 1
-            print(success_sample, i)
-    
+            #print(success_sample, i)
+            print("success num :", success_sample, "total num :", i+1)
+
     success_rate = success_sample /sample_num
-    print(success_rate)
+    collision_rate = collision_sample /sample_num
+    print("collision rate :", collision_rate, "success rate :", success_rate)
     
 if __name__ == "__main__":
     main()
