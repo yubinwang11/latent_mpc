@@ -24,11 +24,7 @@ from parameters import *
 def arg_parser():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--visualization', type=bool, default=False,
-                        help="Play animation")
-    parser.add_argument('--save_video', type=bool, default=False,
-                        help="Save the animation as a video file")
-    parser.add_argument('--use_SE3', type=bool, default=True,
+    parser.add_argument('--use_SE3', type=bool, default=False,
                         help="Baselines")                   
     return parser
 
@@ -39,13 +35,14 @@ def main():
 
 def eval_learningMPC(args):
 
-    use_learning = True
+    use_learning =  True
 
     eval_mode = 'CRL' # CRL,standardRL or human-expert
 
     sample_num = 100
     success_sample = 0
-    collision_sample = 100
+    collision_sample = 0
+    time_sample = 0 
 
     for i in range(sample_num):
         env_mode = 'hard'
@@ -99,7 +96,7 @@ def eval_learningMPC(args):
 
         if not (use_learning):
             # decision varaibles are designed by human-expert experience
-            high_variable[0] = obs.detach().numpy().tolist()[5] # px
+            high_variable[0] = obs.detach().numpy().tolist()[5] + 6 # px
             high_variable[1] = -env.lane_len/2 # py
             high_variable[2] = 0 # heading
             high_variable[3] = 10 # vx
@@ -124,9 +121,11 @@ def eval_learningMPC(args):
             #print(success_sample, i)
             print("success num :", success_sample, "total num :", i+1)
 
+        time_sample += worker.env.t
     success_rate = success_sample /sample_num
     collision_rate = collision_sample /sample_num
-    print("collision rate :", collision_rate, "success rate :", success_rate)
+    average_time = time_sample /sample_num
+    print("collision rate :", collision_rate, "success rate :", success_rate, "average time :", average_time)
     
 if __name__ == "__main__":
     main()
