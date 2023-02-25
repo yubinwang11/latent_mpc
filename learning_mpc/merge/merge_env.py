@@ -238,6 +238,7 @@ class MergeEnv(object):
         # ------------------------------------------------------------
         # run  model predictive control
         _act, pred_traj = self.mpc.solve(ref_traj)
+        pred_traj("pred traj", pred_traj)
 
         self.vehicle_state = self.vehicle.run(_act)
         self.vehicle_pos = self.vehicle_state[kpx:kpy+1]
