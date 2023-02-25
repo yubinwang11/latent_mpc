@@ -38,7 +38,8 @@ def main():
     eval_learningMPC(args)
 
 def eval_learningMPC(args):
-
+    
+    use_learning = False
     eval_mode = 'CRL' # CRL,standardRL or human-expert
 
     env_mode = 'hard'
@@ -58,8 +59,6 @@ def eval_learningMPC(args):
     model = DNN(input_dim=nn_input_dim,
                                 output_dim=nn_output_dim,
                                 net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
-    
-    use_learning = False
 
     if eval_mode == 'CRL':
             if not (args.use_SE3):
