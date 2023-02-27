@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as mpatches
+from matplotlib.pyplot import MultipleLocator
+
 from matplotlib.patches import Circle, PathPatch, Rectangle
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import math
@@ -58,16 +60,14 @@ class SimVisual(object):
         ax_2d.set_ylim([-13, 13]) #self.ax_2d.set_ylim([-1, 1]) 25 25
         ax_2d.set_xlabel("${p_x} (m)$", fontsize=25)
         ax_2d.set_ylabel("${p_y} (m)$", fontsize=25)
-        plt.xticks(size = 25) # ontproperties = 'Times New Roman', 
-        plt.yticks(size = 25)
+        plt.xticks(size = 33) # ontproperties = 'Times New Roman', 
+        plt.yticks(size = 33)
 
         '''
         self.pos_min, self.pos_max = 0, 80
-
         self.ax_pos = self.fig.add_subplot(self.gs[2, 1])
         self.ax_act.set_ylim([self.pos_min, self.pos_max])
         self.ax_act.set_xlim([0, self.t_max])
-
         self.l_pos, = self.ax_act.plot([], [], '-k', label='acceleration')
         self.l_steer, = self.ax_act.plot([], [], '-r', label='steer angle')
         self.ax_act.legend( handles=[self.l_acc, self.l_steer], fontsize=13, loc=1)
@@ -161,53 +161,71 @@ class SimVisual(object):
         if len(self.ts) == 0:
             self.init_animate()
         else:
-            self.fig = plt.figure(figsize=(30,30))
+            self.fig = plt.figure(figsize=(38,38))
             self.gs = gridspec.GridSpec(nrows=20, ncols=1)
             ax_2d = self.fig.add_subplot(self.gs[:10, :])
 
+            self.label_fontsize = 55
+            self.legend_fontsize = 70
+            self.stick_fontsize = 45
+
+            x_major_locator_2d = MultipleLocator(10)
+            ax_2d.xaxis.set_major_locator(x_major_locator_2d)
+
             ax_2d.grid(True)
-            ax_2d.set_xlim([12, 64]) #self.ax_2d.set_xlim([-1, 1]) 20 72
+            ax_2d.set_xlim([25, 77]) #self.ax_2d.set_xlim([-1, 1]) 20 72
             ax_2d.set_ylim([-13, 13]) #self.ax_2d.set_ylim([-1, 1]) 25 25 -13 13
-            ax_2d.set_xlabel("${p_x} (m)$", fontsize=35)
-            ax_2d.set_ylabel("${p_y} (m)$", fontsize=35)
-            plt.xticks(size = 30) # ontproperties = 'Times New Roman', 
-            plt.yticks(size = 30)
+            ax_2d.set_xlabel("${p_x}(m)$", fontsize=self.label_fontsize)
+            ax_2d.set_ylabel("${p_y}(m)$", fontsize=self.label_fontsize)
+            plt.xticks(size = self.stick_fontsize) # ontproperties = 'Times New Roman', 
+            plt.yticks(size = self.stick_fontsize)
         
-            self.l_mainroad_up, = ax_2d.plot([0,self.world_size], [self.lane_len,self.lane_len], 'black', linewidth=3)
-            self.l_mainroad_mid, = ax_2d.plot([0,self.world_size], [0,0], 'black', linewidth=2, linestyle='dashed')
-            self.l_mainroad_dw, = ax_2d.plot([0,self.world_size], [-self.lane_len,-self.lane_len], 'black', linewidth=3)
+            self.l_mainroad_up, = ax_2d.plot([0,self.world_size], [self.lane_len,self.lane_len], 'black', linewidth=5)
+            self.l_mainroad_mid, = ax_2d.plot([0,self.world_size], [0,0], 'black', linewidth=4, linestyle='dashed')
+            self.l_mainroad_dw, = ax_2d.plot([0,self.world_size], [-self.lane_len,-self.lane_len], 'black', linewidth=5)
 
-            self.l_vehicle_pred_traj, = ax_2d.plot([], [], 'r*',  markersize=7)
-            self.l_vehicle_pred_traj.set_data([], [])
+            #self.l_vehicle_pred_traj, = ax_2d.plot([], [], 'r*',  markersize=7)
+            #self.l_vehicle_pred_traj.set_data([], [])
 
-            self.art = ax_2d.scatter([],[],c=[])
+            self.art = ax_2d.scatter([],[], s =200, c=[])
             self.cax = self.fig.add_subplot(self.gs[10, :])
             self.cmap = mpl.cm.winter
             self.norm = mpl.colors.Normalize(vmin=-3, vmax=15)
-            self.cb = mpl.colorbar.ColorbarBase(self.cax, cmap=self.cmap,  norm=self.norm, orientation='horizontal') 
-            self.cax.set_xlabel("${v_x} (m/s)$", fontsize=35)
-            plt.xticks(size = 30) # ontproperties = 'Times New Roman', 
-            plt.yticks(size = 30)
+            self.cb = mpl.colorbar.ColorbarBase(self.cax, cmap=self.cmap, norm=self.norm, orientation='horizontal') 
+            self.cax.set_xlabel("${v_x}(m/s)$", fontsize=self.label_fontsize)
+            self.cax.set_ylabel("Exe.", fontsize=self.label_fontsize)
+            plt.xticks(size = self.stick_fontsize) # ontproperties = 'Times New Roman', 
+            plt.yticks(size = self.stick_fontsize)
 
-            self.art_pred = ax_2d.scatter([],[],c=[])
+            self.art_pred = ax_2d.scatter([],[],s =200, c=[])
             self.cax_pred = self.fig.add_subplot(self.gs[11, :])
-            self.cmap_pred = mpl.cm.spring
+            self.cmap_pred = mpl.cm.autumn
             self.norm_pred = mpl.colors.Normalize(vmin=-3, vmax=15)
-            self.cb = mpl.colorbar.ColorbarBase(self.cax_pred, cmap=self.cmap_pred,  norm=self.norm_pred, orientation='horizontal') 
-            self.cax_pred.set_xlabel("${v_x} (m/s)$", fontsize=35)
-            plt.xticks(size = 30) # ontproperties = 'Times New Roman', 
-            plt.yticks(size = 30)
+            self.cb = mpl.colorbar.ColorbarBase(self.cax_pred, cmap=self.cmap_pred, norm=self.norm_pred, orientation='horizontal') 
+            self.cax_pred.set_xlabel("${v_x}(m/s)$", fontsize=self.label_fontsize)
+            self.cax_pred.set_ylabel("Pred.", fontsize=self.label_fontsize)
+            plt.xticks(size = self.stick_fontsize) # ontproperties = 'Times New Roman', 
+            plt.yticks(size = self.stick_fontsize)
+
+            x_major_locator_color = MultipleLocator(4)
+            self.cax.xaxis.set_major_locator(x_major_locator_color)
+            self.cax_pred.xaxis.set_major_locator(x_major_locator_color)
+
 
             self.ax_speed = self.fig.add_subplot(self.gs[12:16, :])
             self.ax_speed.grid(True)
             self.ax_speed.set_ylim([-5, 15])
             self.ax_speed.set_xlim([0, self.t_max/2+1])
-            plt.xticks(size = 30) # ontproperties = 'Times New Roman', 
-            plt.yticks(size = 30)
+            plt.xticks(size = self.stick_fontsize) # ontproperties = 'Times New Roman', 
+            plt.yticks(size = self.stick_fontsize)
 
-            self.l_vx, = self.ax_speed.plot([], [], 'royalblue', label='${v_x}$', linewidth=5)
-            self.l_vy, = self.ax_speed.plot([], [], 'darkorange', label='${v_y}$', linewidth=5)
-            self.ax_speed.legend( handles=[self.l_vx, self.l_vy], fontsize=40, loc=0)
+            self.l_vx, = self.ax_speed.plot([], [], 'royalblue', label='${v_x}$', linewidth=7)
+            self.l_vy, = self.ax_speed.plot([], [], 'darkorange', label='${v_y}$', linewidth=7)
+            self.ax_speed.legend( handles=[self.l_vx, self.l_vy], fontsize=self.legend_fontsize, loc=0)
+            x_major_locator = MultipleLocator(2)
+            y_major_locator = MultipleLocator(5)
+            self.ax_speed.xaxis.set_major_locator(x_major_locator)
+            self.ax_speed.yaxis.set_major_locator(y_major_locator)
 
             self.act_min = -6; self.act_max = 3
             self.t_min, self.t_max = 0, self.env.sim_T
@@ -216,19 +234,22 @@ class SimVisual(object):
             self.ax_act.grid(True)
             self.ax_act.set_ylim([self.act_min-3, self.act_max+3])
             self.ax_act.set_xlim([0, self.t_max/2+2])
-            plt.xticks(size = 30) # ontproperties = 'Times New Roman', 
-            plt.yticks(size = 30)
+            plt.xticks(size = self.stick_fontsize) # ontproperties = 'Times New Roman', 
+            plt.yticks(size = self.stick_fontsize)
 
-            self.ax_speed.set_xlabel("Time ($s$)", fontsize=35)
-            self.ax_speed.set_ylabel("Speed ($m/s$)", fontsize=35)
+            self.ax_speed.set_xlabel("Time($s$)", fontsize=self.label_fontsize)
+            self.ax_speed.set_ylabel("Speed($m/s$)", fontsize=self.label_fontsize)
 
 
-            self.l_acc, = self.ax_act.plot([], [], 'crimson', label='${a} (m/s^2)$ ', linewidth=5)
-            self.l_steer, = self.ax_act.plot([], [], 'goldenrod', label='${\delta} (rad)$', linewidth=5)
-            self.ax_act.legend( handles=[self.l_acc, self.l_steer], fontsize=40, loc=4)
+            self.l_acc, = self.ax_act.plot([], [], 'crimson', label='${a} (m/s^2)$ ', linewidth=7)
+            self.l_steer, = self.ax_act.plot([], [], 'goldenrod', label='${\delta} (rad)$', linewidth=7)
+            self.ax_act.legend( handles=[self.l_acc, self.l_steer], fontsize=self.legend_fontsize, loc=4)
 
-            self.ax_act.set_xlabel("Time ($s$)", fontsize=35)
-            self.ax_act.set_ylabel("Actions", fontsize=35)
+            self.ax_act.xaxis.set_major_locator(x_major_locator)
+            self.ax_act.yaxis.set_major_locator(y_major_locator)
+
+            self.ax_act.set_xlabel("Time($s$)", fontsize=self.label_fontsize)
+            self.ax_act.set_ylabel("Actions", fontsize=self.label_fontsize)
 
             self.l_acc.set_data([], [])
             self.l_steer.set_data([], [])
@@ -328,12 +349,13 @@ class SimVisual(object):
             #self.p_high_variable = self.ax_2d.scatter(high_variable[0], high_variable[1], marker='*', color='brown', s=300)
            
             # plot quadrotor trajectory
-            self.l_vehicle_pos = ax_2d.scatter(vehicle_pos_arr[:, 0], vehicle_pos_arr[:, 1], s =35, c=self.vehicle_vx, cmap='winter', edgecolors='none')
+            self.l_vehicle_pos = ax_2d.scatter(vehicle_pos_arr[:, 0], vehicle_pos_arr[:, 1], s =150, c=self.vehicle_vx, cmap='winter', edgecolors='none')
+            #plt.colorbar(self.l_vehicle_pos,cax=ax_2d)
             data = np.hstack((vehicle_pos_arr[:, 0][:,np.newaxis], vehicle_pos_arr[:, 1][:,np.newaxis]))
             self.art.set_offsets(data)
             self.art.set_color(self.cmap(self.norm(self.vehicle_vx))) 
             
-            self.l_vehicle_pred_traj = ax_2d.scatter(pred_vehicle_traj[:, 0], pred_vehicle_traj[:, 1], s =35, c=pred_vehicle_traj[:, 3], cmap='spring', edgecolors='none')
+            self.l_vehicle_pred_traj = ax_2d.scatter(pred_vehicle_traj[:, 0], pred_vehicle_traj[:, 1], s =150, c=pred_vehicle_traj[:, 3], cmap='autumn', edgecolors='none')
             data_pred = np.hstack((pred_vehicle_traj[:, 0][:,np.newaxis], pred_vehicle_traj[:, 1][:,np.newaxis]))
             self.art_pred.set_offsets(data_pred)
             self.art_pred.set_color(self.cmap_pred(self.norm_pred(pred_vehicle_traj[:, 3]))) 
@@ -350,7 +372,7 @@ class SimVisual(object):
             eval_dir = Path('./figs')
             fig_name = '%i' % (current_t*10)
             plt.tight_layout()
-            self.fig.savefig(eval_dir / fig_name, dpi=600)
+            self.fig.savefig(eval_dir / fig_name, dpi=600, bbox_inches='tight')
 
             ax_2d.clear()
 
@@ -380,5 +402,3 @@ class SimVisual(object):
                     self.ego_v,\
                     self.f_v, self.flow_v_list[0],self.flow_v_list[1],self.flow_v_list[2], self.flow_v_list[3],self.flow_v_list[4], \
                     self.flow_v_list[5], self.flow_v_list[6], self.flow_v_list[7], self.flow_v_list[8],self.flow_v_list[-6],self.flow_v_list[-5], self.flow_v_list[-4], self.flow_v_list[-3], self.flow_v_list[-2] , self.flow_v_list[-1]
-        
-    

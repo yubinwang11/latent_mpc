@@ -28,7 +28,7 @@ def arg_parser():
                         help="Play animation")
     parser.add_argument('--save_video', type=bool, default=True,
                         help="Save the animation as a video file")
-    parser.add_argument('--use_SE3', type=bool, default=False,
+    parser.add_argument('--use_SE3', type=bool, default=True,
                         help="Baselines")     
     return parser
 
@@ -39,7 +39,7 @@ def main():
 
 def eval_learningMPC(args):
     
-    use_learning = False
+    use_learning = True
     eval_mode = 'CRL' # CRL,standardRL or human-expert
 
     env_mode = 'hard'
