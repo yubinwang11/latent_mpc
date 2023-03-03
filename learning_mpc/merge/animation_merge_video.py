@@ -25,7 +25,7 @@ from PIL import Image
 import random
 
 #
-class SimVisual(object):
+class SimVisual_video(object):
     """
     An animation class
     """
@@ -62,7 +62,6 @@ class SimVisual(object):
         ax_2d.set_ylabel("${p_y} (m)$", fontsize=25)
         plt.xticks(size = 33) # ontproperties = 'Times New Roman', 
         plt.yticks(size = 33)
-
         '''
         self.pos_min, self.pos_max = 0, 80
         self.ax_pos = self.fig.add_subplot(self.gs[2, 1])

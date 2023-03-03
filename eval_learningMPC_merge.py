@@ -16,6 +16,7 @@ import torch
 
 from learning_mpc.merge.merge_env import MergeEnv
 from learning_mpc.merge.animation_merge import SimVisual
+from learning_mpc.merge.animation_merge_video import SimVisual_video
 from networks import DNN
 from worker import Worker_Eval
 
@@ -24,12 +25,12 @@ from parameters import *
 def arg_parser():
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('--visualization', type=bool, default=True,
+    parser.add_argument('--clear_visualization', type=bool, default=False,
                         help="Play animation")
     parser.add_argument('--save_video', type=bool, default=True,
                         help="Save the animation as a video file")
-    parser.add_argument('--use_SE3', type=bool, default=True,
-                        help="Baselines")     
+    parser.add_argument('--use_SE3', type=bool, default=False,
+                        help="Baselines")  
     return parser
 
 def main():
@@ -109,8 +110,10 @@ def eval_learningMPC(args):
 
     worker.run_episode(high_variable, args)
 
-    #if args.visualization:
-    sim_visual = SimVisual(worker.env)
+    if args.clear_visualization:
+        sim_visual = SimVisual(worker.env)
+    else:
+        sim_visual = SimVisual_video(worker.env)
 #
     run_frame = partial(worker.run_episode, high_variable, args)
     ani = animation.FuncAnimation(sim_visual.fig, sim_visual.update, frames=run_frame,
@@ -118,7 +121,10 @@ def eval_learningMPC(args):
 
 
     plt.tight_layout()
-    #plt.show()
+
+    if not args.clear_visualization:
+        plt.show()
+        pass
     #plt.savefig('./1.eps', dpi=300)
     
     if args.save_video:
