@@ -14,9 +14,9 @@ import os
 
 import torch
 
-from learning_mpc.merge.merge_env import MergeEnv
-from learning_mpc.merge.animation_merge import SimVisual
-from learning_mpc.merge.animation_merge_video import SimVisual_video
+from learning_mpc.lane_change.env import Env
+from learning_mpc.lane_change.animation import SimVisual
+from learning_mpc.lane_change.animation_video import SimVisual_video
 from networks import DNN
 from worker import Worker_Eval
 
@@ -44,7 +44,7 @@ def eval_learningMPC(args):
     eval_mode = 'CRL' # CRL,standardRL or human-expert
 
     env_mode = 'hard'
-    env = MergeEnv(curriculum_mode=env_mode, eval=False, use_SE3=args.use_SE3)
+    env = Env(curriculum_mode=env_mode, eval=False, use_SE3=args.use_SE3)
     obs=env.reset()
 
     nn_input_dim = len(obs)
@@ -120,9 +120,10 @@ def eval_learningMPC(args):
                                 init_func=sim_visual.init_animate, interval=100, blit=True, repeat=False)
 
 
-    plt.tight_layout()
+    #plt.tight_layout()
 
     if not args.clear_visualization:
+        plt.tight_layout()
         plt.show()
         pass
     #plt.savefig('./1.eps', dpi=300)

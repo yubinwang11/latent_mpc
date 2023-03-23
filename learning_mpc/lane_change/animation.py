@@ -63,20 +63,6 @@ class SimVisual(object):
         plt.xticks(size = 33) # ontproperties = 'Times New Roman', 
         plt.yticks(size = 33)
 
-        '''
-        self.pos_min, self.pos_max = 0, 80
-        self.ax_pos = self.fig.add_subplot(self.gs[2, 1])
-        self.ax_act.set_ylim([self.pos_min, self.pos_max])
-        self.ax_act.set_xlim([0, self.t_max])
-        self.l_pos, = self.ax_act.plot([], [], '-k', label='acceleration')
-        self.l_steer, = self.ax_act.plot([], [], '-r', label='steer angle')
-        self.ax_act.legend( handles=[self.l_acc, self.l_steer], fontsize=13, loc=1)
-        '''
-
-        # Plot 2D coordinates,
-        #self.l_vehicle_pos, = self.ax_2d.plot([], [], 'royalblue', linewidth=3)
-        #self.l_vehicle_pred_traj, = self.ax_2d.plot([], [], 'darkorange', marker = '*',  markersize=5)
-        #self.l_vehicle_pred_traj, = self.ax_2d.plot([], [], color = 'darkorange', marker = '*',  markersize=5)
         self.l_vehicle_pred_traj, = ax_2d.plot([], [], 'r*',  markersize=7)
 
         self.l_vehicle_outline, = ax_2d.plot([], [], 'royalblue', linewidth=3)
@@ -101,36 +87,20 @@ class SimVisual(object):
 
     def init_animate(self,):
         
-        # Initialize quadrotor 3d trajectory
-        #self.l_vehicle_pos.set_data([], [])
         # Initialize MPC planned trajectory
         self.l_vehicle_pred_traj.set_data([], [])
 
         self.l_vehicle_outline.set_data([], [])
         #self.l_vehicle_fill.set_data([], [])
         self.l_f_v_outline.set_data([], [])
-        #self.l_surrounding_v_outline.set_data([], [])
 
         self.l_trafficflow_left.set_data([], [])
         self.l_trafficflow_right.set_data([], [])
 
-        #self.l_acc.set_data([], [])
-        #self.l_steer.set_data([], [])
-
-        #self.l_vx.set_data([], [])
-        #self.l_vy.set_data([], [])
-
-        #self.p_high_variable.set_data([],[])
-        #self.l_vehicle_fill = self.ax_2d.fill([],[], facecolor='g', alpha=0.5)
-
         return self.l_vehicle_pred_traj, \
             self.l_vehicle_outline, self.l_f_v_outline, \
             self.l_trafficflow_left, self.l_trafficflow_right, \
-            #self.l_acc, self.l_steer, self.l_vx, self.l_vy
-            #self.l_vehicle_fill, 
     
-
-
     def update(self, data_info):
 
         info, t, update = data_info[0], data_info[1], data_info[2]
@@ -276,24 +246,16 @@ class SimVisual(object):
             vehicle_outline[0, :] += vehicle_pos_arr[-1, 0] #vehicle_state[kpx]
             vehicle_outline[1, :] += vehicle_pos_arr[-1:, 1] #vehicle_state[kpy]
 
-            #f_v_outline = copy.deepcopy(vehicle_outline)
             f_v_outline = np.array([[-self.vehicle_length/2, self.vehicle_length/2, self.vehicle_length/2, -self.vehicle_length/2,-self.vehicle_length/2,],
                         [self.vehicle_width / 2, self.vehicle_width / 2, - self.vehicle_width / 2, -self.vehicle_width / 2, self.vehicle_width / 2]])
 
             f_v_outline[0, :] += f_v_pos[0]
             f_v_outline[1, :] += f_v_pos[1]
 
-            #self.l_vehicle_outline.set_data([np.array(self.vehicle_outline[0, :]).flatten()],[np.array(self.vehicle_outline[1, :]).flatten()])
-            #self.l_vehicle_outline.set_data([vehicle_outline[0, :]],[vehicle_outline[1, :]])
-            #self.ego_v_img = self.ego_v_img.rotate(yaw*57.3,expand=True)
-            #self.ego_v_img = scipy.ndimage.rotate(self.ego_v_img,yaw*57.3)
-            #self.ax_2d.clear(self.ego_v)
             self.ego_v = ax_2d.imshow(self.ego_v_img, interpolation='none',
                                                                 origin='lower',  extent=(vehicle_pos_arr[-1, 0]-self.vehicle_length/1.8,vehicle_pos_arr[-1, 0]+self.vehicle_length/1.8,\
                                                                 vehicle_pos_arr[-1, 1]-self.vehicle_width/1.8,vehicle_pos_arr[-1, 1]+self.vehicle_width/1.8), clip_on=True)
-            #self.ego_v = self.ax_2d.imshow(self.ego_v_img.rotate(yaw*57.3,expand=True),  extent=(vehicle_pos_arr[-1, 0]-self.vehicle_length/1.3,vehicle_pos_arr[-1, 0]+self.vehicle_length/1.3,\
-                                                                #vehicle_pos_arr[-1, 1]-self.vehicle_width/1.3,vehicle_pos_arr[-1, 1]+self.vehicle_width/1.3))
-            #print(yaw)
+
             trans_data =  mtransforms.Affine2D().rotate_deg_around(vehicle_pos_arr[-1, 0], vehicle_pos_arr[-1, 1], np.rad2deg(yaw)) + ax_2d.transData
             self.ego_v.set_transform(trans_data)
 
@@ -313,18 +275,12 @@ class SimVisual(object):
                 trafficflow_left_vehicle = np.array([[center_left+self.vehicle_length/2, center_left+self.vehicle_length/2, center_left-self.vehicle_length/2, center_left-self.vehicle_length/2,center_left+self.vehicle_length/2,center_left+self.vehicle_length/2,center_left-self.vehicle_length/2,center_left-self.vehicle_length/2,],
                         [self.lane_len/2, -self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, +self.chance_wid/2+self.lane_len/2, +self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, self.lane_len/2]])
                 trafficflow_left_outline.append(trafficflow_left_vehicle)
-                #self.l_trafficflow_left_fill = plt.fill(np.array(trafficflow_left_vehicle[0]), np.array(trafficflow_left_vehicle[1]), color ='g')
-                #self.flow_v_left=self.ax_2d.imshow(self.flow_v_img, extent=(center_left-self.vehicle_length/1.3,center_left+self.vehicle_length/1.3,-self.vehicle_width/1.3+self.lane_len/2,+self.vehicle_width/1.3+self.lane_len/2))
-                #img_path = random.choice(self.surr_v_color_list)
+
                 ith_car_left = num_left % 3
                 img_path = self.surr_v_color_list[ith_car_left]
                 self.flow_v_img = Image.open(img_path)
                 self.flow_v = ax_2d.imshow(self.flow_v_img, extent=(center_left-self.vehicle_length/1.8,center_left+self.vehicle_length/1.8,-self.vehicle_width/1.8+self.lane_len/2,+self.vehicle_width/1.8+self.lane_len/2))
                 self.flow_v_list.append(self.flow_v)
-
-            #trafficflow_left_outline = np.array(trafficflow_left_outline)
-            #self.l_trafficflow_left.set_data([trafficflow_left_outline[:,0, :]],[trafficflow_left_outline[:,1, :]])
-            #self.l_trafficflow_left.set_data([trafficflow_left_outline[:,0, :]],[trafficflow_left_outline[:,1, :]])
 
             trafficflow_right_outline = []
             for num_right in range(right_trafficflow_vehicle_num):
@@ -333,20 +289,13 @@ class SimVisual(object):
                 trafficflow_right_vehicle = np.array([[center_right-self.vehicle_length/2, center_right-self.vehicle_length/2, center_right+self.vehicle_length/2, center_right+self.vehicle_length/2,center_right-self.vehicle_length/2,center_right-self.vehicle_length/2,center_right+self.vehicle_length/2,center_right+self.vehicle_length/2,],
                         [self.lane_len/2, +self.chance_wid/2+self.lane_len/2, +self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, -self.chance_wid/2+self.lane_len/2, +self.chance_wid/2+self.lane_len/2, +self.chance_wid/2+self.lane_len/2, self.lane_len/2]])
                 trafficflow_right_outline.append(trafficflow_right_vehicle)
-                #self.l_trafficflow_left_fill = plt.fill(np.array(trafficflow_left_vehicle[0]), np.array(trafficflow_left_vehicle[1]), color ='g')
-                #img_path = random.choice(self.surr_v_color_list)
+
                 ith_car_right = num_right % 3
                 img_path = self.surr_v_color_list[ith_car_right]
                 self.flow_v_img = Image.open(img_path)
                 self.flow_v = ax_2d.imshow(self.flow_v_img, extent=(center_right-self.vehicle_length/1.8,center_right+self.vehicle_length/1.8,-self.vehicle_width/1.8+self.lane_len/2,+self.vehicle_width/1.8+self.lane_len/2))
                 self.flow_v_list.append(self.flow_v)
 
-            #trafficflow_right_outline = np.array(trafficflow_right_outline)
-            #self.l_trafficflow_left.set_data([trafficflow_left_outline[:,0, :]],[trafficflow_left_outline[:,1, :]])
-            #self.l_trafficflow_right.set_data([trafficflow_right_outline[:,0, :]],[trafficflow_right_outline[:,1, :]])
-
-            #self.p_high_variable.set_data([self.env.high_variable_pos[0]],[self.env.high_variable_pos[1]])
-            #self.p_high_variable = self.ax_2d.scatter(high_variable[0], high_variable[1], marker='*', color='brown', s=300)
            
             # plot quadrotor trajectory
             self.l_vehicle_pos = ax_2d.scatter(vehicle_pos_arr[:, 0], vehicle_pos_arr[:, 1], s =150, c=self.vehicle_vx, cmap='winter', edgecolors='none')
@@ -360,12 +309,6 @@ class SimVisual(object):
             self.art_pred.set_offsets(data_pred)
             self.art_pred.set_color(self.cmap_pred(self.norm_pred(pred_vehicle_traj[:, 3]))) 
             
-            #self.fig.colorbar(mpl.cm.ScalarMappable(), cax=self.ax_2d, orientation='horizontal')
-            #self.sub_colorbar = self.fig.colorbar(self.l_vehicle_pos, ax=self.ax_2d)
-            #self.l_vehicle_pos.set_data(vehicle_pos_arr[:, 0], vehicle_pos_arr[:, 1])
-
-            # plot mpc plan trajectory
-            #self.l_vehicle_pred_traj.set_data(pred_vehicle_traj[:, 0], pred_vehicle_traj[:, 1])
 
             # save eps fig
             #plt.savefig('./1.pdf', dpi=300)

@@ -1,5 +1,5 @@
 """
-Curriculum RL with MPC for Autonomous Driving
+Standard RL with MPC for Autonomous Driving
 """
 
 import numpy as np
@@ -21,8 +21,8 @@ import torch.optim as optim
 
 import wandb
 
-from learning_mpc.merge.merge_env import MergeEnv
-from learning_mpc.merge.animation_merge import SimVisual
+from learning_mpc.lane_change.env import Env
+from learning_mpc.lane_change.animation import SimVisual
 from networks import DNN
 from worker import Worker_Train
 
@@ -40,7 +40,7 @@ def arg_parser():
                         help="Save the model of nn")
     parser.add_argument('--load_model', type=bool, default=False,
                         help="Load the trained model of nn")
-    parser.add_argument('--use_SE3', type=bool, default=False,
+    parser.add_argument('--use_SE3', type=bool, default=True,
                         help="Baselines")
     return parser
 
@@ -53,14 +53,14 @@ def main():
     num_episode = args.episode_num
 
     env_mode = 'hard'
-    env = MergeEnv(curriculum_mode=env_mode, use_SE3=args.use_SE3)
+    env = Env(curriculum_mode=env_mode, use_SE3=args.use_SE3)
 
     obs=env.reset()
     nn_input_dim = len(obs)
     use_gpu = False
     if torch.cuda.is_available():
         use_gpu = True
-        
+
     if (args.use_SE3):
         nn_output_dim=4
     else:
@@ -69,12 +69,11 @@ def main():
     model = DNN(input_dim=nn_input_dim,
                                 output_dim=nn_output_dim,
                                 net_arch=NET_ARCH,model_togpu=use_gpu,device=device)
-
     optimizer = optim.Adam(model.high_policy.parameters(), lr=learning_rate)
     lr_decay = optim.lr_scheduler.StepLR(optimizer, step_size=DECAY_STEP, gamma=decay_gamma)
 
     if args.load_model:
-        model_path = "./" + "models/augmented" + "CRL/"
+        model_path = "./" + "models/" + "standardRL/"
         print('Loading Model...')
         if torch.cuda.is_available():
             checkpoint = torch.load(model_path + '/checkpoint.pth')
@@ -105,16 +104,9 @@ def main():
         print("===========================================================")    
         print("episode is :", episode_i)
 
-        if episode_i <= 100:
-            env_mode = 'easy'
-        
-        elif 100 < episode_i <= 200:
-            env_mode = 'medium'
+        env_mode = 'hard'
 
-        elif 200 < episode_i <= 500:
-            env_mode = 'hard'
-        
-        env = MergeEnv(curriculum_mode=env_mode, use_SE3=args.use_SE3)
+        env = Env(curriculum_mode=env_mode, use_SE3=args.use_SE3)
         obs=env.reset()
 
         worker = Worker_Train(env)
@@ -213,9 +205,10 @@ def main():
             if episode_i > 0 and episode_i % args.save_model_window == 0: ##default 100
                 #print('Saving model', end='\n')
                 if not (args.use_SE3):
-                    model_path = "models/augmented/CRL"
+                    model_path = "models/augmented/standardRL"
                 else:
-                    model_path = "models/SE3/CRL"
+                    model_path = "models/SE3/standardRL"
+                    
                 print('Saving model', end='\n')
                 checkpoint = {"model": best_model.state_dict(),
                               "optimizer": optimizer.state_dict(),

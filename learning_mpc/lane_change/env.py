@@ -2,7 +2,7 @@ import numpy as np
 #
 from simulation.vehicle import Bicycle_Dynamics
 from simulation.object import Surr_Vehicle
-from learning_mpc.merge.mpc_merge import High_MPC
+from learning_mpc.lane_change.mpc import High_MPC
 #
 from common.vehicle_index import *
 
@@ -17,7 +17,7 @@ class Space(object):
     def sample(self):
         return np.random.uniform(self.low, self.high)
 
-class MergeEnv(object):
+class Env(object):
 
     def __init__(self, curriculum_mode = 'hard', eval = False, use_SE3=False):
 

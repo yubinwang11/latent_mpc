@@ -14,8 +14,8 @@ import os
 
 import torch
 
-from learning_mpc.merge.merge_env import MergeEnv
-from learning_mpc.merge.animation_merge import SimVisual
+from learning_mpc.lane_change.env import Env
+from learning_mpc.lane_change.animation import SimVisual
 from networks import DNN
 from worker import Worker_Record
 
@@ -46,7 +46,7 @@ def eval_learningMPC(args):
 
     for i in range(sample_num):
         env_mode = 'hard'
-        env = MergeEnv(curriculum_mode=env_mode, eval=False, use_SE3=args.use_SE3)
+        env = Env(curriculum_mode=env_mode, eval=False, use_SE3=args.use_SE3)
         obs=env.reset()
 
         nn_input_dim = len(obs)
