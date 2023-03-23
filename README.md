@@ -1,7 +1,6 @@
 # MPC-CRL: Chance-Aware Lane Change with High-Level Model Predictive Control Through Curriculum Reinforcement Learning
 Author: Yubin Wang
 
-Multi-Actor-Attention-Critic
 Code for [*Chance-Aware Lane Change with High-Level Model Predictive Control Through Curriculum Reinforcement Learning*](https://arxiv.org/abs/2303.03723) (IROS 2023 Submission)
 
 ## Requirements

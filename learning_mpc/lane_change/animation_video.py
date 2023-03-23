@@ -31,9 +31,9 @@ class SimVisual_video(object):
     """
     def __init__(self, env):
         
-        self.surr_v_color_list = ['blue.png','orange.png','green.png']
-        self.f_v_img = Image.open('orange.png')
-        self.ego_v_img = Image.open('red.png')
+        self.surr_v_color_list = ['./simulation/blue.png','./simulation/orange.png','./simulation/green.png']
+        self.f_v_img = Image.open('./simulation/orange.png')
+        self.ego_v_img = Image.open('./simulation/red.png')
         self.env = env
         self.lane_len = self.env.lane_len
         self.world_size = self.env.world_size
