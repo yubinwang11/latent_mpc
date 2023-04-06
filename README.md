@@ -1,29 +1,18 @@
-# MPC-CRL: Chance-Aware Lane Change with High-Level Model Predictive Control Through Curriculum Reinforcement Learning
+# Learning to constrcuct a parameterized MPC for autonomous driving with latent collosion avoidance representation
 Author: Yubin Wang
 
-Code for [*Chance-Aware Lane Change with High-Level Model Predictive Control Through Curriculum Reinforcement Learning*](https://arxiv.org/abs/2303.03723) (IROS 2023 Submission)
-
 ## Requirements
-* Python 3.8.1 
+* Python 3.7.1 
 * [PyTorch](http://pytorch.org/)
 * [Wandb](https://wandb.ai)
-* [CasADi](https://web.casadi.org/), version: 3.5.5
+* [CasADi](https://web.casadi.org/) 3.5.5
+* Unreal Engine 4.26
+* Carla 0.9.12
 
 The versions are just what I used and not necessarily strict requirements.
 
 ## How to Run
 
-### Train
-
-Train our method MPC-CRL:
-```shell
-python train_CRL_MPC.py
-```
-
-Train baseline MPC-vanilla RL:
-```shell
-python train_standardRL_MPC.py
-```
 
 ### Evaluate
 
