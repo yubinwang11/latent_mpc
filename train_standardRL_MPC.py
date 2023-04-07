@@ -18,13 +18,11 @@ from torch import nn
 from torch.cuda.amp.grad_scaler import GradScaler
 from torch.cuda.amp.autocast_mode import autocast
 import torch.optim as optim
-
 import wandb
 
 from learning_mpc.lane_change.env import Env
-from learning_mpc.lane_change.animation import SimVisual
 from networks import DNN
-from worker import Worker_Train
+from worker import Worker
 
 from parameters import *
 
@@ -48,7 +46,7 @@ def main():
 
     args = arg_parser().parse_args()
 
-    device = torch.device('cuda:3' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     num_episode = args.episode_num
 

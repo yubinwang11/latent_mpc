@@ -15,8 +15,6 @@ import os
 import torch
 
 from learning_mpc.lane_change.env import Env
-from learning_mpc.lane_change.animation import SimVisual
-from learning_mpc.lane_change.animation_video import SimVisual_video
 from networks import DNN
 from worker import Worker_Eval
 
