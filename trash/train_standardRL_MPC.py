@@ -22,7 +22,7 @@ import wandb
 
 from learning_mpc.lane_change.env import Env
 from networks import DNN
-from worker import Worker
+from trash.worker import Worker
 
 from parameters import *
 
@@ -38,8 +38,6 @@ def arg_parser():
                         help="Save the model of nn")
     parser.add_argument('--load_model', type=bool, default=False,
                         help="Load the trained model of nn")
-    parser.add_argument('--use_SE3', type=bool, default=True,
-                        help="Baselines")
     return parser
 
 def main():

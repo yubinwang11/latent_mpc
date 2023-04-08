@@ -55,7 +55,7 @@ class High_MPC(object):
         '''
 
         self._Q_u = np.diag([0.1, 0.1]) # a, delta self._Q_u = np.diag([0.1, 0.1]) # a, delta
-        self._Q_delta_u = np.diag([10, 10]) # delta_a, delta_steer
+        self._Q_delta_u = np.diag([1, 1]) # delta_a, delta_steer
 
         # initial state and control action
         if init_state is None:
@@ -152,10 +152,16 @@ class High_MPC(object):
         u_min = [self.a_min, self.delta_min] #
         u_max = [self.a_max,  self.delta_max] #
         x_bound = np.inf #x_bound = ca.inf
+
         x_min = [-x_bound for _ in range(self._s_dim)]
-        x_min[1] = -3/2*self.lane_width + self.vehicle_width/2
+        x_min[0] = 0
+        x_min[1] = -1.5*self.lane_width + self.vehicle_width/2
+        x_min[3] = -5
+
         x_max = [x_bound  for _ in range(self._s_dim)]
-        x_max[1] =  3/2*self.lane_width - self.vehicle_width/2
+        x_max[0] = 300
+        x_max[1] = 1.5*self.lane_width - self.vehicle_width/2
+        x_max[3] = 15
 
         #
         g_min = [0 for _ in range(self._s_dim)]

@@ -14,11 +14,11 @@ The versions are just what I used and not necessarily strict requirements.
 ## How to Run
 
 
-### Evaluate
+### Run  MPC
 
 Evaluate the performance of trained model:
 ```shell
-python eval_learningMPC.py
+python run_mpc.py
 ```
 
 ## More

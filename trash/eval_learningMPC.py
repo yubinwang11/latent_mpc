@@ -16,7 +16,7 @@ import torch
 
 from learning_mpc.lane_change.env import Env
 from networks import DNN
-from worker import Worker_Eval
+from trash.worker import Worker_Eval
 
 from parameters import *
 
