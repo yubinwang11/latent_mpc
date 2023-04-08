@@ -32,6 +32,9 @@ class High_MPC(object):
         self.a_max = 1.5 ; self.a_min = -3 
         self.delta_max = 0.75 ; self.delta_min = -0.75 
 
+        self.v_min = -5
+        self.v_max = 10
+
         #
         # state dimension (x, y,           # vehicle position
         #                  v,                    # linear velocity
@@ -156,12 +159,12 @@ class High_MPC(object):
         x_min = [-x_bound for _ in range(self._s_dim)]
         x_min[0] = 0
         x_min[1] = -1.5*self.lane_width + self.vehicle_width/2
-        x_min[3] = -5
+        x_min[3] = self.v_min
 
         x_max = [x_bound  for _ in range(self._s_dim)]
         x_max[0] = 300
         x_max[1] = 1.5*self.lane_width - self.vehicle_width/2
-        x_max[3] = 15
+        x_max[3] = self.v_max
 
         #
         g_min = [0 for _ in range(self._s_dim)]

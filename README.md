@@ -16,7 +16,7 @@ The versions are just what I used and not necessarily strict requirements.
 
 ### Run  MPC
 
-Evaluate the performance of trained model:
+Run standard MPC:
 ```shell
 python run_mpc.py
 ```
