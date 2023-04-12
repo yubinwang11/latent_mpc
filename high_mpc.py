@@ -48,14 +48,11 @@ class High_MPC(object):
             100, 100,  # delta_x, delta_y 100 100 
             100, # delta_phi 10
             10])  # delta_v
-        '''
-        self._Q_gap = np.diag([
+        
+        self._Q_tra = np.diag([
             500, 500,  # delta_x, delta_y 100 100
-            50,
-            50]) # delta_omega #0, 100, 100,  # delta_x, delta_y, delta_z
-            #10, 10, 10, 10, # delta_qw, delta_qx, delta_qy, delta_qz
-            #0, 10, 10]) # delta_vx, delta_vy, delta_vz
-        '''
+            50, # delta_phi
+            50]) #  delta_v
 
         self._Q_u = np.diag([0.1, 0.1]) # a, delta self._Q_u = np.diag([0.1, 0.1]) # a, delta
         self._Q_delta_u = np.diag([1, 1]) # delta_a, delta_steer
@@ -117,24 +114,20 @@ class High_MPC(object):
 
         # placeholder for the quadratic cost function
         Delta_s = ca.SX.sym("Delta_s", self._s_dim)
-        '''
-        if not (self.use_SE3):
-            Delta_p = ca.SX.sym("Delta_p", self._s_dim)
-        else:
-            Delta_p = ca.SX.sym("Delta_p", 3)
-        '''
+        Delta_p = ca.SX.sym("Delta_p", self._s_dim)
+
         Delta_u = ca.SX.sym("Delta_u", self._u_dim)
         Delta_delta_u = ca.SX.sym("Delta_delta_u", self._u_dim)      
         
         #        
         cost_goal = Delta_s.T @ self._Q_goal @ Delta_s 
-        #cost_gap = Delta_p.T @ self._Q_gap @ Delta_p 
+        cost_tra = Delta_p.T @ self._Q_tra @ Delta_p 
         cost_u = Delta_u.T @ self._Q_u @ Delta_u
         cost_delta_u = Delta_delta_u.T @ self._Q_delta_u @ Delta_delta_u
 
         #
         f_cost_goal = ca.Function('cost_goal', [Delta_s], [cost_goal])
-        #f_cost_gap = ca.Function('cost_gap', [Delta_p], [cost_gap])
+        f_cost_tra = ca.Function('cost_tra', [Delta_p], [cost_tra])
         f_cost_u = ca.Function('cost_u', [Delta_u], [cost_u])
         f_cost_delta_u = ca.Function('cost_delta_u', [Delta_delta_u], [cost_delta_u])
 
@@ -170,10 +163,7 @@ class High_MPC(object):
         g_min = [0 for _ in range(self._s_dim)]
         g_max = [0 for _ in range(self._s_dim)]
 
-        '''
-            P = ca.SX.sym("P", self._s_dim+(self._s_dim+3)*1+self._s_dim)
-        '''
-        P = ca.SX.sym("P", self._s_dim+self._s_dim)
+        P = ca.SX.sym("P", self._s_dim+(self._s_dim+3)*1+self._s_dim)
         #P = ca.SX.sym("P", self._s_dim+self._s_dim)
         X = ca.SX.sym("X", self._s_dim, self._N+1)
         U = ca.SX.sym("U", self._u_dim, self._N)
@@ -200,15 +190,10 @@ class High_MPC(object):
             
             # retrieve time constant
             #idx_k = self._s_dim+self._s_dim+(self._s_dim+3)*(k)
-            '''
-            if not (self.use_SE3):
-                idx_k = self._s_dim + self._s_dim
-                #idx_k_end = self._s_dim+(self._s_dim+3)*(k+1)\
-                idx_k_end = self._s_dim+self._s_dim+3
-            else:
-                idx_k = self._s_dim + 3
-                #idx_k_end = self._s_dim+(self._s_dim+3)*(k+1)\
-                idx_k_end = self._s_dim+3+3
+            
+            idx_k = self._s_dim + self._s_dim
+            #idx_k_end = self._s_dim+(self._s_dim+3)*(k+1)\
+            idx_k_end = self._s_dim+self._s_dim+3
 
             time_k = P[ idx_k : idx_k_end]
             
@@ -223,43 +208,28 @@ class High_MPC(object):
             # # # # # # # # # # # # # # # # # # # # # # # # 
             #weight = ca.exp(- time_k[2] * (time_k[0]-time_k[1])**2 ) 
             weight = ca.exp(- time_k[2] * (time_k[0]-time_k[1])**2 ) 
-            '''
+            
             # cost for tracking the goal position
-            #cost_goal_k = 0
             cost_goal_k, cost_gap_k = 0, 0
             #delta_s_k = (X[:, k+1] - P[self._s_dim:]) # The goal postion.
             #cost_goal_k = f_cost_goal(delta_s_k)
 
-            '''
+            
             if k >= self._N-1: # The goal postion.
-                if not (self.use_SE3):
-                    delta_s_k = (X[:, k+1] - P[self._s_dim:])
+
+                delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*1:])
                 cost_goal_k = f_cost_goal(delta_s_k)
+
             else:
-                
-                if (self.stimulate):
-                    ## tricks for training acceleration
-                    # cost for tracking the goal
-                    ''''''
-                    if not (self.use_SE3):
-                        delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*1:])
-                    else:
-                        delta_s_k = (X[:, k+1] - P[self._s_dim+(3+3)*1:])
-                    cost_goal_k = f_cost_goal(delta_s_k)
-                    
+
+                delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*1:])
+                cost_goal_k = f_cost_goal(delta_s_k)
+                                    
                 # cost for tracking the moving gap
-                if not (self.use_SE3):
-                    delta_p_k = (X[0:self._s_dim, k+1] - P[self._s_dim+(self._s_dim+3)*0 : \
-                        self._s_dim+(self._s_dim+3)*(0+1)-3]) 
-                else:
-                    delta_p_k = (X[0:3, k+1] - P[self._s_dim+(3+3)*0 : \
-                        self._s_dim+(3+3)*(0+1)-3]) 
-                
-                #cost_gap_k = f_cost_gap(delta_p_k) * weight
+                delta_p_k = (X[0:self._s_dim, k+1] - P[self._s_dim+(self._s_dim+3)*0 : \
+                    self._s_dim+(self._s_dim+3)*(0+1)-3]) 
+                cost_tra_k = f_cost_tra(delta_p_k) * weight
                 #print(cost_gap_k.shape)
-            '''
-            delta_s_k = (X[:, k+1] - P[self._s_dim:])
-            cost_goal_k = f_cost_goal(delta_s_k)
             
             delta_u_k = U[:, k]-[0, 0] #delta_u_k = U[:, k]-[self._gz, 0, 0, 0]
             cost_u_k = f_cost_u(delta_u_k)
@@ -271,7 +241,7 @@ class High_MPC(object):
             
             cost_delta_u_k = f_cost_delta_u(delta_delta_u_k)
 
-            self.mpc_obj = self.mpc_obj + cost_goal_k + cost_u_k + cost_delta_u_k  # cost_gap_k 
+            self.mpc_obj = self.mpc_obj + cost_goal_k + cost_u_k + cost_delta_u_k  +  cost_tra_k 
 
             # New NLP variable for state at end of interval
             self.nlp_w += [X[:, k+1]]

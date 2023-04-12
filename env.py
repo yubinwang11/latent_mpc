@@ -78,7 +78,7 @@ class Env(object):
         self.ego_vehicle_bp = self.blueprint_library.find('vehicle.tesla.model3')
         self.ego_vehicle_bp.set_attribute('color', '0, 0, 0')
 
-        self.num_agents = 5
+        self.num_agents = 0
 
         self.plan_T = 5.0 # Prediction horizon for MPC 
         self.plan_dt = 0.1 # Sampling time step for MPC
@@ -87,8 +87,9 @@ class Env(object):
         self.sim_T = 50          # Episode length, seconds
         self.sim_dt = 0.1       # simulation time step
         self.max_episode_steps = int(self.sim_T/self.sim_dt)
+
         ## Planner 
-        #self.sigma = 1 # 10
+        self.sigma = 10 # 10
     
     def seed(self, seed):
         np.random.seed(seed=seed)
@@ -118,7 +119,7 @@ class Env(object):
             spawn_agent_transform = carla.Transform(location=carla.Location(x=agent_waypoint.transform.location.x, \
                                             y=agent_waypoint.transform.location.y, z=agent_waypoint.transform.location.z+0.3),\
                                                             rotation=agent_waypoint.transform.rotation)
-            print(rand_lane_id, rand_s)
+            #print(rand_lane_id, rand_s)
             moving_agent = spawn_autopilot_agent(self.blueprint_library, self.world, spawn_agent_transform)
             self.moving_agents.append(moving_agent)
 
@@ -153,8 +154,12 @@ class Env(object):
         self.spectator.set_transform(carla.Transform(transform.location + carla.Location(z=30),
                                                 carla.Rotation(pitch=-90)))
         
+        # generate decision variable, now diy for test
+        decision_variable = [self.vehicle_state[0]+20, 0, 0, 10, 0.2]
+        tra_state = decision_variable[0:4] + [self.t, decision_variable[-1], self.sigma]
+
         # compute the mpc reference
-        ref_traj = self.vehicle_state + self.goal_state
+        ref_traj = self.vehicle_state + tra_state + self.goal_state
 
         # run  model predictive control
         _act, pred_traj = self.high_mpc.solve(ref_traj)
@@ -166,6 +171,8 @@ class Env(object):
         self.curr_waypoint = self.map.get_waypoint(self.vehicle.get_location()) # ,project_to_road=True
         #print('======',self.curr_waypoint.s, '======', self.vehicle_state)
         print('======',self.t, '======', self.curr_waypoint.s)
+        #print('===',self.t, '===', self.curr_waypoint.s, '===', pred_traj)
+        #self.draw_traj(pred_traj)
 
         # compute the distance toward goal state
         dist2desti = np.linalg.norm(np.array(self.goal_state[:3]) - np.array(self.vehicle_state[:3]))
@@ -191,5 +198,11 @@ class Env(object):
         '''
         return done
 
+    def draw_traj(self, traj, color=carla.Color(0,0, 255), line_thickness=0.1, duration=60):
+
+        for i in range(len(traj)-1):
+            start = carla.Location(x=traj[i][0], y=traj[i][1], z=0)
+            end = carla.Location(x=traj[i+1][0], y=traj[i+1][1], z=0)
         
+        self.world.debug.draw_line(start, end, line_thickness, color, duration)
     
