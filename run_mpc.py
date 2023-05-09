@@ -33,6 +33,7 @@ def main():
 
             done = env.step()
             if (done):
+                print(f"reward is {env.reward}")
                 break
     
     finally:

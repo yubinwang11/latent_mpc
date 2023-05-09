@@ -34,9 +34,9 @@ def get_state_frenet(vehicle, map):
 
     return  vehicle_state
 
-def get_control_input(acceleration, steer_angle, dead_zone=0.1):
+def get_control_input(acceleration, steer_angle, dead_zone=0.05):
 
-    max_throttle=0.75; max_brake=0.5; max_steering=0.75; KP=0.75 # 0.1
+    max_throttle=0.75; max_brake=0.5; max_steering=0.75; KP=1 # 0.1
 
     if acceleration >= dead_zone:
         throttle = min(max_throttle, KP*acceleration)
@@ -56,7 +56,10 @@ def get_control_input(acceleration, steer_angle, dead_zone=0.1):
 
 def spawn_autopilot_agent(blueprint_lib, world, spawn_transform):
 
-    agent_bp = random.choice(blueprint_lib.filter('vehicle.*'))
+    #agent_bp = random.choice(blueprint_lib.filter('vehicle.*'))
+    agent_bp = blueprint_lib.find('vehicle.tesla.model3')
+    rand_r, rand_g, rand_b = random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)
+    agent_bp.set_attribute('color', '{},{},{}'.format(rand_r, rand_g, rand_b))
     agent_bp.set_attribute('role_name', 'autopilot')
     agent = world.spawn_actor(agent_bp, spawn_transform)
     agent.set_autopilot(True)
@@ -78,7 +81,7 @@ class Env(object):
         self.ego_vehicle_bp = self.blueprint_library.find('vehicle.tesla.model3')
         self.ego_vehicle_bp.set_attribute('color', '0, 0, 0')
 
-        self.num_agents = 0
+        #self.num_agents = 6
 
         self.plan_T = 5.0 # Prediction horizon for MPC 
         self.plan_dt = 0.1 # Sampling time step for MPC
@@ -90,14 +93,24 @@ class Env(object):
 
         ## Planner 
         self.sigma = 10 # 10
+
+        # Collision sensor
+        self.collision_hist = [] # The collision history
+        #self.collision_hist_l = 1 # collision history length
+        self.collision_bp = self.world.get_blueprint_library().find('sensor.other.collision')
     
     def seed(self, seed):
         np.random.seed(seed=seed)
     
     def reset(self):
-
+        
         # reset the environment
+        self.collision_sensor = None
+        self.reward = 0 
 
+        # Delete surrouding vehicles 
+        self._clear_all_actors(['sensor.other.collision', 'vehicle.*'])
+        
         self.t = 0
         self.initial_u = [0, 0]
 
@@ -112,13 +125,16 @@ class Env(object):
 
         # spawn the moving obstacles (agents)
         self.moving_agents = []
+        self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
+        self.s_list = [30, 60, 80, 100, 100, 80, 120]
+
+        self.num_agents = len(self.lane_id_list)
+
         for i in range(self.num_agents):
-            rand_lane_id = random.choice([-1, -2, -3]) # -1,-2,
-            rand_s = random.randint(0,150) 
-            agent_waypoint = self.map.get_waypoint_xodr(34, rand_lane_id, rand_s)
+            agent_waypoint = self.map.get_waypoint_xodr(34, self.lane_id_list[i], self.s_list[i])
             spawn_agent_transform = carla.Transform(location=carla.Location(x=agent_waypoint.transform.location.x, \
-                                            y=agent_waypoint.transform.location.y, z=agent_waypoint.transform.location.z+0.3),\
-                                                            rotation=agent_waypoint.transform.rotation)
+                                        y=agent_waypoint.transform.location.y, z=agent_waypoint.transform.location.z+0.5),\
+                                                        rotation=agent_waypoint.transform.rotation)
             #print(rand_lane_id, rand_s)
             moving_agent = spawn_autopilot_agent(self.blueprint_library, self.world, spawn_agent_transform)
             self.moving_agents.append(moving_agent)
@@ -140,6 +156,17 @@ class Env(object):
         # determine and visualize the destination
         self.goal_state = np.array([275, 0, 0, 8]).tolist()
         self.world.debug.draw_point(self.destination.location, size=0.3, color=carla.Color(255,0,0), life_time=300)
+
+        # Add collision sensor
+        self.collision_sensor = self.world.spawn_actor(self.collision_bp, carla.Transform(), attach_to=self.vehicle)
+        self.collision_sensor.listen(lambda event: get_collision_hist(event))
+        def get_collision_hist(event):
+            impulse = event.normal_impulse
+            intensity = np.sqrt(impulse.x**2 + impulse.y**2 + impulse.z**2)
+            self.collision_hist.append(intensity)
+            #if len(self.collision_hist)>self.collision_hist_l:
+                #self.collision_hist.pop(0)
+        self.collision_hist = []
 
     def step(self):
         #
@@ -176,11 +203,20 @@ class Env(object):
 
         # compute the distance toward goal state
         dist2desti = np.linalg.norm(np.array(self.goal_state[:3]) - np.array(self.vehicle_state[:3]))
-        if dist2desti < 0.5: #1.25
+        if dist2desti < 1.5: #1.25
             print('======== Success, Arrivied at Target Point!')
-            done = True      
+            done = True
+            self.reward += 100      
+
         elif self.t >= (self.sim_T-self.sim_dt):
             done = True
+
+        # get the reward
+
+        if done:
+            if len(self.collision_hist) > 0:
+                #print(self.collision_hist)
+                self.reward -= 0.1*self.collision_hist[0]
 
         '''
         # observation
@@ -205,4 +241,10 @@ class Env(object):
             end = carla.Location(x=traj[i+1][0], y=traj[i+1][1], z=0)
         
         self.world.debug.draw_line(start, end, line_thickness, color, duration)
-    
+
+    def _clear_all_actors(self, actor_filters):
+        """Clear specific actors."""
+        for actor_filter in actor_filters:
+            for actor in self.world.get_actors().filter(actor_filter):
+                if actor.is_alive:
+                    actor.destroy()
