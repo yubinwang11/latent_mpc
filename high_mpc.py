@@ -29,7 +29,7 @@ class High_MPC(object):
         self.lane_width = lane_width
 
         #self.a_max = 1.5 * 1.5 ; self.a_min = -3 * 1.5
-        self.a_max = 1.5 ; self.a_min = -3 
+        self.a_max = 1.5*3; self.a_min = -3*3
         self.delta_max = 0.75 ; self.delta_min = -0.75 
 
         self.v_min = -5
@@ -190,7 +190,6 @@ class High_MPC(object):
             
             # retrieve time constant
             #idx_k = self._s_dim+self._s_dim+(self._s_dim+3)*(k)
-            
             idx_k = self._s_dim + self._s_dim
             #idx_k_end = self._s_dim+(self._s_dim+3)*(k+1)\
             idx_k_end = self._s_dim+self._s_dim+3
@@ -215,7 +214,8 @@ class High_MPC(object):
             #cost_goal_k = f_cost_goal(delta_s_k)
 
             
-            if k >= self._N-1: # The goal postion.
+            #if k >= self._N-1: # The goal postion.
+            if k >= self._N -1: # The goal postion.
 
                 delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*1:])
                 cost_goal_k = f_cost_goal(delta_s_k)

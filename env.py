@@ -54,6 +54,18 @@ def get_control_input(acceleration, steer_angle, dead_zone=0.05):
 
     return control
 
+def convert_acc(acc):
+
+    # Convert acceleration to throttle and brake
+    if acc > 0:
+        throttle = np.clip(acc/3,0,1)
+        brake = 0
+    else:
+        throttle = 0
+        brake = np.clip(-acc/8,0,1)
+
+    return throttle, brake
+    
 def spawn_autopilot_agent(blueprint_lib, world, spawn_transform):
 
     #agent_bp = random.choice(blueprint_lib.filter('vehicle.*'))
@@ -125,8 +137,8 @@ class Env(object):
 
         # spawn the moving obstacles (agents)
         self.moving_agents = []
-        self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
-        self.s_list = [30, 60, 80, 100, 100, 80, 120]
+        self.lane_id_list = [-3, -1, -1, -1, -2, -2] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
+        self.s_list = [20, 50, 75, 100, 80, 100] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
 
         self.num_agents = len(self.lane_id_list)
 
@@ -154,7 +166,7 @@ class Env(object):
                                  vehicle_width = self.vehicle_width, lane_width = self.lane_width,  init_state=self.vehicle_state)
 
         # determine and visualize the destination
-        self.goal_state = np.array([275, 0, 0, 8]).tolist()
+        self.goal_state = np.array([275, 0, 0, 8]).tolist() # 275
         self.world.debug.draw_point(self.destination.location, size=0.3, color=carla.Color(255,0,0), life_time=300)
 
         # Add collision sensor
@@ -172,7 +184,7 @@ class Env(object):
         #
         self.t += self.sim_dt
         done = False
-
+        
         self.world.tick()
         
         # top view
@@ -182,7 +194,7 @@ class Env(object):
                                                 carla.Rotation(pitch=-90)))
         
         # generate decision variable, now diy for test
-        decision_variable = [self.vehicle_state[0]+20, 0, 0, 10, 0.2]
+        decision_variable = [self.vehicle_state[0]+20, 0, 0, 10, 0.1]
         tra_state = decision_variable[0:4] + [self.t, decision_variable[-1], self.sigma]
 
         # compute the mpc reference
@@ -190,8 +202,15 @@ class Env(object):
 
         # run  model predictive control
         _act, pred_traj = self.high_mpc.solve(ref_traj)
-        control = get_control_input(acceleration=float(_act[0]), steer_angle=float(_act[1]))
-        self.vehicle.apply_control(control)
+    
+        throttle, brake = convert_acc(_act[0])
+        steer = _act[1]
+        act = carla.VehicleControl(throttle=float(throttle), steer=float(steer), brake=float(brake))
+        self.vehicle.apply_control(act)
+
+        #control = get_control_input(acceleration=float(_act[0]), steer_angle=float(_act[1]))
+        #self.vehicle.apply_control(control)
+
         self.vehicle_state = get_state_frenet(self.vehicle, self.map)
         
         # print current state

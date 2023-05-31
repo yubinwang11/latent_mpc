@@ -25,7 +25,7 @@ python run_mpc.py
 
 Under construction...
 
-## Note
+## Reference
 
 Please consider citing the our paper if useful :
 
@@ -37,3 +37,4 @@ Please consider citing the our paper if useful :
   year={2023}
 }
 ```
+
