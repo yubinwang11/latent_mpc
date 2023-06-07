@@ -1,73 +1,83 @@
-#!/usr/bin/env python
+import os
+import yaml
+import argparse
+import numpy as np
+import torch
 
-# Copyright (c) 2019: Jianyu Chen (jianyuchen@berkeley.edu).
-#
-# This work is licensed under the terms of the MIT license.
-# For a copy, see <https://opensource.org/licenses/MIT>.
+from discor.env import make_env
+from discor.algorithm import EvalAlgorithm
 
-import gym
-import gym_carla
-import carla
 
-def main():
-  # parameters for the gym_carla environment
-  params = {
-    'number_of_vehicles': 0, # 100
-    'number_of_walkers': 0,
-    'display_size': 256*2,  # screen size of bird-eye render
-    'max_past_step': 1,  # the number of past steps to draw
-    'dt': 0.1,  # time interval between two frames
-    'discrete': False,  # whether to use discrete control space
-    'discrete_acc': [-3.0, 0.0, 3.0],  # discrete value of accelerations
-    'discrete_steer': [-0.2, 0.0, 0.2],  # discrete value of steering angles
-    'continuous_accel_range': [-3.0, 3.0],  # continuous acceleration range
-    'continuous_steer_range': [-0.3, 0.3],  # continuous steering angle range
-    'ego_vehicle_filter': 'vehicle.tesla.model3*',  # filter for defining ego vehicle lincoln
-    'port': 2000,  # connection port
-    'town': 'Town05',  # which town to simulate
-    'task_mode': 'normal',  # mode of the task, [random, normal, roundabout (only for Town03)]
-    'max_time_episode': 1000,  # maximum timesteps per episode
-    'max_waypt': 12,  # maximum number of waypoints
-    'obs_range': 32,  # observation range (meter)
-    'lidar_bin': 0.125,  # bin size of lidar sensor (meter)
-    'd_behind': 12,  # distance behind the ego vehicle (meter)
-    'out_lane_thres': 2.0,  # threshold for out of lane
-    'desired_speed': 8,  # desired speed (m/s)
-    'max_ego_spawn_times': 200,  # maximum times to spawn ego vehicle
-    'display_route': True,  # whether to render the desired route
-    'pixor_size': 64,  # size of the pixor labels
-    'pixor': False,  # whether to output PIXOR observation
-  }
+def test(env, algo, render):
+    state = env.reset()
+    episode_return = 0.0
+    success = 0.0
 
-  # Set gym-carla environment
-  env = gym.make('carla-v0', params=params)
-  obs = env.reset()
+    done = False
+    while (not done):
+        action = algo.exploit(state)
+        next_state, reward, done, info = env.step(action)
+        if render:
+            env.render()
 
-  while True:
-    #action = [2.0, 0.0]
+        episode_return += reward
+        if env.is_metaworld and info['success'] > 1e-6:
+            success = info['success']
 
-    # generate decision variable, now diy for test
-    decision_variable = [obs['state'][0]+20, 0, 0, 10, 0.1]
-    tra_state = decision_variable[0:4] + [env.t, decision_variable[-1], 10] # 10 is sigma
+        state = next_state
+    return episode_return, success
 
-    # compute the mpc reference
-    ref_traj = obs['state'] + tra_state + env.goal_state
 
-    # run  model predictive control
-    _act, pred_traj = env.high_mpc.solve(ref_traj)
+def run(args):
+    with open(args.config) as f:
+        config = yaml.load(f, Loader=yaml.SafeLoader)
 
-    obs,r,done,info = env.step(_act)
-    #print(obs['state'][3])
-    #print(_act)
-    print(info)
+    policy_hidden_units = config['SAC']['policy_hidden_units']
+
+    # Create environments.
+    env = make_env(args.env_id)
+    env.seed(args.seed)
+
+    # Device to use.
+    device = torch.device(
+        "cuda" if args.cuda and torch.cuda.is_available() else "cpu")
+
+    # Evaluation algorithm.
+    algo = EvalAlgorithm(
+        state_dim=env.observation_space.shape[0],
+        action_dim=env.action_space.shape[0],
+        device=device,
+        policy_hidden_units=policy_hidden_units)
+    algo.load_models(os.path.join(args.log_dir, 'model', 'best'))
+
+    returns = np.empty((args.num_episodes))
+    success = np.empty((args.num_episodes))
+
     env.render()
+    env.viewer._paused = True
 
-    if done:
-      #obs = env.reset()
-      ####
-      env._clear_all_actors(['sensor.other.collision', 'sensor.lidar.ray_cast', 'sensor.camera.rgb', 'vehicle.*', 'controller.ai.walker', 'walker.*'])
-      break 
+    for i in range(args.num_episodes):
+        returns[i], success[i] = test(env, algo, args.render)
+
+    env.viewer._paused = True
+    print('-' * 60)
+    print(f'Num Episodes: {args.num_episodes:<5}\n'
+          f'Mean Return : {returns.mean():<5.1f} '
+          f'+/- {returns.std():<5.1f} ')
+    if env.is_metaworld:
+        print(f'Success rate: {success.mean():<1.3f}  ')
+    print('-' * 60)
 
 
 if __name__ == '__main__':
-  main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--config', type=str, default=os.path.join('config', 'metaworld.yaml'))
+    parser.add_argument('--env_id', type=str, default='hammer-v1')
+    parser.add_argument('--log_dir', type=str, required=True)
+    parser.add_argument('--num_episodes', type=int, default=10)
+    parser.add_argument('--render', action='store_true')
+    parser.add_argument('--cuda', action='store_true')
+    parser.add_argument('--seed', type=int, default=0)
+    args = parser.parse_args()
+    run(args)

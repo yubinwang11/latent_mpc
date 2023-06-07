@@ -48,11 +48,6 @@ class High_MPC(object):
             100, 100,  # delta_x, delta_y 100 100 
             100, # delta_phi 10
             10])  # delta_v
-        
-        self._Q_tra = np.diag([
-            500, 500,  # delta_x, delta_y 100 100
-            50, # delta_phi
-            50]) #  delta_v
 
         self._Q_u = np.diag([0.1, 0.1]) # a, delta self._Q_u = np.diag([0.1, 0.1]) # a, delta
         self._Q_delta_u = np.diag([1, 1]) # delta_a, delta_steer
@@ -121,13 +116,11 @@ class High_MPC(object):
         
         #        
         cost_goal = Delta_s.T @ self._Q_goal @ Delta_s 
-        cost_tra = Delta_p.T @ self._Q_tra @ Delta_p 
         cost_u = Delta_u.T @ self._Q_u @ Delta_u
         cost_delta_u = Delta_delta_u.T @ self._Q_delta_u @ Delta_delta_u
 
         #
         f_cost_goal = ca.Function('cost_goal', [Delta_s], [cost_goal])
-        f_cost_tra = ca.Function('cost_tra', [Delta_p], [cost_tra])
         f_cost_u = ca.Function('cost_u', [Delta_u], [cost_u])
         f_cost_delta_u = ca.Function('cost_delta_u', [Delta_delta_u], [cost_delta_u])
 
@@ -151,20 +144,21 @@ class High_MPC(object):
 
         x_min = [-x_bound for _ in range(self._s_dim)]
         x_min[0] = 0
-        x_min[1] = -1.5*self.lane_width + self.vehicle_width/2
+        x_min[1] = -self.lane_width #-1.5*self.lane_width + self.vehicle_width/2
         x_min[3] = self.v_min
 
         x_max = [x_bound  for _ in range(self._s_dim)]
         x_max[0] = 300
-        x_max[1] = 1.5*self.lane_width - self.vehicle_width/2
+        x_max[1] = self.lane_width #1.5*self.lane_width - self.vehicle_width/2
         x_max[3] = self.v_max
 
         #
         g_min = [0 for _ in range(self._s_dim)]
         g_max = [0 for _ in range(self._s_dim)]
 
-        P = ca.SX.sym("P", self._s_dim+(self._s_dim+3)*1+self._s_dim)
+        #P = ca.SX.sym("P", self._s_dim+(self._s_dim+3)*1+self._s_dim)
         #P = ca.SX.sym("P", self._s_dim+self._s_dim)
+        P = ca.SX.sym("P", self._s_dim+(self._s_dim*2)*1+self._s_dim)
         X = ca.SX.sym("X", self._s_dim, self._N+1)
         U = ca.SX.sym("U", self._u_dim, self._N)
         #
@@ -192,10 +186,19 @@ class High_MPC(object):
             #idx_k = self._s_dim+self._s_dim+(self._s_dim+3)*(k)
             idx_k = self._s_dim + self._s_dim
             #idx_k_end = self._s_dim+(self._s_dim+3)*(k+1)\
-            idx_k_end = self._s_dim+self._s_dim+3
+            #idx_k_end = self._s_dim+self._s_dim+3
+            idx_k_end = self._s_dim+self._s_dim*2
 
-            time_k = P[ idx_k : idx_k_end]
+            #time_k = P[ idx_k : idx_k_end]
+            weight_k = P[ idx_k : idx_k_end]
             
+            self._Q_tra = np.diag([
+            100*weight_k[0], 100*weight_k[1],  # delta_x, delta_y 100 100
+            10*weight_k[2], # delta_phi
+            10*weight_k[3]]) #  delta_v
+
+            cost_tra = Delta_p.T @ self._Q_tra @ Delta_p 
+            f_cost_tra = ca.Function('cost_tra', [Delta_p], [cost_tra])
 
             # # # # # # # # # # # # # # # # # # # # # # # # 
             # - compute exponetial weights
@@ -206,7 +209,7 @@ class High_MPC(object):
 
             # # # # # # # # # # # # # # # # # # # # # # # # 
             #weight = ca.exp(- time_k[2] * (time_k[0]-time_k[1])**2 ) 
-            weight = ca.exp(- time_k[2] * (time_k[0]-time_k[1])**2 ) 
+            #weight = ca.exp(- time_k[2] * (time_k[0]-time_k[1])**2 ) 
             
             # cost for tracking the goal position
             cost_goal_k, cost_gap_k = 0, 0
@@ -217,18 +220,22 @@ class High_MPC(object):
             #if k >= self._N-1: # The goal postion.
             if k >= self._N -1: # The goal postion.
 
-                delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*1:])
+                #delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*1:])
+                delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim*2)*1:])
                 cost_goal_k = f_cost_goal(delta_s_k)
 
             else:
 
-                delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*1:])
+                #delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*1:])
+                delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim*2)*1:])
                 cost_goal_k = f_cost_goal(delta_s_k)
                                     
                 # cost for tracking the moving gap
-                delta_p_k = (X[0:self._s_dim, k+1] - P[self._s_dim+(self._s_dim+3)*0 : \
-                    self._s_dim+(self._s_dim+3)*(0+1)-3]) 
-                cost_tra_k = f_cost_tra(delta_p_k) * weight
+                #delta_p_k = (X[0:self._s_dim, k+1] - P[self._s_dim+(self._s_dim+3)*0 : \
+                    #self._s_dim+(self._s_dim+3)*(0+1)-3]) 
+                delta_p_k = (X[0:self._s_dim, k+1] - P[self._s_dim+(self._s_dim*2)*0 : \
+                    self._s_dim+(self._s_dim*2)*(0+1)-self._s_dim]) 
+                cost_tra_k = f_cost_tra(delta_p_k) #* weight
                 #print(cost_gap_k.shape)
             
             delta_u_k = U[:, k]-[0, 0] #delta_u_k = U[:, k]-[self._gz, 0, 0, 0]

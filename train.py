@@ -1,129 +1,123 @@
 from __future__ import division
+
+import os
+import yaml
+import argparse
+from datetime import datetime
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.autograd import Variable
+import gym
 
 import numpy as np
-import math
+from torch.autograd import Variable
+import pygame
+import gym_carla
+import carla
+import wandb
 
-import utils
-import model
-
-BATCH_SIZE = 128
-LEARNING_RATE = 0.001
-GAMMA = 0.99
-TAU = 0.001
+#from discor.env import make_env
+from discor.algorithm import SAC, DisCor
+from discor.agent import Agent
 
 
-class Trainer:
+def run(args):
+    with open(args.config) as f:
+       config = yaml.load(f, Loader=yaml.SafeLoader)
 
-	def __init__(self, state_dim, action_dim, action_lim, ram):
-		"""
-		:param state_dim: Dimensions of state (int)
-		:param action_dim: Dimension of action (int)
-		:param action_lim: Used to limit action in [-action_lim,action_lim]
-		:param ram: replay memory buffer object
-		:return:
-		"""
-		self.state_dim = state_dim
-		self.action_dim = action_dim
-		self.action_lim = action_lim
-		self.ram = ram
-		self.iter = 0
-		self.noise = utils.OrnsteinUhlenbeckActionNoise(self.action_dim)
+    if args.num_steps is not None:
+        config['Agent']['num_steps'] = args.num_steps
 
-		self.actor = model.Actor(self.state_dim, self.action_dim, self.action_lim)
-		self.target_actor = model.Actor(self.state_dim, self.action_dim, self.action_lim)
-		self.actor_optimizer = torch.optim.Adam(self.actor.parameters(),LEARNING_RATE)
+    # parameters for the gym_carla environment
+    params = {
+	'use_wandb': True,  # whether to use discrete control space
+	'number_of_vehicles': 0, # 100
+	'number_of_walkers': 0,
+	'display_size': 256*2,  # screen size of bird-eye render
+	'max_past_step': 1,  # the number of past steps to draw
+	'dt': 0.1,  # time interval between two frames
+	'discrete': False,  # whether to use discrete control space
+	'discrete_acc': [-3.0, 0.0, 3.0],  # discrete value of accelerations
+	'discrete_steer': [-0.2, 0.0, 0.2],  # discrete value of steering angles
+	#'continuous_accel_range': [-3.0, 3.0],  # continuous acceleration range
+	#'continuous_steer_range': [-0.3, 0.3],  # continuous steering angle range
+	'ego_vehicle_filter': 'vehicle.tesla.model3*',  # filter for defining ego vehicle lincoln
+	'port': 2000,  # connection port
+	'town': 'Town05',  # which town to simulate
+	'task_mode': 'normal',  # mode of the task, [random, normal, roundabout (only for Town03)]
+	'max_time_episode': 500,  # maximum timesteps per episode
+	'max_waypt': 12,  # maximum number of waypoints
+	'obs_range': 32,  # observation range (meter)
+	'lidar_bin': 0.125,  # bin size of lidar sensor (meter)
+	'd_behind': 12,  # distance behind the ego vehicle (meter)
+	'out_lane_thres': 2.0,  # threshold for out of lane
+	'desired_speed': 8,  # desired speed (m/s)
+	'max_ego_spawn_times': 200,  # maximum times to spawn ego vehicle
+	'display_route': True,  # whether to render the desired route
+	'pixor_size': 64,  # size of the pixor labels
+	'pixor': False,  # whether to output PIXOR observation
+	}
+        
+    # Create environments.
+    #env = make_env(args.env_id)
+    #env = gym.make(args.env_id)
+    #test_env = make_env(args.env_id)
+    #test_env = gym.make(args.env_id)
+    # Set gym-carla environment
+    env = gym.make('carla-v0', params=params)
 
-		self.critic = model.Critic(self.state_dim, self.action_dim)
-		self.target_critic = model.Critic(self.state_dim, self.action_dim)
-		self.critic_optimizer = torch.optim.Adam(self.critic.parameters(),LEARNING_RATE)
+    if params['use_wandb']:
+    # start a new wandb run to track this script
+        wandb.init(
+            # set the wandb project where this run will be logged
+            project="latent_mpc_test",
+            entity="yubinwang",
+            # track hyperparameters and run metadata
+            config={
+            #"learning_rate": 0.02,
+            #"architecture": "CNN",
+            #"dataset": "CIFAR-100",
+            "algo": "{args.algo}", # discor
+            }
+        )
+                
+    # Device to use.
+    device = torch.device(
+        "cuda" if args.cuda and torch.cuda.is_available() else "cpu")
 
-		utils.hard_update(self.target_actor, self.actor)
-		utils.hard_update(self.target_critic, self.critic)
+    # Specify the directory to log.
+    time = datetime.now().strftime("%Y%m%d-%H%M")
+    log_dir = os.path.join(
+        'logs', args.env_id, f'{args.algo}-seed{args.seed}-{time}')
 
-	def get_exploitation_action(self, state):
-		"""
-		gets the action from target actor added with exploration noise
-		:param state: state (Numpy array)
-		:return: sampled action (Numpy array)
-		"""
-		state = Variable(torch.from_numpy(state))
-		action = self.target_actor.forward(state).detach()
-		return action.data.numpy()
+    if args.algo == 'discor':
+        # Discor algorithm.
+        algo = DisCor(
+            state_dim=env.observation_space.shape[0],
+            action_dim=env.action_space.shape[0],
+            device=device, seed=args.seed,
+            **config['SAC'], **config['DisCor'])
+    elif args.algo == 'sac':
+        # SAC algorithm.
+        algo = SAC(
+            state_dim=env.observation_space.shape[0],
+            action_dim=env.action_space.shape[0],
+            device=device, seed=args.seed, **config['SAC'])
+    else:
+        raise Exception('You need to set "--algo sac" or "--algo discor".')
 
-	def get_exploration_action(self, state):
-		"""
-		gets the action from actor added with exploration noise
-		:param state: state (Numpy array)
-		:return: sampled action (Numpy array)
-		"""
-		state = Variable(torch.from_numpy(state))
-		action = self.actor.forward(state).detach()
-		new_action = action.data.numpy() + (self.noise.sample() * self.action_lim)
-		return new_action
+    agent = Agent(
+        env=env, algo=algo, log_dir=log_dir,
+        device=device, seed=args.seed, use_wandb=params['use_wandb'], **config['Agent'])
+    agent.run()
 
-	def optimize(self):
-		"""
-		Samples a random batch from replay memory and performs optimization
-		:return:
-		"""
-		s1,a1,r1,s2 = self.ram.sample(BATCH_SIZE)
 
-		s1 = Variable(torch.from_numpy(s1))
-		a1 = Variable(torch.from_numpy(a1))
-		r1 = Variable(torch.from_numpy(r1))
-		s2 = Variable(torch.from_numpy(s2))
-
-		# ---------------------- optimize critic ----------------------
-		# Use target actor exploitation policy here for loss evaluation
-		a2 = self.target_actor.forward(s2).detach()
-		next_val = torch.squeeze(self.target_critic.forward(s2, a2).detach())
-		# y_exp = r + gamma*Q'( s2, pi'(s2))
-		y_expected = r1 + GAMMA*next_val
-		# y_pred = Q( s1, a1)
-		y_predicted = torch.squeeze(self.critic.forward(s1, a1))
-		# compute critic loss, and update the critic
-		loss_critic = F.smooth_l1_loss(y_predicted, y_expected)
-		self.critic_optimizer.zero_grad()
-		loss_critic.backward()
-		self.critic_optimizer.step()
-
-		# ---------------------- optimize actor ----------------------
-		pred_a1 = self.actor.forward(s1)
-		loss_actor = -1*torch.sum(self.critic.forward(s1, pred_a1))
-		self.actor_optimizer.zero_grad()
-		loss_actor.backward()
-		self.actor_optimizer.step()
-
-		utils.soft_update(self.target_actor, self.actor, TAU)
-		utils.soft_update(self.target_critic, self.critic, TAU)
-
-		# if self.iter % 100 == 0:
-		# 	print 'Iteration :- ', self.iter, ' Loss_actor :- ', loss_actor.data.numpy(),\
-		# 		' Loss_critic :- ', loss_critic.data.numpy()
-		# self.iter += 1
-
-	def save_models(self, episode_count):
-		"""
-		saves the target actor and critic models
-		:param episode_count: the count of episodes iterated
-		:return:
-		"""
-		torch.save(self.target_actor.state_dict(), './Models/' + str(episode_count) + '_actor.pt')
-		torch.save(self.target_critic.state_dict(), './Models/' + str(episode_count) + '_critic.pt')
-		print('Models saved successfully') 
-
-	def load_models(self, episode):
-		"""
-		loads the target actor and critic models, and copies them onto actor and critic models
-		:param episode: the count of episodes iterated (used to find the file name)
-		:return:
-		"""
-		self.actor.load_state_dict(torch.load('./Models/' + str(episode) + '_actor.pt'))
-		self.critic.load_state_dict(torch.load('./Models/' + str(episode) + '_critic.pt'))
-		utils.hard_update(self.target_actor, self.actor)
-		utils.hard_update(self.target_critic, self.critic)
-		print('Models loaded succesfully') 
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--config', type=str, default=os.path.join('config', 'metaworld.yaml'))
+    parser.add_argument('--num_steps', type=int, required=False)
+    parser.add_argument('--env_id', type=str, default='Pendulum-v0') # hammer-v1
+    parser.add_argument('--algo', choices=['sac', 'discor'], default='discor')
+    parser.add_argument('--cuda', action='store_true')
+    parser.add_argument('--seed', type=int, default=0)
+    args = parser.parse_args()
+    run(args)

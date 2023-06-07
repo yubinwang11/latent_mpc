@@ -60,30 +60,61 @@ class CarlaEnv(gym.Env):
       self.dests = None
 
     # action and observation spaces
+    #self.act_high = np.array([20.0, 10.0, 5.0, 20.0, 10.0, 10.0, 10.0, 10.0], dtype=np.float32)
+    #self.act_low = np.array([-20.0, -10, -5.0, -20.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float32)
+    self.act_high = np.array([20.0, 10.0, np.pi/2, 20.0, 10.0, 10.0, 10.0, 10.0], dtype=np.float32)
+    self.act_low = np.array([-5.0, -10, -np.pi/2, -5.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float32)
+    #self.act_high = np.array([1.0, 1.0], dtype=np.float32)
+    #self.act_low = np.array([-1.0, -1.0], dtype=np.float32)
+
+    self.obs_high_list = []
+    self.obs_high_list += [275.0, 10.0, np.pi, 20.0]
+    #self.obs_high_list += [275.0, 10.0, np.pi, 20.0]
+    self.obs_high_list += [-1.5*4]
+    self.obs_high_list += [1.5*4]
+    for i in range(6):
+      self.obs_high_list += [275.0, 10.0, np.pi, 20.0]
+    self.obs_high = np.array(self.obs_high_list, dtype=np.float32)
+
+    self.obs_low_list = []
+    self.obs_low_list += [0, -10.0, -np.pi, -20.0]
+    #self.obs_low_list += [0, -10.0, -np.pi, -20.0]
+    self.obs_low_list += [-1.5*4]
+    self.obs_low_list += [1.5*4]
+
+    for i in range(6):
+      self.obs_low_list += [0, -10.0, -np.pi, -20.0]
+    self.obs_low = np.array(self.obs_low_list, dtype=np.float32)
+
+    self.action_space = spaces.Box(
+      low=self.act_low, high=self.act_high, dtype=np.float32
+      )
+    self.observation_space = spaces.Box(low=self.obs_low, high=self.obs_high, dtype=np.float32)
+
     self.discrete = params['discrete']
     self.discrete_act = [params['discrete_acc'], params['discrete_steer']] # acc, steer
     self.n_acc = len(self.discrete_act[0])
     self.n_steer = len(self.discrete_act[1])
-    if self.discrete:
-      self.action_space = spaces.Discrete(self.n_acc*self.n_steer)
-    else:
-      self.action_space = spaces.Box(np.array([params['continuous_accel_range'][0], 
-      params['continuous_steer_range'][0]]), np.array([params['continuous_accel_range'][1],
-      params['continuous_steer_range'][1]]), dtype=np.float32)  # acc, steer
-    observation_space_dict = {
-      'camera': spaces.Box(low=0, high=255, shape=(self.obs_size, self.obs_size, 3), dtype=np.uint8),
-      'lidar': spaces.Box(low=0, high=255, shape=(self.obs_size, self.obs_size, 3), dtype=np.uint8),
-      'birdeye': spaces.Box(low=0, high=255, shape=(self.obs_size, self.obs_size, 3), dtype=np.uint8),
-      'state': spaces.Box(np.array([-2, -1, -5, 0]), np.array([2, 1, 30, 1]), dtype=np.float32)
-      }
-    if self.pixor:
-      observation_space_dict.update({
-        'roadmap': spaces.Box(low=0, high=255, shape=(self.obs_size, self.obs_size, 3), dtype=np.uint8),
-        'vh_clas': spaces.Box(low=0, high=1, shape=(self.pixor_size, self.pixor_size, 1), dtype=np.float32),
-        'vh_regr': spaces.Box(low=-5, high=5, shape=(self.pixor_size, self.pixor_size, 6), dtype=np.float32),
-        'pixor_state': spaces.Box(np.array([-1000, -1000, -1, -1, -5]), np.array([1000, 1000, 1, 1, 20]), dtype=np.float32)
-        })
-    self.observation_space = spaces.Dict(observation_space_dict)
+    #if self.discrete:
+      #self.action_space = spaces.Discrete(self.n_acc*self.n_steer)
+    #else:
+      #self.action_space = spaces.Box(np.array([params['continuous_accel_range'][0], 
+      #params['continuous_steer_range'][0]]), np.array([params['continuous_accel_range'][1],
+      #params['continuous_steer_range'][1]]), dtype=np.float32)  # acc, steer
+    #observation_space_dict = {
+      #'camera': spaces.Box(low=0, high=255, shape=(self.obs_size, self.obs_size, 3), dtype=np.uint8),
+      #'lidar': spaces.Box(low=0, high=255, shape=(self.obs_size, self.obs_size, 3), dtype=np.uint8),
+      #'birdeye': spaces.Box(low=0, high=255, shape=(self.obs_size, self.obs_size, 3), dtype=np.uint8),
+      #'state': spaces.Box(np.array([-2, -1, -5, 0]), np.array([2, 1, 30, 1]), dtype=np.float32)
+      #}
+    #if self.pixor:
+      #observation_space_dict.update({
+        #'roadmap': spaces.Box(low=0, high=255, shape=(self.obs_size, self.obs_size, 3), dtype=np.uint8),
+        #'vh_clas': spaces.Box(low=0, high=1, shape=(self.pixor_size, self.pixor_size, 1), dtype=np.float32),
+        #'vh_regr': spaces.Box(low=-5, high=5, shape=(self.pixor_size, self.pixor_size, 6), dtype=np.float32),
+        ##################'pixor_state': spaces.Box(np.array([-1000, -1000, -1, -1, -5]), np.array([1000, 1000, 1, 1, 20]), dtype=np.float32)
+        #})
+    #self.observation_space = spaces.Dict(observation_space_dict)
 
     # Connect to carla server and get world object
     print('connecting to Carla server...')
@@ -170,7 +201,12 @@ class CarlaEnv(gym.Env):
     self.t = 0
     # reset reward
     self.reward = 0
-    
+    # reset done
+    self.done = False
+    self.arrived = False
+    self.out_of_time = False
+    self.prev_decision_var = None
+
     # Clear sensor objects  
     self.collision_sensor = None
     self.lidar_sensor = None
@@ -257,6 +293,7 @@ class CarlaEnv(gym.Env):
     self.s_list = [20, 50, 75, 100, 80, 100] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
 
     self.num_agents = len(self.lane_id_list)
+    #self.num_agents = 0
 
     for i in range(self.num_agents):
         agent_waypoint = self.map.get_waypoint_xodr(34, self.lane_id_list[i], self.s_list[i])
@@ -300,6 +337,7 @@ class CarlaEnv(gym.Env):
 
     # Enable sync mode
     self.settings.synchronous_mode = True
+    self.settings.no_rendering_mode = True
     self.world.apply_settings(self.settings)
 
     self.routeplanner = RoutePlanner(self.ego, self.max_waypt)
@@ -315,7 +353,7 @@ class CarlaEnv(gym.Env):
 
     return obs
   
-  def step(self, action):
+  def step(self, action, ref, supervised_flag = False):
 
      # top view
     self.spectator = self.world.get_spectator()
@@ -392,7 +430,9 @@ class CarlaEnv(gym.Env):
       'vehicle_front': self.vehicle_front
     }
     
-    return (self._get_obs(), self._get_reward(), self._terminal(), copy.deepcopy(info))
+    self.done = self._terminal()
+
+    return (self._get_obs(), self._get_reward(ref, supervised_flag), self.done, copy.deepcopy(info))
 
   def seed(self, seed=None):
     self.np_random, seed = seeding.np_random(seed)
@@ -633,13 +673,16 @@ class CarlaEnv(gym.Env):
       np.array(np.array([np.cos(ego_yaw), np.sin(ego_yaw)]))))
     v = self.ego.get_velocity()
     speed = np.sqrt(v.x**2 + v.y**2)
-    drive_state = np.array([lateral_dis, - delta_yaw, speed, self.vehicle_front])
+    #drive_state = np.array([lateral_dis, - delta_yaw, speed, self.vehicle_front])
 
     self.ego_state = self.get_state_frenet(self.ego, self.map)
 
     obs = []
-    obs += self.ego_state
-
+    obs += (np.array(self.goal_state)-np.array(self.ego_state)).tolist()
+    #obs += self.goal_state
+    obs += [-1.5*self.lane_width]
+    obs += [1.5*self.lane_width]
+    
     for agent in self.moving_agents:
       agent_location = agent.get_location()
       waypoint = self.map.get_waypoint(agent_location)
@@ -647,9 +690,14 @@ class CarlaEnv(gym.Env):
       if agent_road_ID == 34:
         agent_state = self.get_state_frenet(agent, self.map)
       else:
-        agent_state = [0, 0, 0, 0]
-      obs += agent_state
-    
+        agent_state = self.ego_state #[0, 0, 0, 0]
+      
+      obs += (np.array(agent_state)-np.array(self.ego_state)).tolist()
+  
+    #for i in range(6):
+      #agent_state = self.goal_state
+      #obs += agent_state
+
     obs = np.array(obs)
 
     '''
@@ -711,42 +759,96 @@ class CarlaEnv(gym.Env):
 
     return obs
 
-  def _get_reward(self):
-    """Calculate the step reward."""
-    # reward for speed tracking
-    v = self.ego.get_velocity()
-    speed = np.sqrt(v.x**2 + v.y**2)
-    #r_speed = -abs(speed - self.desired_speed)
-    
-    # reward for collision
-    r_collision = 0
-    if len(self.collision_hist) > 0:
-      r_collision = -1 
+  def _get_reward(self, ref, supervised_flag=False):
 
-    # reward for steering:
-    r_steer = -self.ego.get_control().steer**2
+    if (supervised_flag):
+      print("under supervised learning")
+      human_exp = np.array([20, 0, 0, 10, 1, 1, 1, 1])
+      r_dist = - np.linalg.norm(human_exp-np.array(ref))
 
-    # reward for out of lane
-    ego_x, ego_y = get_pos(self.ego)
-    dis, w = get_lane_dis(self.waypoints, ego_x, ego_y)
-    r_out = 0
-    #if abs(dis) > self.out_lane_thres:
-      #r_out = -1
+      r_arrive = 0
+      if self.arrived:
+        r_arrive = 1000
 
-    # longitudinal speed
-    lspeed = np.array([v.x, v.y])
-    lspeed_lon = np.dot(lspeed, w)
+      r_speed = 0
+      if self.arrived:
+        r_speed = 275 / self.t
 
-    # cost for too fast
-    r_fast = 0
-    #if lspeed_lon > self.desired_speed:
-      #r_fast = -1
+      r_time = 0 
+      if self.out_of_time:
+        r_time -= 500
 
-    # cost for lateral acceleration
-    r_lat = - abs(self.ego.get_control().steer) * lspeed_lon**2
+      # reward for collision
+      r_collision = 0
+      if len(self.collision_hist) > 0:
+        #r_collision = -1
+        r_collision = -0.01*self.collision_hist[0]
 
-    r = 200*r_collision + 1*lspeed_lon + 10*r_fast + 1*r_out + r_steer*5 + 0.2*r_lat - 0.1
+      r = 1 * r_dist + r_arrive + 30 * r_speed + r_time + r_collision
 
+    else:
+
+      """Calculate the reward."""
+      # reward for speed tracking
+      v = self.ego.get_velocity()
+      speed = np.sqrt(v.x**2 + v.y**2)
+      #r_speed = -abs(speed - self.desired_speed)
+      
+      # reward for collision
+      r_collision = 0
+      if len(self.collision_hist) > 0:
+        #r_collision = -1
+        r_collision = -0.01*self.collision_hist[0]
+
+      # reward for steering:
+      #r_steer = -self.ego.get_control().steer**2
+      r_steer = 0
+
+      # reward for out of lane
+      ego_x, ego_y = get_pos(self.ego)
+      dis, w = get_lane_dis(self.waypoints, ego_x, ego_y)
+      r_lane = 0
+      if abs(dis) > self.out_lane_thres:
+        r_lane = -1
+
+      # longitudinal speed
+      lspeed = np.array([v.x, v.y])
+      lspeed_lon = np.dot(lspeed, w)
+
+      # cost for too fast
+      r_fast = 0
+      #if lspeed_lon > self.desired_speed:
+        #r_fast = -1
+
+      # cost for lateral acceleration
+      r_lat = - abs(self.ego.get_control().steer) * lspeed_lon**2
+
+      r_arrive = 0
+      if self.arrived:
+        r_arrive = 1000
+
+      r_speed = 0
+      if self.arrived:
+        r_speed = 275 / self.t
+
+      r_time = 0 
+      if self.out_of_time:
+        r_time -= 500
+
+      # reward for how long travelled
+      r_s = self.ego_state[0]
+
+      # cost for out of road
+      r_road = 0 
+      dist_out_road = abs(self.ego_state[1]) - 1.5 * self.lane_width
+      if dist_out_road >= 0:
+        r_road = - 100 * dist_out_road
+        
+      #r = 200*r_collision + 1*lspeed_lon + 10*r_fast + 1*r_out + r_steer*5 + 0.2*r_lat - 0.1+  r_arrive + 10 * r_speed + 5 * r_s
+      r = r_collision + 30 * r_speed + 0.1 * r_s + r_arrive + 10 * r_lane + 1 * r_road + r_time
+
+    self.reward += r
+  
     return r
 
   def _terminal(self):
@@ -756,13 +858,14 @@ class CarlaEnv(gym.Env):
     state = self.get_state_frenet(self.ego, self.map)
 
     # If collides
-    #if len(self.collision_hist)>0: 
-      #print('end with collision')
-      #return True
+    if len(self.collision_hist)>0: 
+      print('end with collision')
+      return True
 
     # If reach maximum timestep
     if self.time_step>self.max_time_episode:
       print('end with time')
+      self.out_of_time = True
       return True
 
     # If at destination
@@ -774,6 +877,7 @@ class CarlaEnv(gym.Env):
     if self.dests is not None:
       dist2desti = np.linalg.norm(np.array(self.goal_state[:3]) - np.array(state[:3]))
       if dist2desti < 1:
+        self.arrived = True
         return True
       
     # If out of road (lane)
@@ -807,6 +911,8 @@ class CarlaEnv(gym.Env):
 
     x = map.get_waypoint(vehicle.get_location(), project_to_road=True).s
     centerline_waypoint= map.get_waypoint_xodr(34, -2,x) # road and lane id
+    if centerline_waypoint is None:
+      centerline_waypoint = map.get_waypoint(vehicle.get_location(), project_to_road=True)
     tangent_vector = centerline_waypoint.transform.get_forward_vector()
     normal_vector = carla.Vector3D(-(-tangent_vector.y), tangent_vector.x, 0)
     normal_vector_normalized = np.array([normal_vector.x, -normal_vector.y]) /  np.linalg.norm(np.array([normal_vector.x, -normal_vector.y]))
