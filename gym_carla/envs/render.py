@@ -533,11 +533,11 @@ class BirdeyeRender(object):
       self.vehicle_polygons,
       self.walker_polygons)
 
-    self.waypoints_surface.fill(COLOR_BLACK)
-    self.render_waypoints(
-      self.waypoints_surface, 
-      self.waypoints,
-      self.map_image.world_to_pixel)
+    #self.waypoints_surface.fill(COLOR_BLACK)
+    #self.render_waypoints(
+      #self.waypoints_surface, 
+      #self.waypoints,
+      #self.map_image.world_to_pixel)
 
     # Blit surfaces
     if render_types == None:

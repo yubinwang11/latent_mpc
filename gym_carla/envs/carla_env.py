@@ -70,8 +70,8 @@ class CarlaEnv(gym.Env):
     self.obs_high_list = []
     self.obs_high_list += [275.0, 10.0, np.pi, 20.0]
     #self.obs_high_list += [275.0, 10.0, np.pi, 20.0]
-    self.obs_high_list += [-1.5*4]
-    self.obs_high_list += [1.5*4]
+    #self.obs_high_list += [-1.5*4]
+    #self.obs_high_list += [1.5*4]
     for i in range(6):
       self.obs_high_list += [275.0, 10.0, np.pi, 20.0]
     self.obs_high = np.array(self.obs_high_list, dtype=np.float32)
@@ -79,8 +79,8 @@ class CarlaEnv(gym.Env):
     self.obs_low_list = []
     self.obs_low_list += [0, -10.0, -np.pi, -20.0]
     #self.obs_low_list += [0, -10.0, -np.pi, -20.0]
-    self.obs_low_list += [-1.5*4]
-    self.obs_low_list += [1.5*4]
+    #self.obs_low_list += [-1.5*4]
+    #self.obs_low_list += [1.5*4]
 
     for i in range(6):
       self.obs_low_list += [0, -10.0, -np.pi, -20.0]
@@ -233,6 +233,7 @@ class CarlaEnv(gym.Env):
       if self._try_spawn_random_vehicle_at(random.choice(self.vehicle_spawn_points), number_of_wheels=[4]):
         count -= 1
 
+    
     # Spawn pedestrians
     random.shuffle(self.walker_spawn_points)
     count = self.number_of_walkers
@@ -245,7 +246,7 @@ class CarlaEnv(gym.Env):
     while count > 0:
       if self._try_spawn_random_walker_at(random.choice(self.walker_spawn_points)):
         count -= 1
-
+    
     # Get actors polygon list
     self.vehicle_polygons = []
     vehicle_poly_dict = self._get_actor_polygons('vehicle.*')
@@ -253,7 +254,7 @@ class CarlaEnv(gym.Env):
     self.walker_polygons = []
     walker_poly_dict = self._get_actor_polygons('walker.*')
     self.walker_polygons.append(walker_poly_dict)
-
+    
     # Spawn the ego vehicle
     ego_spawn_times = 0
     while True:
@@ -290,7 +291,7 @@ class CarlaEnv(gym.Env):
     # spawn the moving obstacles (agents)
     self.moving_agents = []
     self.lane_id_list = [-3, -1, -1, -1, -2, -2] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
-    self.s_list = [20, 50, 75, 100, 80, 100] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
+    self.s_list = [20+random.uniform(-5,5), 50+random.uniform(-5,5), 75+random.uniform(-5,5), 100+random.uniform(-5,5), 80+random.uniform(-5,5), 100+random.uniform(-5,5)] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
 
     self.num_agents = len(self.lane_id_list)
     #self.num_agents = 0
@@ -342,18 +343,21 @@ class CarlaEnv(gym.Env):
 
     self.routeplanner = RoutePlanner(self.ego, self.max_waypt)
     self.waypoints, _, self.vehicle_front = self.routeplanner.run_step()
+    #self.waypoints = self.map.get_waypoint(self.ego.get_location())
 
     # Set ego information for render
     self.birdeye_render.set_hero(self.ego, self.ego.id)
 
     obs = self._get_obs()
 
+    self.travelled_dist = None
+
     self.high_mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, L=self.inter_axle_distance, \
                             vehicle_width = self.vehicle_width, lane_width = self.lane_width,  init_state=self.ego_state)
 
     return obs
   
-  def step(self, action, ref, supervised_flag = False):
+  def step(self, action):
 
      # top view
     self.spectator = self.world.get_spectator()
@@ -412,7 +416,7 @@ class CarlaEnv(gym.Env):
       self.walker_polygons.pop(0)
 
     # route planner
-    self.waypoints, _, self.vehicle_front = self.routeplanner.run_step()
+    #self.waypoints, _, self.vehicle_front = self.routeplanner.run_step()
 
     # Update timesteps
     self.t += self.sim_dt
@@ -420,19 +424,21 @@ class CarlaEnv(gym.Env):
     self.total_step += 1
 
     # print current state
-    self.curr_waypoint = self.map.get_waypoint(self.ego.get_location()) # ,project_to_road=True
+    #self.curr_waypoint = self.map.get_waypoint(self.ego.get_location()) # ,project_to_road=True
     #print('======',self.curr_waypoint.s, '======', self.vehicle_state)
     #print('======',self.t, '======', self.curr_waypoint.s)
 
+    obs = self._get_obs()
     # state information
     info = {
       #'waypoints': self.curr_waypoint,
-      'vehicle_front': self.vehicle_front
+      'ego_state': self.ego_state
     }
     
+    r = self._get_reward(),
     self.done = self._terminal()
 
-    return (self._get_obs(), self._get_reward(ref, supervised_flag), self.done, copy.deepcopy(info))
+    return obs,  r, self.done, copy.deepcopy(info) #(obs,  r, self.done, copy.deepcopy(info))
 
   def seed(self, seed=None):
     self.np_random, seed = seeding.np_random(seed)
@@ -467,7 +473,7 @@ class CarlaEnv(gym.Env):
     """
     pygame.init()
     self.display = pygame.display.set_mode(
-    (self.display_size * 3, self.display_size),
+    (self.display_size*2, self.display_size), # * 3
     pygame.HWSURFACE | pygame.DOUBLEBUF)
 
     pixels_per_meter = self.display_size / self.obs_range
@@ -596,8 +602,8 @@ class CarlaEnv(gym.Env):
 
     # birdeye view with roadmap and actors
     birdeye_render_types = ['roadmap', 'actors']
-    if self.display_route:
-      birdeye_render_types.append('waypoints')
+    #if self.display_route:
+      #birdeye_render_types.append('waypoints')
     self.birdeye_render.render(self.display, birdeye_render_types)
     birdeye = pygame.surfarray.array3d(self.display)
     birdeye = birdeye[0:self.display_size, :, :]
@@ -621,7 +627,7 @@ class CarlaEnv(gym.Env):
     # Display birdeye image
     birdeye_surface = rgb_to_display_surface(birdeye, self.display_size)
     self.display.blit(birdeye_surface, (0, 0))
-
+    '''
     ## Lidar image generation
     point_cloud = []
     # Get point cloud data
@@ -652,14 +658,15 @@ class CarlaEnv(gym.Env):
     lidar = lidar * 255
 
     # Display lidar image
-    lidar_surface = rgb_to_display_surface(lidar, self.display_size)
-    self.display.blit(lidar_surface, (self.display_size, 0))
-
+    #lidar_surface = rgb_to_display_surface(lidar, self.display_size)
+    #self.display.blit(lidar_surface, (self.display_size, 0))
+    
+    '''
     ## Display camera image
     camera = resize(self.camera_img, (self.obs_size, self.obs_size)) * 255
     camera_surface = rgb_to_display_surface(camera, self.display_size)
-    self.display.blit(camera_surface, (self.display_size * 2, 0))
-
+    self.display.blit(camera_surface, (self.display_size, 0)) # self.display_size * 2
+    
     # Display on pygame
     pygame.display.flip()
 
@@ -680,8 +687,8 @@ class CarlaEnv(gym.Env):
     obs = []
     obs += (np.array(self.goal_state)-np.array(self.ego_state)).tolist()
     #obs += self.goal_state
-    obs += [-1.5*self.lane_width]
-    obs += [1.5*self.lane_width]
+    #obs += [-1.5*self.lane_width]
+    #obs += [1.5*self.lane_width]
     
     for agent in self.moving_agents:
       agent_location = agent.get_location()
@@ -759,95 +766,76 @@ class CarlaEnv(gym.Env):
 
     return obs
 
-  def _get_reward(self, ref, supervised_flag=False):
+  def _get_reward(self):
 
-    if (supervised_flag):
-      print("under supervised learning")
-      human_exp = np.array([20, 0, 0, 10, 1, 1, 1, 1])
-      r_dist = - np.linalg.norm(human_exp-np.array(ref))
+    """Calculate the reward."""
+    # reward for speed tracking
+    #v = self.ego.get_velocity()
+    #speed = np.sqrt(v.x**2 + v.y**2)
+    #r_speed = -abs(speed - self.desired_speed)
+    
+    # reward for collision
+    r_collision = 0
+    if len(self.collision_hist) > 0:
+      r_collision = -100
+      #r_collision = -0.01*self.collision_hist[0]
 
-      r_arrive = 0
-      if self.arrived:
-        r_arrive = 1000
+    # reward for steering:
+    r_steer = -self.ego.get_control().steer  # **2
+    #r_steer = 0
 
-      r_speed = 0
-      if self.arrived:
-        r_speed = 275 / self.t
+    # reward for out of lane
+    #ego_x, ego_y = get_pos(self.ego)
+    #dis, w = get_lane_dis(self.waypoints, ego_x, ego_y)
+    #r_lane = 0
+    #if abs(dis) > self.out_lane_thres:
+      #r_lane = -1
 
-      r_time = 0 
-      if self.out_of_time:
-        r_time -= 500
+    # cost for too fast
+    #r_fast = 0
+    #if lspeed_lon > self.desired_speed:
+      #r_fast = -1
 
-      # reward for collision
-      r_collision = 0
-      if len(self.collision_hist) > 0:
-        #r_collision = -1
-        r_collision = -0.01*self.collision_hist[0]
+    # longitudinal speed
+    #lspeed = np.array([v.x, v.y])
+    #lspeed_lon = np.dot(lspeed, w)
 
-      r = 1 * r_dist + r_arrive + 30 * r_speed + r_time + r_collision
+    # cost for lateral acceleration
+    #r_lat = - abs(self.ego.get_control().steer) * lspeed_lon**2
 
-    else:
+    r_arrive = 0
+    if self.arrived:
+      r_arrive = 100
 
-      """Calculate the reward."""
-      # reward for speed tracking
-      v = self.ego.get_velocity()
-      speed = np.sqrt(v.x**2 + v.y**2)
-      #r_speed = -abs(speed - self.desired_speed)
+    r_speed = 0
+    if self.arrived:
+      r_speed = 275 / self.t
+
+    r_time = 0 
+    if self.out_of_time:
+      r_time -= 100
+
+    # reward for how long travelled
+    #r_s = self.ego_state[0] - self.prev_state[0]
+
+    r_forward = 0 
+    current_dist = self.ego_state[0]
+    if self.travelled_dist is not None:
+      r_forward = current_dist - self.travelled_dist#self.ego_state[0] / 20
+
+    self.travelled_dist = current_dist
+
+    # cost for out of road
+    #r_road = 0 
+    #dist_out_road = abs(self.ego_state[1]) - 1.5 * self.lane_width
+    #if dist_out_road >= 0:
+      #r_road = - 100 * dist_out_road
       
-      # reward for collision
-      r_collision = 0
-      if len(self.collision_hist) > 0:
-        #r_collision = -1
-        r_collision = -0.01*self.collision_hist[0]
+    #r = 200*r_collision + 1*lspeed_lon + 10*r_fast + 1*r_out + r_steer*5 + 0.2*r_lat - 0.1+  r_arrive + 10 * r_speed + 5 * r_s
+    #r = 200 * r_collision + 30 * r_speed + 0.1 * r_s + r_arrive + 10 * r_lane + 1 * r_road + r_time
+    r = r_collision + r_time + r_forward + r_steer + r_arrive + r_speed
 
-      # reward for steering:
-      #r_steer = -self.ego.get_control().steer**2
-      r_steer = 0
-
-      # reward for out of lane
-      ego_x, ego_y = get_pos(self.ego)
-      dis, w = get_lane_dis(self.waypoints, ego_x, ego_y)
-      r_lane = 0
-      if abs(dis) > self.out_lane_thres:
-        r_lane = -1
-
-      # longitudinal speed
-      lspeed = np.array([v.x, v.y])
-      lspeed_lon = np.dot(lspeed, w)
-
-      # cost for too fast
-      r_fast = 0
-      #if lspeed_lon > self.desired_speed:
-        #r_fast = -1
-
-      # cost for lateral acceleration
-      r_lat = - abs(self.ego.get_control().steer) * lspeed_lon**2
-
-      r_arrive = 0
-      if self.arrived:
-        r_arrive = 1000
-
-      r_speed = 0
-      if self.arrived:
-        r_speed = 275 / self.t
-
-      r_time = 0 
-      if self.out_of_time:
-        r_time -= 500
-
-      # reward for how long travelled
-      r_s = self.ego_state[0]
-
-      # cost for out of road
-      r_road = 0 
-      dist_out_road = abs(self.ego_state[1]) - 1.5 * self.lane_width
-      if dist_out_road >= 0:
-        r_road = - 100 * dist_out_road
-        
-      #r = 200*r_collision + 1*lspeed_lon + 10*r_fast + 1*r_out + r_steer*5 + 0.2*r_lat - 0.1+  r_arrive + 10 * r_speed + 5 * r_s
-      r = r_collision + 30 * r_speed + 0.1 * r_s + r_arrive + 10 * r_lane + 1 * r_road + r_time
-
-    self.reward += r
+    #self.reward += r
   
     return r
 
@@ -886,8 +874,8 @@ class CarlaEnv(gym.Env):
       #return True
 
     # If out of road:
-    if abs(self.ego_state[1]) >= self.lane_width*1.5 + self.out_lane_thres:
-      return True
+    #if abs(self.ego_state[1]) >= self.lane_width*1.5 + self.out_lane_thres:
+      #return True
 
     return False
 
