@@ -18,7 +18,7 @@ def build_net(layer_shape, activation, output_activation):
 
 
 class Actor(nn.Module):
-	def __init__(self, state_dim, action_dim, hid_shape, h_acti=nn.ReLU, o_acti=nn.ReLU):
+	def __init__(self, state_dim, action_dim, hid_shape, h_acti=nn.LeakyReLU, o_acti=nn.LeakyReLU): # h_acti=nn.ReLU, o_acti=nn.ReLU
 		super(Actor, self).__init__()
 
 		layers = [state_dim] + list(hid_shape)
@@ -41,7 +41,9 @@ class Actor(nn.Module):
 
 		if deterministic: u = mu
 		else: u = dist.rsample() #'''reparameterization trick of Gaussian'''#
+		#print('u is ', u)
 		a = torch.tanh(u)
+		#print('after tanh a is ', a)
 
 		if with_logprob:
 			# get probability density of logp_pi_a from probability density of u, which is given by the original paper.
@@ -61,8 +63,8 @@ class Q_Critic(nn.Module):
 		super(Q_Critic, self).__init__()
 		layers = [state_dim + action_dim] + list(hid_shape) + [1]
 
-		self.Q_1 = build_net(layers, nn.ReLU, nn.Identity)
-		self.Q_2 = build_net(layers, nn.ReLU, nn.Identity)
+		self.Q_1 = build_net(layers, nn.LeakyReLU, nn.Identity) # nn.ReLU, nn.Identity
+		self.Q_2 = build_net(layers, nn.LeakyReLU, nn.Identity) # nn.ReLU, nn.Identity
 
 
 	def forward(self, state, action):
@@ -118,6 +120,7 @@ class SAC_Agent(object):
 		with torch.no_grad():
 			state = torch.FloatTensor(state.reshape(1, -1)).to(device)
 			a, _ = self.actor(state, deterministic, with_logprob)
+			#print('selected action is ', a)
 		return a.cpu().numpy().flatten()
 
 

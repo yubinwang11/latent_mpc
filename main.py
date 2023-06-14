@@ -27,7 +27,6 @@ def str2bool(v):
 
 '''Hyperparameter Setting'''
 parser = argparse.ArgumentParser()
-#parser.add_argument('--EnvIdex', type=int, default=1, help='BWv3, BWHv3, Lch_Cv2, PV0, Humanv2, HCv2') #3
 parser.add_argument('--write', type=str2bool, default=True, help='Use SummaryWriter to record the training')
 parser.add_argument('--eval', type=str2bool, default=False, help='Evaluate or Not')
 parser.add_argument('--render', type=str2bool, default=True, help='Render or Not')
@@ -50,14 +49,81 @@ parser.add_argument('--adaptive_alpha', type=str2bool, default=True, help='Use a
 opt = parser.parse_args()
 print(opt)
 
+class RunningStat(object):
+    def __init__(self, shape):
+        self._n = 0
+        self._M = np.zeros(shape)
+        self._S = np.zeros(shape)
 
-def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high):
+    def push(self, x):
+        x = np.asarray(x)
+        assert x.shape == self._M.shape
+        self._n += 1
+        if self._n == 1:
+            self._M[...] = x
+        else:
+            oldM = self._M.copy()
+            self._M[...] = oldM + (x - oldM) / self._n
+            self._S[...] = self._S + (x - oldM) * (x - self._M)
+
+    @property
+    def n(self):
+        return self._n
+
+    @property
+    def mean(self):
+        return self._M
+
+    @property
+    def var(self):
+        return self._S / (self._n - 1) if self._n > 1 else np.square(self._M)
+
+    @property
+    def std(self):
+        return np.sqrt(self.var)
+
+    @property
+    def shape(self):
+        return self._M.shape
+
+
+class ZFilter:
+    """
+    y = (x-mean)/std
+    using running estimates of mean,std
+    """
+
+    def __init__(self, shape, demean=True, destd=True, clip=10.0):
+        self.demean = demean
+        self.destd = destd
+        self.clip = clip
+
+        self.rs = RunningStat(shape)
+
+    def __call__(self, x, update=True):
+        if update: self.rs.push(x)
+        if self.demean:
+            x = x - self.rs.mean
+        if self.destd:
+            x = x / (self.rs.std + 1e-5) # 1e-8
+        if self.clip:
+            x = np.clip(x, -self.clip, self.clip)
+        return x
+
+    def output_shape(self, input_space):
+        return input_space.shape
+    
+def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, state_dim):
     scores = 0
     turns = opt.eval_turn
+    running_state = ZFilter((state_dim,), clip=5.0)
+
     for j in range(turns):
         s, done, ep_r = env.reset(), False, 0
         while not done:
             # Take deterministic actions at test time
+            s = running_state(s)
+            print('normalized state  is ', s)
             a = model.select_action(s, deterministic=True, with_logprob=False)
             act = Action_adapter(a, act_low, act_high)  # [0,1] to [-max,max]
 
@@ -73,6 +139,7 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high):
             _act, pred_traj = env.high_mpc.solve(ref_traj)
 
             s_prime, r, done, info = env.step(_act)
+            s_prime = running_state(s_prime)
             # r = Reward_adapter(r, EnvIdex)
             if type(r) == tuple:
                 r = np.array(list(r))
@@ -89,16 +156,6 @@ def main():
     write = opt.write   #Use SummaryWriter to record the training.
     render = opt.render
     eval = opt.eval
-
-    # Env config:
-    #EnvName = ['BipedalWalker-v3','BipedalWalkerHardcore-v3','LunarLanderContinuous-v2','Pendulum-v0','Humanoid-v2','HalfCheetah-v2']
-    #BriefEnvName = ['BWv3', 'BWHv3', 'Lch_Cv2', 'PV0', 'Humanv2', 'HCv2']
-    #Env_With_Dead = [True, True, True, True, False, True, False]
-    #EnvIdex = opt.EnvIdex
-    #env_with_Dead = Env_With_Dead[EnvIdex]
-    #Env like 'LunarLanderContinuous-v2' is with Dead Signal. Important!
-    #Env like 'Pendulum-v0' is without Dead Signal.
-    #env = gym.make(EnvName[EnvIdex])
 
     # parameters for the gym_carla environment
     params = {
@@ -119,22 +176,21 @@ def main():
 	'task_mode': 'normal',  # mode of the task, [random, normal, roundabout (only for Town03)]
 	'max_time_episode': 500,  # maximum timesteps per episode
 	'max_waypt': 12,  # maximum number of waypoints
+    'detect_range': 50,  # obstacle detection range (meter)
+    'detector_num': 19,  # number of obstacle detectiors
+    'detect_angle': 180,  # horizontal angle of obstacle detection
 	'obs_range': 32,  # observation range (meter)
 	'lidar_bin': 0.125,  # bin size of lidar sensor (meter)
 	'd_behind': 12,  # distance behind the ego vehicle (meter)
 	'out_lane_thres': 2.0,  # threshold for out of lane
 	'desired_speed': 8,  # desired speed (m/s)
 	'max_ego_spawn_times': 200,  # maximum times to spawn ego vehicle
-	'display_route': True,  # whether to render the desired route
+	'display_route': False,  # whether to render the desired route
 	'pixor_size': 64,  # size of the pixor labels
 	'pixor': False,  # whether to output PIXOR observation
 	}
         
     # Create environments.
-    #env = make_env(args.env_id)
-    #env = gym.make(args.env_id)
-    #test_env = make_env(args.env_id)
-    #test_env = gym.make(args.env_id)
     # Set gym-carla environment
     env = gym.make('carla-v0', params=params)
     env_with_Dead = True
@@ -178,9 +234,9 @@ def main():
                 project="CarlaEnv",
                 entity="yubinwang",
                 # track hyperparameters and run metadata
-                #config={
-                #"algo": "f{args.algo}", # discor
-                #}
+                config={
+                "algo": "SAC", # discor
+                }
             )
 
     #Model hyperparameter config:
@@ -200,14 +256,16 @@ def main():
     model = SAC_Agent(**kwargs)
     if not os.path.exists('model'): os.mkdir('model')
     if opt.Loadmodel: model.load(opt.ModelIdex)
+    running_state = ZFilter((state_dim,), clip=5.0)
 
     replay_buffer = RandomBuffer(state_dim, action_dim, env_with_Dead, max_size=int(1e6))
 
     if eval:
-        average_reward = evaluate_policy(eval_env, model, False, steps_per_epoch, env.act_low, env.act_high) #evaluate_policy(env, model, render, steps_per_epoch, max_action, EnvIdex)
+        average_reward = evaluate_policy(eval_env, model, False, steps_per_epoch, env.act_low, env.act_high, state_dim) #evaluate_policy(env, model, render, steps_per_epoch, max_action, EnvIdex)
         print('Average Reward:', average_reward)
     else:
         s, done, current_steps = env.reset(), False, 0
+        s = running_state(s)
         for t in range(total_steps):
 
             #s = State_adapter(s)
@@ -218,15 +276,17 @@ def main():
             if t < start_steps:
                 #Random explore for start_steps
                 act = env.action_space.sample() #act∈[-max,max]
-                #a = Action_adapter_reverse(act,max_action) #a∈[-1,1]
-                a = act.tolist()
+                act = act.tolist()
+                a = Action_adapter_reverse(act,env.act_low, env.act_high) #a∈[-1,1]
             else:
-                act = model.select_action(s, deterministic=False, with_logprob=False) #a∈[-1,1]
+                
+                print('normalized state  is ', s)
+                a = model.select_action(s, deterministic=False, with_logprob=False) #a∈[-1,1]
                 #a.tolist()
-                a = Action_adapter(act,env.act_low, env.act_high) #act∈[-max,max]
+                act = Action_adapter(a, env.act_low, env.act_high) #act∈[-max,max]
 
-            print(a)
-            ref = a #.tolist()
+            print(act)
+            ref = act #.tolist()
             tra_state = np.array(env.ego_state) + np.array(ref[0:4])
             tra_state = tra_state.tolist()
             ref_obj = tra_state + ref[4:8]
@@ -237,6 +297,7 @@ def main():
             _act, pred_traj = env.high_mpc.solve(ref_traj)
 
             s_prime, r, done, info = env.step(_act)
+            s_prime = running_state(s_prime)
             env.render()
 
             if type(r) == tuple:
@@ -246,7 +307,6 @@ def main():
             r = Reward_adapter(r)
             replay_buffer.add(s, a, r, s_prime, dead)
             s = s_prime
-
 
             # 50 environment steps company with 50 gradient steps.
             # Stabler than 1 environment step company with 1 gradient step.
@@ -260,7 +320,7 @@ def main():
 
             '''record & log'''
             if (t + 1) % eval_interval == 0:
-                score = evaluate_policy(eval_env, model, False, steps_per_epoch, env.act_low, env.act_high)
+                score = evaluate_policy(eval_env, model, False, steps_per_epoch, env.act_low, env.act_high, state_dim)
                 if (params['use_wandb']):
                     wandb.log({"step":t+1, "score": score})
                 if write:
@@ -269,9 +329,10 @@ def main():
                 print('EnvName: CarlaEnv, seed:', random_seed, 'totalsteps:', t+1, 'score:', score)
             if done:
                 s, done, current_steps = env.reset(), False, 0
+                s = running_state(s)
 
-    env.close()
-    eval_env.close()
+    #env.close()
+    #eval_env.close()
 
 if __name__ == '__main__':
     main()

@@ -39,6 +39,9 @@ class CarlaEnv(gym.Env):
     self.task_mode = params['task_mode']
     self.max_time_episode = params['max_time_episode']
     self.max_waypt = params['max_waypt']
+    self.detect_range = params['detect_range']
+    self.detector_num = params['detector_num']
+    self.detect_angle = params['detect_angle']
     self.obs_range = params['obs_range']
     self.lidar_bin = params['lidar_bin']
     self.d_behind = params['d_behind']
@@ -67,25 +70,10 @@ class CarlaEnv(gym.Env):
     #self.act_high = np.array([1.0, 1.0], dtype=np.float32)
     #self.act_low = np.array([-1.0, -1.0], dtype=np.float32)
 
-    self.obs_high_list = []
-    self.obs_high_list += [275.0, 10.0, np.pi, 20.0]
-    #self.obs_high_list += [275.0, 10.0, np.pi, 20.0]
-    #self.obs_high_list += [-1.5*4]
-    #self.obs_high_list += [1.5*4]
-    for i in range(6):
-      self.obs_high_list += [275.0, 10.0, np.pi, 20.0]
-    self.obs_high = np.array(self.obs_high_list, dtype=np.float32)
-
-    self.obs_low_list = []
-    self.obs_low_list += [0, -10.0, -np.pi, -20.0]
-    #self.obs_low_list += [0, -10.0, -np.pi, -20.0]
-    #self.obs_low_list += [-1.5*4]
-    #self.obs_low_list += [1.5*4]
-
-    for i in range(6):
-      self.obs_low_list += [0, -10.0, -np.pi, -20.0]
-    self.obs_low = np.array(self.obs_low_list, dtype=np.float32)
-
+    self.obs_high = np.array([275.0, 10.0, np.pi/2, 20.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, \
+                              50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0], dtype=np.float32)
+    self.obs_low = np.array([0.0, -10, -np.pi/2, -5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, \
+                             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float32)
     self.action_space = spaces.Box(
       low=self.act_low, high=self.act_high, dtype=np.float32
       )
@@ -159,6 +147,15 @@ class CarlaEnv(gym.Env):
     self.collision_hist_l = 1 # collision history length
     self.collision_bp = self.world.get_blueprint_library().find('sensor.other.collision')
 
+    # Obstacle detector
+    self.distance_measurements = []
+    self.obstector_bp = self.world.get_blueprint_library().find('sensor.other.obstacle')
+    #self.obstector_trans = carla.Transform(carla.Location(x=0.0, z=1.0))
+    self.obstector_bp.set_attribute('debug_linetrace', 'False')
+    self.obstector_bp.set_attribute('distance', '50')
+    self.obstector_bp.set_attribute('hit_radius', '0.2') #0.5
+    
+    '''
     # Lidar sensor
     self.lidar_data = None
     self.lidar_height = 2.1
@@ -166,6 +163,16 @@ class CarlaEnv(gym.Env):
     self.lidar_bp = self.world.get_blueprint_library().find('sensor.lidar.ray_cast')
     self.lidar_bp.set_attribute('channels', '32')
     self.lidar_bp.set_attribute('range', '5000')
+    '''
+
+    '''
+    # Radar sensor
+    self.radar_data = None
+    self.radar_trans = carla.Transform(carla.Location(x=0.0, z=1.0))
+    self.radar_bp = self.world.get_blueprint_library().find('sensor.other.radar')
+    self.radar_bp.set_attribute('horizontal_fov', '180')
+    #self.lidar_bp.set_attribute('range', '30')
+    '''
 
     # Camera sensor
     self.camera_img = np.zeros((self.obs_size, self.obs_size, 3), dtype=np.uint8)
@@ -215,7 +222,8 @@ class CarlaEnv(gym.Env):
     self.inter_axle_distance = None
 
     # Delete sensors, vehicles and walkers
-    self._clear_all_actors(['sensor.other.collision', 'sensor.lidar.ray_cast', 'sensor.camera.rgb', 'vehicle.*', 'controller.ai.walker', 'walker.*'])
+    self._clear_all_actors(['sensor.other.collision', 'sensor.other.obstacle', 'sensor.lidar.ray_cast', \
+                            'sensor.camera.rgb', 'vehicle.*', 'controller.ai.walker', 'walker.*'])
 
     # Disable sync mode
     self._set_synchronous_mode(True)
@@ -315,12 +323,46 @@ class CarlaEnv(gym.Env):
       if len(self.collision_hist)>self.collision_hist_l:
         self.collision_hist.pop(0)
     self.collision_hist = []
+    
+    # Add obstacle dector
+    self.distance_measurements = [] #self.det_range
+    self.detector_list = []
 
+    for detector_i in range(self.detector_num):
+      self.distance_measurements.append(self.detect_range)
+      self.obstector_trans = carla.Transform(carla.Location(x=0.0, z=1.0), carla.Rotation(yaw=-self.detect_angle/2+(self.detect_angle/(self.detector_num-1))*detector_i))
+
+      self.detector_list.append(self.world.spawn_actor(self.obstector_bp, self.obstector_trans, attach_to=self.ego))
+      #self.detector_list[detector_i].listen(lambda distance_i: get_obstacle_distance(distance_i, detector_i))
+    self.detector_list[0].listen(lambda distance: get_obstacle_distance(distance, 0)); self.detector_list[1].listen(lambda distance: get_obstacle_distance(distance, 1))
+    self.detector_list[2].listen(lambda distance: get_obstacle_distance(distance, 2)); self.detector_list[3].listen(lambda distance: get_obstacle_distance(distance, 3))
+    self.detector_list[4].listen(lambda distance: get_obstacle_distance(distance, 4)); self.detector_list[5].listen(lambda distance: get_obstacle_distance(distance, 5))
+    self.detector_list[6].listen(lambda distance: get_obstacle_distance(distance, 6)); self.detector_list[7].listen(lambda distance: get_obstacle_distance(distance, 7))
+    self.detector_list[8].listen(lambda distance: get_obstacle_distance(distance, 8)); self.detector_list[9].listen(lambda distance: get_obstacle_distance(distance, 9))
+    self.detector_list[10].listen(lambda distance: get_obstacle_distance(distance,10)); self.detector_list[11].listen(lambda distance: get_obstacle_distance(distance, 11))
+    self.detector_list[12].listen(lambda distance: get_obstacle_distance(distance, 12)); self.detector_list[13].listen(lambda distance: get_obstacle_distance(distance, 13))
+    self.detector_list[14].listen(lambda distance: get_obstacle_distance(distance, 14)); self.detector_list[15].listen(lambda distance: get_obstacle_distance(distance, 15))
+    self.detector_list[16].listen(lambda distance: get_obstacle_distance(distance, 16));self.detector_list[17].listen(lambda distance: get_obstacle_distance(distance, 17))
+    self.detector_list[18].listen(lambda distance: get_obstacle_distance(distance, 18))
+
+    def get_obstacle_distance(info, detector_i):
+      if info is not None:
+        self.distance_measurements[detector_i] = info.distance
+      else:
+        self.distance_measurements[detector_i] = self.detect_range #carla.ObstacleDetectionEvent(distance=self.det_range)
+    
+    '''
     # Add lidar sensor
     self.lidar_sensor = self.world.spawn_actor(self.lidar_bp, self.lidar_trans, attach_to=self.ego)
     self.lidar_sensor.listen(lambda data: get_lidar_data(data))
     def get_lidar_data(data):
       self.lidar_data = data
+    '''
+    # Add radar sensor
+    #self.radar_sensor = self.world.spawn_actor(self.radar_bp, self.radar_trans, attach_to=self.ego)
+    #self.radar_sensor.listen(lambda data: get_radar_data(data))
+    #def get_radar_data(data):
+    #self.radar_data = data
 
     # Add camera sensor
     self.camera_sensor = self.world.spawn_actor(self.camera_bp, self.camera_trans, attach_to=self.ego)
@@ -437,6 +479,11 @@ class CarlaEnv(gym.Env):
     
     r = self._get_reward(),
     self.done = self._terminal()
+
+    #if self.done:
+      # Delete sensors, vehicles and walkers
+      #self._clear_all_actors(['sensor.other.collision', 'sensor.other.obstacle', 'sensor.lidar.ray_cast', \
+                            #'sensor.camera.rgb', 'vehicle.*', 'controller.ai.walker', 'walker.*'])
 
     return obs,  r, self.done, copy.deepcopy(info) #(obs,  r, self.done, copy.deepcopy(info))
 
@@ -627,22 +674,33 @@ class CarlaEnv(gym.Env):
     # Display birdeye image
     birdeye_surface = rgb_to_display_surface(birdeye, self.display_size)
     self.display.blit(birdeye_surface, (0, 0))
-    '''
+    
     ## Lidar image generation
+
+    # We need to convert point cloud(carla-format) into numpy.ndarray
+    #lidar_data = np.copy(np.frombuffer(self.lidar_data.raw_data, dtype = np.dtype("f4")))
+    #lidar_data = np.reshape(lidar_data, (int(lidar_data.shape[0] / 4), 4))
+
+    #lidar_data = lidar_data[:, :-1] # we only use x, y, z coordinates
+    #lidar_data[:, 1] = -lidar_data[:, 1] # This is different from official script
+    #lidar_measurements = lidar_data
+    '''
     point_cloud = []
     # Get point cloud data
     for data in self.lidar_data:
-      point_cloud.append([data.point.x, data.point.y, -data.point.z]) #location
+      point_cloud.append([data.point.x, data.point.y, data.point.z]) #location # data.point.x, data.point.y, -data.point.z
     point_cloud = np.array(point_cloud)
+  
     # Separate the 3D space to bins for point cloud, x and y is set according to self.lidar_bin,
     # and z is set to be two bins.
     y_bins = np.arange(-(self.obs_range - self.d_behind), self.d_behind+self.lidar_bin, self.lidar_bin)
     x_bins = np.arange(-self.obs_range/2, self.obs_range/2+self.lidar_bin, self.lidar_bin)
     z_bins = [-self.lidar_height-1, -self.lidar_height+0.25, 1]
     # Get lidar image according to the bins
-    lidar, _ = np.histogramdd(point_cloud, bins=(x_bins, y_bins, z_bins))
+    lidar, _ = np.histogramdd(point_cloud, bins=(x_bins, y_bins, z_bins)) # , z_bins
     lidar[:,:,0] = np.array(lidar[:,:,0]>0, dtype=np.uint8)
     lidar[:,:,1] = np.array(lidar[:,:,1]>0, dtype=np.uint8)
+
     # Add the waypoints to lidar image
     if self.display_route:
       wayptimg = (birdeye[:,:,0] <= 10) * (birdeye[:,:,1] <= 10) * (birdeye[:,:,2] >= 240)
@@ -653,15 +711,17 @@ class CarlaEnv(gym.Env):
 
     # Get the final lidar image
     lidar = np.concatenate((lidar, wayptimg), axis=2)
+    ''''''
     lidar = np.flip(lidar, axis=1)
     lidar = np.rot90(lidar, 1)
+    lidar = np.rot90(lidar, 1)#lidar = np.rot90(lidar, 1)
     lidar = lidar * 255
 
     # Display lidar image
-    #lidar_surface = rgb_to_display_surface(lidar, self.display_size)
-    #self.display.blit(lidar_surface, (self.display_size, 0))
-    
+    lidar_surface = rgb_to_display_surface(lidar, self.display_size)
+    self.display.blit(lidar_surface, (self.display_size, 0))
     '''
+    
     ## Display camera image
     camera = resize(self.camera_img, (self.obs_size, self.obs_size)) * 255
     camera_surface = rgb_to_display_surface(camera, self.display_size)
@@ -684,22 +744,28 @@ class CarlaEnv(gym.Env):
 
     self.ego_state = self.get_state_frenet(self.ego, self.map)
 
+    #distance_measurements = self.distance_measurements
+    #print('distance is ', distance_measurements)
+
+    #radar_data = self.radar_data
     obs = []
-    obs += (np.array(self.goal_state)-np.array(self.ego_state)).tolist()
+    obs += [np.array(self.goal_state[0])-np.array(self.ego_state[0])]
+    obs += self.ego_state[1:]
+    obs += self.distance_measurements
     #obs += self.goal_state
     #obs += [-1.5*self.lane_width]
     #obs += [1.5*self.lane_width]
     
-    for agent in self.moving_agents:
-      agent_location = agent.get_location()
-      waypoint = self.map.get_waypoint(agent_location)
-      agent_road_ID = waypoint.road_id
-      if agent_road_ID == 34:
-        agent_state = self.get_state_frenet(agent, self.map)
-      else:
-        agent_state = self.ego_state #[0, 0, 0, 0]
-      
-      obs += (np.array(agent_state)-np.array(self.ego_state)).tolist()
+    #for agent in self.moving_agents:
+    #  agent_location = agent.get_location()
+    #  waypoint = self.map.get_waypoint(agent_location)
+    #  agent_road_ID = waypoint.road_id
+    #  if agent_road_ID == 34:
+    #    agent_state = self.get_state_frenet(agent, self.map)
+    #  else:
+    #    agent_state = self.ego_state #[0, 0, 0, 0]
+    #  
+    #  obs += (np.array(agent_state)-np.array(self.ego_state)).tolist()
   
     #for i in range(6):
       #agent_state = self.goal_state
@@ -842,8 +908,6 @@ class CarlaEnv(gym.Env):
   def _terminal(self):
     """Calculate whether to terminate the current episode."""
     # Get ego state
-    ego_x, ego_y = get_pos(self.ego)
-    state = self.get_state_frenet(self.ego, self.map)
 
     # If collides
     if len(self.collision_hist)>0: 
@@ -856,15 +920,10 @@ class CarlaEnv(gym.Env):
       self.out_of_time = True
       return True
 
-    # If at destination
-    #if self.dests is not None: # If at destination
-      #for dest in self.dests:
-        #if np.sqrt((ego_x-dest[0])**2+(ego_y-dest[1])**2)<4:
-          #return True
-
     if self.dests is not None:
-      dist2desti = np.linalg.norm(np.array(self.goal_state[:3]) - np.array(state[:3]))
-      if dist2desti < 1:
+      #dist2desti = np.linalg.norm(np.array(self.goal_state[:3]) - np.array(state[:3]))
+      #if dist2desti < 1:
+      if self.ego_state[0] >= self.goal_state[0]:
         self.arrived = True
         return True
       
@@ -883,10 +942,10 @@ class CarlaEnv(gym.Env):
     """Clear specific actors."""
     for actor_filter in actor_filters:
       for actor in self.world.get_actors().filter(actor_filter):
-        if actor.is_alive:
-          if actor.type_id == 'controller.ai.walker':
-            actor.stop()
-          actor.destroy()
+        #if actor.is_alive:
+          #if actor.type_id == 'controller.ai.walker':
+           # actor.stop()
+        actor.destroy()
 
   def get_longitudinal_speed(self, vehicle):
     velocity = vehicle.get_velocity()
