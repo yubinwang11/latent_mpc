@@ -28,7 +28,7 @@ def Action_adapter(act, act_low, act_high):
     action = []
     for dim in range(len(act)):
         action += [((act_low[dim]+act_high[dim])/2 + act[dim]* (abs(act_high[dim]-act_low[dim]))/2).tolist()]
-    print('neural network output is ', act, 'adapted action is ', action)
+    #print('neural network output is ', act, 'adapted action is ', action)
     return action
 
 def Action_adapter_reverse(act, act_low, act_high):#(act,max_action):
@@ -36,7 +36,7 @@ def Action_adapter_reverse(act, act_low, act_high):#(act,max_action):
     action = []
     for dim in range(len(act)):
         action += [((act[dim]-((act_low[dim]+act_high[dim])/2))/((abs(act_high[dim]-act_low[dim]))/2)).tolist()]
-    print('orginal sampled action is ', act, 'reversed action is ', action)
+    #print('orginal sampled action is ', act, 'reversed action is ', action)
     return  action
     
     #(act_low[dim]+act_high[dim])/2 = o

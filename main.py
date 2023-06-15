@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import gym
+import pickle
 from SAC import SAC_Agent
 from ReplayBuffer import RandomBuffer, device
 
@@ -27,17 +28,18 @@ def str2bool(v):
 
 '''Hyperparameter Setting'''
 parser = argparse.ArgumentParser()
+parser.add_argument('--wandb', type=str2bool, default=True, help='Use Wandb to record the training')
 parser.add_argument('--write', type=str2bool, default=True, help='Use SummaryWriter to record the training')
 parser.add_argument('--eval', type=str2bool, default=False, help='Evaluate or Not')
-parser.add_argument('--render', type=str2bool, default=True, help='Render or Not')
+parser.add_argument('--render', type=str2bool, default=False, help='Render or Not')
 parser.add_argument('--Loadmodel', type=str2bool, default=False, help='Load pretrained model or Not')
-parser.add_argument('--ModelIdex', type=int, default=80000, help='which model to load')
+parser.add_argument('--ModelIdex', type=int, default=270000, help='which model to load')
 parser.add_argument('--seed', type=int, default=1, help='random seed')
 
 parser.add_argument('--total_steps', type=int, default=int(5e6), help='Max training steps')
 parser.add_argument('--save_interval', type=int, default=int(1e4), help='Model saving interval, in steps.')
 parser.add_argument('--eval_interval', type=int, default=int(1e3), help='Model evaluating interval, in stpes.')
-parser.add_argument('--eval_turn', type=int, default=3, help='Model evaluating times, in episode.')
+parser.add_argument('--eval_turn', type=int, default=3, help='Model evaluating times, in episode.') # 3
 parser.add_argument('--update_every', type=int, default=50, help='Training Fraquency, in stpes')
 parser.add_argument('--gamma', type=float, default=0.99, help='Discounted Factor')
 parser.add_argument('--net_width', type=int, default=256, help='Hidden net width')
@@ -113,21 +115,20 @@ class ZFilter:
     def output_shape(self, input_space):
         return input_space.shape
     
-def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, state_dim):
+def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, running_state):
     scores = 0
     turns = opt.eval_turn
-    running_state = ZFilter((state_dim,), clip=5.0)
 
     for j in range(turns):
         s, done, ep_r = env.reset(), False, 0
+        s = running_state(s)
         while not done:
             # Take deterministic actions at test time
-            s = running_state(s)
-            print('normalized state  is ', s)
-            a = model.select_action(s, deterministic=True, with_logprob=False)
+            #print('normalized state  is ', s)
+            a = model.select_action(s, deterministic=False, with_logprob=False)
             act = Action_adapter(a, act_low, act_high)  # [0,1] to [-max,max]
 
-            print(act)
+            #print(act)
             ref = act #.tolist()
             tra_state = np.array(env.ego_state) + np.array(ref[0:4])
             tra_state = tra_state.tolist()
@@ -139,6 +140,8 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, stat
             _act, pred_traj = env.high_mpc.solve(ref_traj)
 
             s_prime, r, done, info = env.step(_act)
+            print('under evaluation')
+
             s_prime = running_state(s_prime)
             # r = Reward_adapter(r, EnvIdex)
             if type(r) == tuple:
@@ -147,6 +150,7 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, stat
             s = s_prime
             if render:
                 env.render()
+        
         # print(ep_r)
         scores += ep_r
     return scores/turns
@@ -156,10 +160,10 @@ def main():
     write = opt.write   #Use SummaryWriter to record the training.
     render = opt.render
     eval = opt.eval
+    use_wandb = opt.wandb
 
     # parameters for the gym_carla environment
     params = {
-	'use_wandb': True,  # whether to use discrete control space
 	'number_of_vehicles': 0, # 100
 	'number_of_walkers': 0,
 	'display_size': 256*2,  # screen size of bird-eye render
@@ -188,6 +192,7 @@ def main():
 	'display_route': False,  # whether to render the desired route
 	'pixor_size': 64,  # size of the pixor labels
 	'pixor': False,  # whether to output PIXOR observation
+    'render': render,
 	}
         
     # Create environments.
@@ -228,7 +233,7 @@ def main():
         if os.path.exists(writepath): shutil.rmtree(writepath)
         writer = SummaryWriter(log_dir=writepath)
 
-    if (params['use_wandb']):
+    if (use_wandb):
         wandb.init(
                 # set the wandb project where this run will be logged
                 project="CarlaEnv",
@@ -252,16 +257,19 @@ def main():
         "adaptive_alpha":opt.adaptive_alpha
     }
 
-
-    model = SAC_Agent(**kwargs)
-    if not os.path.exists('model'): os.mkdir('model')
-    if opt.Loadmodel: model.load(opt.ModelIdex)
     running_state = ZFilter((state_dim,), clip=5.0)
+    model = SAC_Agent(**kwargs)
+
+    if not os.path.exists('model'): os.mkdir('model')
+    if opt.Loadmodel: 
+        model.load(opt.ModelIdex)
+        with open("./model/mean_std_{}.txt".format(opt.ModelIdex), 'rb') as saved_mean_std:
+                running_state = pickle.load(saved_mean_std)
 
     replay_buffer = RandomBuffer(state_dim, action_dim, env_with_Dead, max_size=int(1e6))
 
     if eval:
-        average_reward = evaluate_policy(eval_env, model, False, steps_per_epoch, env.act_low, env.act_high, state_dim) #evaluate_policy(env, model, render, steps_per_epoch, max_action, EnvIdex)
+        average_reward = evaluate_policy(eval_env, model, False, steps_per_epoch, env.act_low, env.act_high, running_state) #evaluate_policy(env, model, render, steps_per_epoch, max_action, EnvIdex)
         print('Average Reward:', average_reward)
     else:
         s, done, current_steps = env.reset(), False, 0
@@ -280,12 +288,12 @@ def main():
                 a = Action_adapter_reverse(act,env.act_low, env.act_high) #a∈[-1,1]
             else:
                 
-                print('normalized state  is ', s)
+                #print('normalized state  is ', s)
                 a = model.select_action(s, deterministic=False, with_logprob=False) #a∈[-1,1]
                 #a.tolist()
                 act = Action_adapter(a, env.act_low, env.act_high) #act∈[-max,max]
 
-            print(act)
+            #print(act)
             ref = act #.tolist()
             tra_state = np.array(env.ego_state) + np.array(ref[0:4])
             tra_state = tra_state.tolist()
@@ -298,7 +306,8 @@ def main():
 
             s_prime, r, done, info = env.step(_act)
             s_prime = running_state(s_prime)
-            env.render()
+            if render:
+                env.render()
 
             if type(r) == tuple:
                 r = np.array(list(r))
@@ -316,12 +325,16 @@ def main():
 
             '''save model'''
             if (t + 1) % save_interval == 0:
+                with open("./model/mean_std_{}.txt".format(t + 1), 'wb') as saved_mean_std:
+                    pickle.dump(running_state, saved_mean_std)
+                    saved_mean_std.close()
+
                 model.save(t + 1)
 
             '''record & log'''
             if (t + 1) % eval_interval == 0:
-                score = evaluate_policy(eval_env, model, False, steps_per_epoch, env.act_low, env.act_high, state_dim)
-                if (params['use_wandb']):
+                score = evaluate_policy(eval_env, model, False, steps_per_epoch, env.act_low, env.act_high, running_state)
+                if (use_wandb):
                     wandb.log({"step":t+1, "score": score})
                 if write:
                     writer.add_scalar('ep_r', score, global_step=t + 1)

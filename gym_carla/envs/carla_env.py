@@ -50,6 +50,8 @@ class CarlaEnv(gym.Env):
     self.desired_speed = params['desired_speed']
     self.max_ego_spawn_times = params['max_ego_spawn_times']
     self.display_route = params['display_route']
+    self.use_render = params['render']
+
     if 'pixor' in params.keys():
       self.pixor = params['pixor']
       self.pixor_size = params['pixor_size']
@@ -107,7 +109,7 @@ class CarlaEnv(gym.Env):
     # Connect to carla server and get world object
     print('connecting to Carla server...')
     client = carla.Client('localhost', params['port'])
-    client.set_timeout(10.0)
+    client.set_timeout(10.0) # 10.0
     self.world = client.load_world(params['town'])
     print('Carla server connected!')
 
@@ -194,7 +196,8 @@ class CarlaEnv(gym.Env):
     self.total_step = 0
     
     # Initialize the renderer
-    self._init_renderer()
+    if self.use_render:
+      self._init_renderer()
 
     # Get pixel grid points
     if self.pixor:
@@ -299,7 +302,8 @@ class CarlaEnv(gym.Env):
     # spawn the moving obstacles (agents)
     self.moving_agents = []
     self.lane_id_list = [-3, -1, -1, -1, -2, -2] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
-    self.s_list = [20+random.uniform(-5,5), 50+random.uniform(-5,5), 75+random.uniform(-5,5), 100+random.uniform(-5,5), 80+random.uniform(-5,5), 100+random.uniform(-5,5)] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
+    self.s_list = [22+random.uniform(-5,5), 32+random.uniform(-5,5), 50+random.uniform(-5,5), \
+                   65+random.uniform(-5,5), 55+random.uniform(-5,5), 70+random.uniform(-5,5)] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
 
     self.num_agents = len(self.lane_id_list)
     #self.num_agents = 0
@@ -388,7 +392,8 @@ class CarlaEnv(gym.Env):
     #self.waypoints = self.map.get_waypoint(self.ego.get_location())
 
     # Set ego information for render
-    self.birdeye_render.set_hero(self.ego, self.ego.id)
+    if self.use_render:
+      self.birdeye_render.set_hero(self.ego, self.ego.id)
 
     obs = self._get_obs()
 
@@ -642,110 +647,97 @@ class CarlaEnv(gym.Env):
 
   def _get_obs(self):
     """Get the observations."""
-    ## Birdeye rendering
-    self.birdeye_render.vehicle_polygons = self.vehicle_polygons
-    self.birdeye_render.walker_polygons = self.walker_polygons
-    self.birdeye_render.waypoints = self.waypoints
+    if self.use_render:
+      ## Birdeye rendering
+      self.birdeye_render.vehicle_polygons = self.vehicle_polygons
+      self.birdeye_render.walker_polygons = self.walker_polygons
+      self.birdeye_render.waypoints = self.waypoints
 
-    # birdeye view with roadmap and actors
-    birdeye_render_types = ['roadmap', 'actors']
-    #if self.display_route:
-      #birdeye_render_types.append('waypoints')
-    self.birdeye_render.render(self.display, birdeye_render_types)
-    birdeye = pygame.surfarray.array3d(self.display)
-    birdeye = birdeye[0:self.display_size, :, :]
-    birdeye = display_to_rgb(birdeye, self.obs_size)
+      # birdeye view with roadmap and actors
+      birdeye_render_types = ['roadmap', 'actors']
+      #if self.display_route:
+        #birdeye_render_types.append('waypoints')
+      
+      self.birdeye_render.render(self.display, birdeye_render_types)
+      birdeye = pygame.surfarray.array3d(self.display)
+      birdeye = birdeye[0:self.display_size, :, :]
+      birdeye = display_to_rgb(birdeye, self.obs_size)
 
-    # Roadmap
-    if self.pixor:
-      roadmap_render_types = ['roadmap']
+      # Roadmap
+      if self.pixor:
+        roadmap_render_types = ['roadmap']
+        if self.display_route:
+          roadmap_render_types.append('waypoints')
+        self.birdeye_render.render(self.display, roadmap_render_types)
+        roadmap = pygame.surfarray.array3d(self.display)
+        roadmap = roadmap[0:self.display_size, :, :]
+        roadmap = display_to_rgb(roadmap, self.obs_size)
+        # Add ego vehicle
+        for i in range(self.obs_size):
+          for j in range(self.obs_size):
+            if abs(birdeye[i, j, 0] - 255)<20 and abs(birdeye[i, j, 1] - 0)<20 and abs(birdeye[i, j, 0] - 255)<20:
+              roadmap[i, j, :] = birdeye[i, j, :]
+
+      # Display birdeye image
+      birdeye_surface = rgb_to_display_surface(birdeye, self.display_size)
+      self.display.blit(birdeye_surface, (0, 0))
+      
+      ## Lidar image generation
+
+      # We need to convert point cloud(carla-format) into numpy.ndarray
+      #lidar_data = np.copy(np.frombuffer(self.lidar_data.raw_data, dtype = np.dtype("f4")))
+      #lidar_data = np.reshape(lidar_data, (int(lidar_data.shape[0] / 4), 4))
+
+      #lidar_data = lidar_data[:, :-1] # we only use x, y, z coordinates
+      #lidar_data[:, 1] = -lidar_data[:, 1] # This is different from official script
+      #lidar_measurements = lidar_data
+      '''
+      point_cloud = []
+      # Get point cloud data
+      for data in self.lidar_data:
+        point_cloud.append([data.point.x, data.point.y, data.point.z]) #location # data.point.x, data.point.y, -data.point.z
+      point_cloud = np.array(point_cloud)
+    
+      # Separate the 3D space to bins for point cloud, x and y is set according to self.lidar_bin,
+      # and z is set to be two bins.
+      y_bins = np.arange(-(self.obs_range - self.d_behind), self.d_behind+self.lidar_bin, self.lidar_bin)
+      x_bins = np.arange(-self.obs_range/2, self.obs_range/2+self.lidar_bin, self.lidar_bin)
+      z_bins = [-self.lidar_height-1, -self.lidar_height+0.25, 1]
+      # Get lidar image according to the bins
+      lidar, _ = np.histogramdd(point_cloud, bins=(x_bins, y_bins, z_bins)) # , z_bins
+      lidar[:,:,0] = np.array(lidar[:,:,0]>0, dtype=np.uint8)
+      lidar[:,:,1] = np.array(lidar[:,:,1]>0, dtype=np.uint8)
+
+      # Add the waypoints to lidar image
       if self.display_route:
-        roadmap_render_types.append('waypoints')
-      self.birdeye_render.render(self.display, roadmap_render_types)
-      roadmap = pygame.surfarray.array3d(self.display)
-      roadmap = roadmap[0:self.display_size, :, :]
-      roadmap = display_to_rgb(roadmap, self.obs_size)
-      # Add ego vehicle
-      for i in range(self.obs_size):
-        for j in range(self.obs_size):
-          if abs(birdeye[i, j, 0] - 255)<20 and abs(birdeye[i, j, 1] - 0)<20 and abs(birdeye[i, j, 0] - 255)<20:
-            roadmap[i, j, :] = birdeye[i, j, :]
+        wayptimg = (birdeye[:,:,0] <= 10) * (birdeye[:,:,1] <= 10) * (birdeye[:,:,2] >= 240)
+      else:
+        wayptimg = birdeye[:,:,0] < 0  # Equal to a zero matrix
+      wayptimg = np.expand_dims(wayptimg, axis=2)
+      wayptimg = np.fliplr(np.rot90(wayptimg, 3))
 
-    # Display birdeye image
-    birdeye_surface = rgb_to_display_surface(birdeye, self.display_size)
-    self.display.blit(birdeye_surface, (0, 0))
-    
-    ## Lidar image generation
+      # Get the final lidar image
+      lidar = np.concatenate((lidar, wayptimg), axis=2)
+      ''''''
+      lidar = np.flip(lidar, axis=1)
+      lidar = np.rot90(lidar, 1)
+      lidar = np.rot90(lidar, 1)#lidar = np.rot90(lidar, 1)
+      lidar = lidar * 255
 
-    # We need to convert point cloud(carla-format) into numpy.ndarray
-    #lidar_data = np.copy(np.frombuffer(self.lidar_data.raw_data, dtype = np.dtype("f4")))
-    #lidar_data = np.reshape(lidar_data, (int(lidar_data.shape[0] / 4), 4))
-
-    #lidar_data = lidar_data[:, :-1] # we only use x, y, z coordinates
-    #lidar_data[:, 1] = -lidar_data[:, 1] # This is different from official script
-    #lidar_measurements = lidar_data
-    '''
-    point_cloud = []
-    # Get point cloud data
-    for data in self.lidar_data:
-      point_cloud.append([data.point.x, data.point.y, data.point.z]) #location # data.point.x, data.point.y, -data.point.z
-    point_cloud = np.array(point_cloud)
-  
-    # Separate the 3D space to bins for point cloud, x and y is set according to self.lidar_bin,
-    # and z is set to be two bins.
-    y_bins = np.arange(-(self.obs_range - self.d_behind), self.d_behind+self.lidar_bin, self.lidar_bin)
-    x_bins = np.arange(-self.obs_range/2, self.obs_range/2+self.lidar_bin, self.lidar_bin)
-    z_bins = [-self.lidar_height-1, -self.lidar_height+0.25, 1]
-    # Get lidar image according to the bins
-    lidar, _ = np.histogramdd(point_cloud, bins=(x_bins, y_bins, z_bins)) # , z_bins
-    lidar[:,:,0] = np.array(lidar[:,:,0]>0, dtype=np.uint8)
-    lidar[:,:,1] = np.array(lidar[:,:,1]>0, dtype=np.uint8)
-
-    # Add the waypoints to lidar image
-    if self.display_route:
-      wayptimg = (birdeye[:,:,0] <= 10) * (birdeye[:,:,1] <= 10) * (birdeye[:,:,2] >= 240)
-    else:
-      wayptimg = birdeye[:,:,0] < 0  # Equal to a zero matrix
-    wayptimg = np.expand_dims(wayptimg, axis=2)
-    wayptimg = np.fliplr(np.rot90(wayptimg, 3))
-
-    # Get the final lidar image
-    lidar = np.concatenate((lidar, wayptimg), axis=2)
-    ''''''
-    lidar = np.flip(lidar, axis=1)
-    lidar = np.rot90(lidar, 1)
-    lidar = np.rot90(lidar, 1)#lidar = np.rot90(lidar, 1)
-    lidar = lidar * 255
-
-    # Display lidar image
-    lidar_surface = rgb_to_display_surface(lidar, self.display_size)
-    self.display.blit(lidar_surface, (self.display_size, 0))
-    '''
-    
-    ## Display camera image
-    camera = resize(self.camera_img, (self.obs_size, self.obs_size)) * 255
-    camera_surface = rgb_to_display_surface(camera, self.display_size)
-    self.display.blit(camera_surface, (self.display_size, 0)) # self.display_size * 2
-    
-    # Display on pygame
-    pygame.display.flip()
-
-    # State observation
-    ego_trans = self.ego.get_transform()
-    ego_x = ego_trans.location.x
-    ego_y = ego_trans.location.y
-    ego_yaw = ego_trans.rotation.yaw/180*np.pi
-    lateral_dis, w = get_preview_lane_dis(self.waypoints, ego_x, ego_y)
-    delta_yaw = np.arcsin(np.cross(w, 
-      np.array(np.array([np.cos(ego_yaw), np.sin(ego_yaw)]))))
-    v = self.ego.get_velocity()
-    speed = np.sqrt(v.x**2 + v.y**2)
-    #drive_state = np.array([lateral_dis, - delta_yaw, speed, self.vehicle_front])
+      # Display lidar image
+      lidar_surface = rgb_to_display_surface(lidar, self.display_size)
+      self.display.blit(lidar_surface, (self.display_size, 0))
+      '''
+      
+      ## Display camera image
+      camera = resize(self.camera_img, (self.obs_size, self.obs_size)) * 255
+      camera_surface = rgb_to_display_surface(camera, self.display_size)
+      self.display.blit(camera_surface, (self.display_size, 0)) # self.display_size * 2
+      
+      # Display on pygame
+      pygame.display.flip()
 
     self.ego_state = self.get_state_frenet(self.ego, self.map)
-
-    #distance_measurements = self.distance_measurements
-    #print('distance is ', distance_measurements)
 
     #radar_data = self.radar_data
     obs = []

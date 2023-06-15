@@ -38,6 +38,7 @@ videos/*
 model/*
 models_saved/*
 .vscode/*
+runs/*
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
