@@ -69,14 +69,16 @@ def evaluate_policy(env, render, steps_per_epoch, record=False):
         while not done:
 
             ref_obj = s
+            #print('other vehicle pos:', ref_obj)
 
             # compute the mpc reference
             ref_traj = env.ego_state + ref_obj + env.goal_state
             # run  model predictive control
             _act, pred_traj = env.high_mpc.solve(ref_traj)
+            print('computed action:', _act)
 
             s_prime, r, done, info = env.step(_act)
-            print('under evaluation')
+            #print('under evaluation')
 
             # r = Reward_adapter(r, EnvIdex)
             if type(r) == tuple:

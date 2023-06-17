@@ -5,7 +5,6 @@ import casadi as ca
 import numpy as np
 import time
 from os import system
-from common.vehicle_index import *
 
 #
 class High_MPC(object):
@@ -25,6 +24,7 @@ class High_MPC(object):
         # inter-axle distance
         self.L = L
 
+        self.vehicle_length = vehicle_width*2
         self.vehicle_width = vehicle_width
         self.lane_width = lane_width
         self.num_obstacles=num_obstacles
@@ -185,20 +185,12 @@ class High_MPC(object):
             
             # retrieve time constant
             #idx_k = self._s_dim+self._s_dim+(self._s_dim+3)*(k)
-            idx_k = self._s_dim + self._s_dim
+            idx_k = self._s_dim 
             #idx_k_end = self._s_dim+(self._s_dim+3)*(k+1)\
             #idx_k_end = self._s_dim+self._s_dim+3
             idx_k_end = self._s_dim+self.num_obstacles*2
 
-            obstacles_pos= P[ idx_k : idx_k_end]
-
-            dist = (self.X[0, k+1]-surr_vehicle_pos[0])**2 + (self.X[1, k+1]-surr_vehicle_pos[1])**2
-            nlp_g += [dist]
-
-            lbg += [self.vehicle.length**2]
-            ubg += [np.inf]
-
-
+            obstacles_pos= P[idx_k : idx_k_end]
             
             # cost for tracking the goal position
             cost_goal_k = 0
@@ -210,13 +202,13 @@ class High_MPC(object):
             if k >= self._N -1: # The goal postion.
 
                 #delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*1:])
-                delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim*2)*1:])
+                delta_s_k = (X[:, k+1] - P[self._s_dim+(self.num_obstacles*2)*1:])
                 cost_goal_k = f_cost_goal(delta_s_k)
 
             else:
 
                 #delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*1:])
-                delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim*2)*1:])
+                delta_s_k = (X[:, k+1] - P[self._s_dim+(self.num_obstacles*2)*1:])
                 cost_goal_k = f_cost_goal(delta_s_k)
 
             
@@ -243,11 +235,26 @@ class High_MPC(object):
             self.lbg += g_min
             self.ubg += g_max
 
+            #for i in range(self.num_obstacles):
+                #dist = (X[0, k+1]-obstacles_pos[i*2])**2 + (X[1, k+1]-obstacles_pos[i*2+1])**2
+            #dist = (X[0, k+1]-obstacles_pos[0])**2 + (X[1, k+1]-obstacles_pos[1])**2
+            #self.nlp_g += [dist]
+
+            #self.lbg += [self.vehicle_length**2]
+            #self.ubg += [np.inf]
+            
+            self.nlp_g += [X[1, k+1]]
+            self.lbg += [-1.5*self.lane_width]
+            self.ubg += [1.5*self.lane_width]
+        
+        #print('nlp_g:', self.nlp_g)
         # nlp objective
         nlp_dict = {'f': self.mpc_obj, 
             'x': ca.vertcat(*self.nlp_w), 
             'p': P,               
             'g': ca.vertcat(*self.nlp_g)}        
+        
+
         
         # # # # # # # # # # # # # # # # # # # 
         # -- qpoases            

@@ -275,6 +275,7 @@ class CarlaEnv(gym.Env):
     self.vehicle_width = self.ego.bounding_box.extent.x * 2 # actually use  length to estimate width with buffer
       
     self.inter_axle_distance = 2*self.ego.bounding_box.extent.x
+    print('L:', self.inter_axle_distance)
 
     # determine and visualize the destination
     self.goal_state = np.array([275, 0, 0, 8]).tolist() # 275
@@ -629,7 +630,7 @@ class CarlaEnv(gym.Env):
       else:
         agent_state = self.ego_state #[0, 0, 0, 0]
       
-      obs += agent_state
+      obs += agent_state[0:2]
   
     #obs = np.array(obs)
 
