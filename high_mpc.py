@@ -29,8 +29,8 @@ class High_MPC(object):
         self.lane_width = lane_width
         self.num_obstacles=num_obstacles
 
-        #self.a_max = 1.5 * 1.5 ; self.a_min = -3 * 1.5
-        self.a_max = 1.5*3; self.a_min = -3*3
+        self.a_max = 1.5; self.a_min = -3
+        #self.a_max = 1.5*3; self.a_min = -3*3
         self.delta_max = 0.75 ; self.delta_min = -0.75 
 
         self.v_min = -5
@@ -189,8 +189,6 @@ class High_MPC(object):
             #idx_k_end = self._s_dim+(self._s_dim+3)*(k+1)\
             #idx_k_end = self._s_dim+self._s_dim+3
             idx_k_end = self._s_dim+self.num_obstacles*2
-
-            obstacles_pos= P[idx_k : idx_k_end]
             
             # cost for tracking the goal position
             cost_goal_k = 0
@@ -237,13 +235,14 @@ class High_MPC(object):
 
             #for i in range(self.num_obstacles):
                 #dist = (X[0, k+1]-obstacles_pos[i*2])**2 + (X[1, k+1]-obstacles_pos[i*2+1])**2
-            #dist = (X[0, k+1]-obstacles_pos[0])**2 + (X[1, k+1]-obstacles_pos[1])**2
-            #self.nlp_g += [dist]
+                #dist = ca.sqrt((X[0, k]-P[ self._s_dim+i*2])**2 + (X[1, k]-P[self._s_dim+i*2+1])**2) # k+1
+            #dist = ca.sqrt((X[0, k]-15)**2 + (X[1, k]-0)**2) # k+1
 
-            #self.lbg += [self.vehicle_length**2]
-            #self.ubg += [np.inf]
+            self.nlp_g += [ca.sqrt((X[0, k]-15)**2 + (X[1, k]-0)**2)] # k+1]
+            self.lbg += [self.vehicle_length]#**2
+            self.ubg += [np.inf]
             
-            self.nlp_g += [X[1, k+1]]
+            self.nlp_g += [X[1, k]] # k+1
             self.lbg += [-1.5*self.lane_width]
             self.ubg += [1.5*self.lane_width]
         

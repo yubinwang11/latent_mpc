@@ -290,8 +290,9 @@ class CarlaEnv(gym.Env):
                    65+random.uniform(-5,5), 55+random.uniform(-5,5), 70+random.uniform(-5,5), 90+random.uniform(-5,5),\
                    100+random.uniform(-5,5), 120+random.uniform(-5,5) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
 
-    self.num_agents = len(self.lane_id_list)
+    #self.num_agents = len(self.lane_id_list)
     #self.num_agents = 0
+    self.num_agents = 1
 
     for i in range(self.num_agents):
         agent_waypoint = self.map.get_waypoint_xodr(34, self.lane_id_list[i], self.s_list[i])
