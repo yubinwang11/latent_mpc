@@ -89,26 +89,6 @@ class CarlaEnv(gym.Env):
     self.discrete_act = [params['discrete_acc'], params['discrete_steer']] # acc, steer
     self.n_acc = len(self.discrete_act[0])
     self.n_steer = len(self.discrete_act[1])
-    #if self.discrete:
-      #self.action_space = spaces.Discrete(self.n_acc*self.n_steer)
-    #else:
-      #self.action_space = spaces.Box(np.array([params['continuous_accel_range'][0], 
-      #params['continuous_steer_range'][0]]), np.array([params['continuous_accel_range'][1],
-      #params['continuous_steer_range'][1]]), dtype=np.float32)  # acc, steer
-    #observation_space_dict = {
-      #'camera': spaces.Box(low=0, high=255, shape=(self.obs_size, self.obs_size, 3), dtype=np.uint8),
-      #'lidar': spaces.Box(low=0, high=255, shape=(self.obs_size, self.obs_size, 3), dtype=np.uint8),
-      #'birdeye': spaces.Box(low=0, high=255, shape=(self.obs_size, self.obs_size, 3), dtype=np.uint8),
-      #'state': spaces.Box(np.array([-2, -1, -5, 0]), np.array([2, 1, 30, 1]), dtype=np.float32)
-      #}
-    #if self.pixor:
-      #observation_space_dict.update({
-        #'roadmap': spaces.Box(low=0, high=255, shape=(self.obs_size, self.obs_size, 3), dtype=np.uint8),
-        #'vh_clas': spaces.Box(low=0, high=1, shape=(self.pixor_size, self.pixor_size, 1), dtype=np.float32),
-        #'vh_regr': spaces.Box(low=-5, high=5, shape=(self.pixor_size, self.pixor_size, 6), dtype=np.float32),
-        ##################'pixor_state': spaces.Box(np.array([-1000, -1000, -1, -1, -5]), np.array([1000, 1000, 1, 1, 20]), dtype=np.float32)
-        #})
-    #self.observation_space = spaces.Dict(observation_space_dict)
 
     # Connect to carla server and get world object
     print('connecting to Carla server...')
@@ -248,7 +228,6 @@ class CarlaEnv(gym.Env):
       if self._try_spawn_random_vehicle_at(random.choice(self.vehicle_spawn_points), number_of_wheels=[4]):
         count -= 1
 
-    
     # Spawn pedestrians
     random.shuffle(self.walker_spawn_points)
     count = self.number_of_walkers
@@ -332,55 +311,6 @@ class CarlaEnv(gym.Env):
       if len(self.collision_hist)>self.collision_hist_l:
         self.collision_hist.pop(0)
     self.collision_hist = []
-    
-    # Add obstacle dector
-    self.distance_measurements = [] #self.det_range
-    self.detector_list = []
-
-    for detector_i in range(self.detector_num):
-      self.distance_measurements.append(self.detect_range)
-      self.obstector_trans = carla.Transform(carla.Location(x=0.0, z=0.5), carla.Rotation(yaw=-self.detect_angle/2+(self.detect_angle/(self.detector_num-1))*detector_i))
-
-      self.detector_list.append(self.world.spawn_actor(self.obstector_bp, self.obstector_trans, attach_to=self.ego))
-      #self.detector_list[detector_i].listen(lambda distance_i: get_obstacle_distance(distance_i, detector_i))
-    self.detector_list[0].listen(lambda distance: get_obstacle_distance(distance, 0)); self.detector_list[1].listen(lambda distance: get_obstacle_distance(distance, 1))
-    self.detector_list[2].listen(lambda distance: get_obstacle_distance(distance, 2)); self.detector_list[3].listen(lambda distance: get_obstacle_distance(distance, 3))
-    self.detector_list[4].listen(lambda distance: get_obstacle_distance(distance, 4)); self.detector_list[5].listen(lambda distance: get_obstacle_distance(distance, 5))
-    self.detector_list[6].listen(lambda distance: get_obstacle_distance(distance, 6)); self.detector_list[7].listen(lambda distance: get_obstacle_distance(distance, 7))
-    self.detector_list[8].listen(lambda distance: get_obstacle_distance(distance, 8)); self.detector_list[9].listen(lambda distance: get_obstacle_distance(distance, 9))
-    self.detector_list[10].listen(lambda distance: get_obstacle_distance(distance,10)); self.detector_list[11].listen(lambda distance: get_obstacle_distance(distance, 11))
-    self.detector_list[12].listen(lambda distance: get_obstacle_distance(distance, 12)); self.detector_list[13].listen(lambda distance: get_obstacle_distance(distance, 13))
-    self.detector_list[14].listen(lambda distance: get_obstacle_distance(distance, 14)); self.detector_list[15].listen(lambda distance: get_obstacle_distance(distance, 15))
-    self.detector_list[16].listen(lambda distance: get_obstacle_distance(distance, 16));self.detector_list[17].listen(lambda distance: get_obstacle_distance(distance, 17))
-    self.detector_list[18].listen(lambda distance: get_obstacle_distance(distance, 18));self.detector_list[19].listen(lambda distance: get_obstacle_distance(distance, 19))
-    self.detector_list[20].listen(lambda distance: get_obstacle_distance(distance, 20));self.detector_list[21].listen(lambda distance: get_obstacle_distance(distance, 21))
-    self.detector_list[22].listen(lambda distance: get_obstacle_distance(distance, 22));self.detector_list[23].listen(lambda distance: get_obstacle_distance(distance, 23))
-    self.detector_list[24].listen(lambda distance: get_obstacle_distance(distance, 24));self.detector_list[25].listen(lambda distance: get_obstacle_distance(distance, 25))
-    self.detector_list[26].listen(lambda distance: get_obstacle_distance(distance, 26));self.detector_list[27].listen(lambda distance: get_obstacle_distance(distance, 27))
-    self.detector_list[28].listen(lambda distance: get_obstacle_distance(distance, 28));self.detector_list[29].listen(lambda distance: get_obstacle_distance(distance, 29))
-    self.detector_list[30].listen(lambda distance: get_obstacle_distance(distance, 30));self.detector_list[31].listen(lambda distance: get_obstacle_distance(distance, 31))
-    self.detector_list[32].listen(lambda distance: get_obstacle_distance(distance, 32));self.detector_list[33].listen(lambda distance: get_obstacle_distance(distance, 33))
-    self.detector_list[34].listen(lambda distance: get_obstacle_distance(distance, 34));self.detector_list[35].listen(lambda distance: get_obstacle_distance(distance, 35))
-    self.detector_list[36].listen(lambda distance: get_obstacle_distance(distance, 36))
-
-    def get_obstacle_distance(info, detector_i):
-      if info is not None:
-        self.distance_measurements[detector_i] = info.distance
-      else:
-        self.distance_measurements[detector_i] = self.detect_range #carla.ObstacleDetectionEvent(distance=self.det_range)
-    
-    '''
-    # Add lidar sensor
-    self.lidar_sensor = self.world.spawn_actor(self.lidar_bp, self.lidar_trans, attach_to=self.ego)
-    self.lidar_sensor.listen(lambda data: get_lidar_data(data))
-    def get_lidar_data(data):
-      self.lidar_data = data
-    '''
-    # Add radar sensor
-    #self.radar_sensor = self.world.spawn_actor(self.radar_bp, self.radar_trans, attach_to=self.ego)
-    #self.radar_sensor.listen(lambda data: get_radar_data(data))
-    #def get_radar_data(data):
-    #self.radar_data = data
 
     # Add camera sensor
     self.camera_sensor = self.world.spawn_actor(self.camera_bp, self.camera_trans, attach_to=self.ego)
@@ -414,7 +344,7 @@ class CarlaEnv(gym.Env):
     self.travelled_dist = None
 
     self.high_mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, L=self.inter_axle_distance, \
-                            vehicle_width = self.vehicle_width, lane_width = self.lane_width,  init_state=self.ego_state)
+                            vehicle_width = self.vehicle_width, lane_width = self.lane_width,  init_state=self.ego_state, num_obstacles=self.num_agents)
 
     return obs
   
@@ -442,22 +372,6 @@ class CarlaEnv(gym.Env):
     else:
       throttle = 0
       brake = np.clip(-acc/8,0,1)
-
-    '''
-    max_throttle=0.75; max_brake=0.5; max_steering=0.75; KP=1; dead_zone = 0.05 # 0.1
-
-    if acc >= dead_zone:
-        throttle = min(max_throttle, KP*acc)
-        brake = 0
-    elif acc <= -dead_zone:
-        throttle = 0 
-        brake = min(max_brake, -KP*acc)
-    else:
-        throttle = 0
-        brake = 0.1
-
-    desired_steer_angle = np.clip(steer, -1, 1)
-    '''
     
     # Apply control
     act = carla.VehicleControl(throttle=float(throttle), steer=float(steer), brake=float(brake))
@@ -483,11 +397,6 @@ class CarlaEnv(gym.Env):
     self.t += self.sim_dt
     self.time_step += 1
     self.total_step += 1
-
-    # print current state
-    #self.curr_waypoint = self.map.get_waypoint(self.ego.get_location()) # ,project_to_road=True
-    #print('======',self.curr_waypoint.s, '======', self.vehicle_state)
-    #print('======',self.t, '======', self.curr_waypoint.s)
 
     obs = self._get_obs()
     # state information
@@ -698,53 +607,6 @@ class CarlaEnv(gym.Env):
       birdeye_surface = rgb_to_display_surface(birdeye, self.display_size)
       self.display.blit(birdeye_surface, (0, 0))
       
-      ## Lidar image generation
-
-      # We need to convert point cloud(carla-format) into numpy.ndarray
-      #lidar_data = np.copy(np.frombuffer(self.lidar_data.raw_data, dtype = np.dtype("f4")))
-      #lidar_data = np.reshape(lidar_data, (int(lidar_data.shape[0] / 4), 4))
-
-      #lidar_data = lidar_data[:, :-1] # we only use x, y, z coordinates
-      #lidar_data[:, 1] = -lidar_data[:, 1] # This is different from official script
-      #lidar_measurements = lidar_data
-      '''
-      point_cloud = []
-      # Get point cloud data
-      for data in self.lidar_data:
-        point_cloud.append([data.point.x, data.point.y, data.point.z]) #location # data.point.x, data.point.y, -data.point.z
-      point_cloud = np.array(point_cloud)
-    
-      # Separate the 3D space to bins for point cloud, x and y is set according to self.lidar_bin,
-      # and z is set to be two bins.
-      y_bins = np.arange(-(self.obs_range - self.d_behind), self.d_behind+self.lidar_bin, self.lidar_bin)
-      x_bins = np.arange(-self.obs_range/2, self.obs_range/2+self.lidar_bin, self.lidar_bin)
-      z_bins = [-self.lidar_height-1, -self.lidar_height+0.25, 1]
-      # Get lidar image according to the bins
-      lidar, _ = np.histogramdd(point_cloud, bins=(x_bins, y_bins, z_bins)) # , z_bins
-      lidar[:,:,0] = np.array(lidar[:,:,0]>0, dtype=np.uint8)
-      lidar[:,:,1] = np.array(lidar[:,:,1]>0, dtype=np.uint8)
-
-      # Add the waypoints to lidar image
-      if self.display_route:
-        wayptimg = (birdeye[:,:,0] <= 10) * (birdeye[:,:,1] <= 10) * (birdeye[:,:,2] >= 240)
-      else:
-        wayptimg = birdeye[:,:,0] < 0  # Equal to a zero matrix
-      wayptimg = np.expand_dims(wayptimg, axis=2)
-      wayptimg = np.fliplr(np.rot90(wayptimg, 3))
-
-      # Get the final lidar image
-      lidar = np.concatenate((lidar, wayptimg), axis=2)
-      ''''''
-      lidar = np.flip(lidar, axis=1)
-      lidar = np.rot90(lidar, 1)
-      lidar = np.rot90(lidar, 1)#lidar = np.rot90(lidar, 1)
-      lidar = lidar * 255
-
-      # Display lidar image
-      lidar_surface = rgb_to_display_surface(lidar, self.display_size)
-      self.display.blit(lidar_surface, (self.display_size, 0))
-      '''
-      
       ## Display camera image
       camera = resize(self.camera_img, (self.obs_size, self.obs_size)) * 255
       camera_surface = rgb_to_display_surface(camera, self.display_size)
@@ -757,86 +619,19 @@ class CarlaEnv(gym.Env):
 
     #radar_data = self.radar_data
     obs = []
-    obs += [np.array(self.goal_state[0])-np.array(self.ego_state[0])]
-    obs += self.ego_state[1:]
-    obs += self.distance_measurements
-    #obs += self.goal_state
-    #obs += [-1.5*self.lane_width]
-    #obs += [1.5*self.lane_width]
-    
-    #for agent in self.moving_agents:
-    #  agent_location = agent.get_location()
-    #  waypoint = self.map.get_waypoint(agent_location)
-    #  agent_road_ID = waypoint.road_id
-    #  if agent_road_ID == 34:
-    #    agent_state = self.get_state_frenet(agent, self.map)
-    #  else:
-    #    agent_state = self.ego_state #[0, 0, 0, 0]
-    #  
-    #  obs += (np.array(agent_state)-np.array(self.ego_state)).tolist()
+
+    for agent in self.moving_agents:
+      agent_location = agent.get_location()
+      waypoint = self.map.get_waypoint(agent_location)
+      agent_road_ID = waypoint.road_id
+      if agent_road_ID == 34:
+        agent_state = self.get_state_frenet(agent, self.map)
+      else:
+        agent_state = self.ego_state #[0, 0, 0, 0]
+      
+      obs += agent_state
   
-    #for i in range(6):
-      #agent_state = self.goal_state
-      #obs += agent_state
-
-    obs = np.array(obs)
-
-    '''
-    if self.pixor:
-      ## Vehicle classification and regression maps (requires further normalization)
-      vh_clas = np.zeros((self.pixor_size, self.pixor_size))
-      vh_regr = np.zeros((self.pixor_size, self.pixor_size, 6))
-
-      # Generate the PIXOR image. Note in CARLA it is using left-hand coordinate
-      # Get the 6-dim geom parametrization in PIXOR, here we use pixel coordinate
-      for actor in self.world.get_actors().filter('vehicle.*'):
-        x, y, yaw, l, w = get_info(actor)
-        x_local, y_local, yaw_local = get_local_pose((x, y, yaw), (ego_x, ego_y, ego_yaw))
-        if actor.id != self.ego.id:
-          if abs(y_local)<self.obs_range/2+1 and x_local<self.obs_range-self.d_behind+1 and x_local>-self.d_behind-1:
-            x_pixel, y_pixel, yaw_pixel, l_pixel, w_pixel = get_pixel_info(
-              local_info=(x_local, y_local, yaw_local, l, w),
-              d_behind=self.d_behind, obs_range=self.obs_range, image_size=self.pixor_size)
-            cos_t = np.cos(yaw_pixel)
-            sin_t = np.sin(yaw_pixel)
-            logw = np.log(w_pixel)
-            logl = np.log(l_pixel)
-            pixels = get_pixels_inside_vehicle(
-              pixel_info=(x_pixel, y_pixel, yaw_pixel, l_pixel, w_pixel),
-              pixel_grid=self.pixel_grid)
-            for pixel in pixels:
-              vh_clas[pixel[0], pixel[1]] = 1
-              dx = x_pixel - pixel[0]
-              dy = y_pixel - pixel[1]
-              vh_regr[pixel[0], pixel[1], :] = np.array(
-                [cos_t, sin_t, dx, dy, logw, logl])
-
-      # Flip the image matrix so that the origin is at the left-bottom
-      vh_clas = np.flip(vh_clas, axis=0)
-      vh_regr = np.flip(vh_regr, axis=0)
-
-      # Pixor state, [x, y, cos(yaw), sin(yaw), speed]
-      pixor_state = [ego_x, ego_y, np.cos(ego_yaw), np.sin(ego_yaw), speed]
-    '''
-    '''
-    obs = {
-      'camera':camera.astype(np.uint8),
-      'lidar':lidar.astype(np.uint8),
-      'birdeye':birdeye.astype(np.uint8),
-      'state': state,
-    }
-    '''
-    #obs = drive_state
-
-    '''
-    if self.pixor:
-      obs.update({
-        'roadmap':roadmap.astype(np.uint8),
-        'vh_clas':np.expand_dims(vh_clas, -1).astype(np.float32),
-        'vh_regr':vh_regr.astype(np.float32),
-        'pixor_state': pixor_state,
-      })
-    '''
+    #obs = np.array(obs)
 
     return obs
 

@@ -12,7 +12,7 @@ class High_MPC(object):
     """
     Nonlinear MPC
     """
-    def __init__(self, T, dt, L, vehicle_width, lane_width = 4, init_state=None, init_u=None):
+    def __init__(self, T, dt, L, vehicle_width, lane_width = 4, init_state=None, init_u=None, num_obstacles=9):
         """
         Nonlinear MPC for vehicle control        
         """
@@ -27,6 +27,7 @@ class High_MPC(object):
 
         self.vehicle_width = vehicle_width
         self.lane_width = lane_width
+        self.num_obstacles=num_obstacles
 
         #self.a_max = 1.5 * 1.5 ; self.a_min = -3 * 1.5
         self.a_max = 1.5*3; self.a_min = -3*3
@@ -144,12 +145,12 @@ class High_MPC(object):
 
         x_min = [-x_bound for _ in range(self._s_dim)]
         x_min[0] = 0
-        x_min[1] = -self.lane_width #-1.5*self.lane_width + self.vehicle_width/2
+        x_min[1] = -1.5*self.lane_width + self.vehicle_width/2 #-1.5*self.lane_width + self.vehicle_width/2
         x_min[3] = self.v_min
 
         x_max = [x_bound  for _ in range(self._s_dim)]
         x_max[0] = 300
-        x_max[1] = self.lane_width #1.5*self.lane_width - self.vehicle_width/2
+        x_max[1] = 1.5*self.lane_width - self.vehicle_width/2 #1.5*self.lane_width - self.vehicle_width/2
         x_max[3] = self.v_max
 
         #
@@ -158,7 +159,7 @@ class High_MPC(object):
 
         #P = ca.SX.sym("P", self._s_dim+(self._s_dim+3)*1+self._s_dim)
         #P = ca.SX.sym("P", self._s_dim+self._s_dim)
-        P = ca.SX.sym("P", self._s_dim+(self._s_dim*2)*1+self._s_dim)
+        P = ca.SX.sym("P", self._s_dim+(self.num_obstacles*2)*1+self._s_dim)
         X = ca.SX.sym("X", self._s_dim, self._N+1)
         U = ca.SX.sym("U", self._u_dim, self._N)
         #
@@ -187,32 +188,20 @@ class High_MPC(object):
             idx_k = self._s_dim + self._s_dim
             #idx_k_end = self._s_dim+(self._s_dim+3)*(k+1)\
             #idx_k_end = self._s_dim+self._s_dim+3
-            idx_k_end = self._s_dim+self._s_dim*2
+            idx_k_end = self._s_dim+self.num_obstacles*2
 
-            #time_k = P[ idx_k : idx_k_end]
-            weight_k = P[ idx_k : idx_k_end]
-            
-            self._Q_tra = np.diag([
-            100*weight_k[0], 100*weight_k[1],  # delta_x, delta_y 100 100
-            10*weight_k[2], # delta_phi
-            10*weight_k[3]]) #  delta_v
+            obstacles_pos= P[ idx_k : idx_k_end]
 
-            cost_tra = Delta_p.T @ self._Q_tra @ Delta_p 
-            f_cost_tra = ca.Function('cost_tra', [Delta_p], [cost_tra])
+            dist = (self.X[0, k+1]-surr_vehicle_pos[0])**2 + (self.X[1, k+1]-surr_vehicle_pos[1])**2
+            nlp_g += [dist]
 
-            # # # # # # # # # # # # # # # # # # # # # # # # 
-            # - compute exponetial weights
-            # - time_k[2] defines the temporal spread of the weight
-            # - time_k[0] defines the current time 
-            # - time_k[1] defines the best traversal time, which is selected via 
-            #              a high-level policy / a deep high-level policy
+            lbg += [self.vehicle.length**2]
+            ubg += [np.inf]
 
-            # # # # # # # # # # # # # # # # # # # # # # # # 
-            #weight = ca.exp(- time_k[2] * (time_k[0]-time_k[1])**2 ) 
-            #weight = ca.exp(- time_k[2] * (time_k[0]-time_k[1])**2 ) 
+
             
             # cost for tracking the goal position
-            cost_goal_k, cost_gap_k = 0, 0
+            cost_goal_k = 0
             #delta_s_k = (X[:, k+1] - P[self._s_dim:]) # The goal postion.
             #cost_goal_k = f_cost_goal(delta_s_k)
 
@@ -229,14 +218,7 @@ class High_MPC(object):
                 #delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*1:])
                 delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim*2)*1:])
                 cost_goal_k = f_cost_goal(delta_s_k)
-                                    
-                # cost for tracking the moving gap
-                #delta_p_k = (X[0:self._s_dim, k+1] - P[self._s_dim+(self._s_dim+3)*0 : \
-                    #self._s_dim+(self._s_dim+3)*(0+1)-3]) 
-                delta_p_k = (X[0:self._s_dim, k+1] - P[self._s_dim+(self._s_dim*2)*0 : \
-                    self._s_dim+(self._s_dim*2)*(0+1)-self._s_dim]) 
-                cost_tra_k = f_cost_tra(delta_p_k) #* weight
-                #print(cost_gap_k.shape)
+
             
             delta_u_k = U[:, k]-[0, 0] #delta_u_k = U[:, k]-[self._gz, 0, 0, 0]
             cost_u_k = f_cost_u(delta_u_k)
@@ -248,7 +230,7 @@ class High_MPC(object):
             
             cost_delta_u_k = f_cost_delta_u(delta_delta_u_k)
 
-            self.mpc_obj = self.mpc_obj + cost_goal_k + cost_u_k + cost_delta_u_k  +  cost_tra_k 
+            self.mpc_obj = self.mpc_obj + cost_goal_k + cost_u_k + cost_delta_u_k 
 
             # New NLP variable for state at end of interval
             self.nlp_w += [X[:, k+1]]
