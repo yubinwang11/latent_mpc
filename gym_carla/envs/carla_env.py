@@ -72,9 +72,13 @@ class CarlaEnv(gym.Env):
     #self.act_high = np.array([1.0, 1.0], dtype=np.float32)
     #self.act_low = np.array([-1.0, -1.0], dtype=np.float32)
 
-    self.obs_high = np.array([275.0, 10.0, np.pi/2, 20.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, \
+    self.obs_high = np.array([275.0, 10.0, np.pi/2, 20.0, \
+                              50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0,\
+                              50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0,\
                               50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0], dtype=np.float32)
-    self.obs_low = np.array([0.0, -10, -np.pi/2, -5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, \
+    self.obs_low = np.array([0.0, -10, -np.pi/2, -5.0,\
+                             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,\
+                             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,\
                              0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float32)
     self.action_space = spaces.Box(
       low=self.act_low, high=self.act_high, dtype=np.float32
@@ -301,9 +305,10 @@ class CarlaEnv(gym.Env):
     
     # spawn the moving obstacles (agents)
     self.moving_agents = []
-    self.lane_id_list = [-3, -1, -1, -1, -2, -2] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
+    self.lane_id_list = [-3, -2, -1, -1, -2, -2, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
     self.s_list = [22+random.uniform(-5,5), 32+random.uniform(-5,5), 50+random.uniform(-5,5), \
-                   65+random.uniform(-5,5), 55+random.uniform(-5,5), 70+random.uniform(-5,5)] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
+                   65+random.uniform(-5,5), 55+random.uniform(-5,5), 70+random.uniform(-5,5), 90+random.uniform(-5,5),\
+                   100+random.uniform(-5,5), 120+random.uniform(-5,5) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
 
     self.num_agents = len(self.lane_id_list)
     #self.num_agents = 0
@@ -334,7 +339,7 @@ class CarlaEnv(gym.Env):
 
     for detector_i in range(self.detector_num):
       self.distance_measurements.append(self.detect_range)
-      self.obstector_trans = carla.Transform(carla.Location(x=0.0, z=1.0), carla.Rotation(yaw=-self.detect_angle/2+(self.detect_angle/(self.detector_num-1))*detector_i))
+      self.obstector_trans = carla.Transform(carla.Location(x=0.0, z=0.5), carla.Rotation(yaw=-self.detect_angle/2+(self.detect_angle/(self.detector_num-1))*detector_i))
 
       self.detector_list.append(self.world.spawn_actor(self.obstector_bp, self.obstector_trans, attach_to=self.ego))
       #self.detector_list[detector_i].listen(lambda distance_i: get_obstacle_distance(distance_i, detector_i))
@@ -347,7 +352,16 @@ class CarlaEnv(gym.Env):
     self.detector_list[12].listen(lambda distance: get_obstacle_distance(distance, 12)); self.detector_list[13].listen(lambda distance: get_obstacle_distance(distance, 13))
     self.detector_list[14].listen(lambda distance: get_obstacle_distance(distance, 14)); self.detector_list[15].listen(lambda distance: get_obstacle_distance(distance, 15))
     self.detector_list[16].listen(lambda distance: get_obstacle_distance(distance, 16));self.detector_list[17].listen(lambda distance: get_obstacle_distance(distance, 17))
-    self.detector_list[18].listen(lambda distance: get_obstacle_distance(distance, 18))
+    self.detector_list[18].listen(lambda distance: get_obstacle_distance(distance, 18));self.detector_list[19].listen(lambda distance: get_obstacle_distance(distance, 19))
+    self.detector_list[20].listen(lambda distance: get_obstacle_distance(distance, 20));self.detector_list[21].listen(lambda distance: get_obstacle_distance(distance, 21))
+    self.detector_list[22].listen(lambda distance: get_obstacle_distance(distance, 22));self.detector_list[23].listen(lambda distance: get_obstacle_distance(distance, 23))
+    self.detector_list[24].listen(lambda distance: get_obstacle_distance(distance, 24));self.detector_list[25].listen(lambda distance: get_obstacle_distance(distance, 25))
+    self.detector_list[26].listen(lambda distance: get_obstacle_distance(distance, 26));self.detector_list[27].listen(lambda distance: get_obstacle_distance(distance, 27))
+    self.detector_list[28].listen(lambda distance: get_obstacle_distance(distance, 28));self.detector_list[29].listen(lambda distance: get_obstacle_distance(distance, 29))
+    self.detector_list[30].listen(lambda distance: get_obstacle_distance(distance, 30));self.detector_list[31].listen(lambda distance: get_obstacle_distance(distance, 31))
+    self.detector_list[32].listen(lambda distance: get_obstacle_distance(distance, 32));self.detector_list[33].listen(lambda distance: get_obstacle_distance(distance, 33))
+    self.detector_list[34].listen(lambda distance: get_obstacle_distance(distance, 34));self.detector_list[35].listen(lambda distance: get_obstacle_distance(distance, 35))
+    self.detector_list[36].listen(lambda distance: get_obstacle_distance(distance, 36))
 
     def get_obstacle_distance(info, detector_i):
       if info is not None:
@@ -496,10 +510,12 @@ class CarlaEnv(gym.Env):
     self.np_random, seed = seeding.np_random(seed)
     return [seed]
 
-  def render(self, mode=None):
+  def render(self):
     #pass
-    self.birdeye_render.render(self.display)
-
+    #self.birdeye_render.render(self.display)
+    frame = pygame.surfarray.array3d(self.display)
+    return frame
+  
   def _create_vehicle_bluepprint(self, actor_filter, color=None, number_of_wheels=[4]):
     """Create the blueprint for a specific actor type.
 
@@ -862,8 +878,8 @@ class CarlaEnv(gym.Env):
     #r_lat = - abs(self.ego.get_control().steer) * lspeed_lon**2
 
     r_arrive = 0
-    if self.arrived:
-      r_arrive = 100
+    #if self.arrived:
+      #r_arrive = 50
 
     r_speed = 0
     if self.arrived:
@@ -884,14 +900,16 @@ class CarlaEnv(gym.Env):
     self.travelled_dist = current_dist
 
     # cost for out of road
-    #r_road = 0 
-    #dist_out_road = abs(self.ego_state[1]) - 1.5 * self.lane_width
+    r_road = 0
+    if abs(self.ego_state[1]) >= 1.5 * self.lane_width + 1.0:
+      dist_road = abs((abs(self.ego_state[1]) - 1.5 * self.lane_width - 1.0))
+      r_road = -dist_road
     #if dist_out_road >= 0:
       #r_road = - 100 * dist_out_road
       
     #r = 200*r_collision + 1*lspeed_lon + 10*r_fast + 1*r_out + r_steer*5 + 0.2*r_lat - 0.1+  r_arrive + 10 * r_speed + 5 * r_s
     #r = 200 * r_collision + 30 * r_speed + 0.1 * r_s + r_arrive + 10 * r_lane + 1 * r_road + r_time
-    r = r_collision + r_time + r_forward + r_steer + r_arrive + r_speed
+    r = r_collision + r_time + r_forward + r_steer + r_arrive + r_speed + r_road
 
     #self.reward += r
   
@@ -981,3 +999,6 @@ class CarlaEnv(gym.Env):
     agent.set_autopilot(True)
 
     return agent
+
+
+

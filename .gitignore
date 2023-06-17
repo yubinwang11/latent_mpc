@@ -30,7 +30,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-.vscode/
+.vscode/*
 
 wandb/*
 figs/*
@@ -39,6 +39,7 @@ model/*
 models_saved/*
 .vscode/*
 runs/*
+gif/*
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
