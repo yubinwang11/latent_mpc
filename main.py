@@ -54,10 +54,10 @@ def save_frames_as_gif(frames, run_num=0):
 parser = argparse.ArgumentParser()
 parser.add_argument('--wandb', type=str2bool, default=False, help='Use Wandb to record the training')
 parser.add_argument('--write', type=str2bool, default=False, help='Use SummaryWriter to record the training')
-parser.add_argument('--eval', type=str2bool, default=True, help='Evaluate or Not')
+parser.add_argument('--eval', type=str2bool, default=False, help='Evaluate or Not')
 parser.add_argument('--record', type=str2bool, default=False, help='Record gif or Not')
 parser.add_argument('--render', type=str2bool, default=True, help='Render or Not')
-parser.add_argument('--Loadmodel', type=str2bool, default=True, help='Load pretrained model or Not')
+parser.add_argument('--Loadmodel', type=str2bool, default=False, help='Load pretrained model or Not')
 parser.add_argument('--ModelIdex', type=int, default= 90000, help='which model to load') # 270000
 parser.add_argument('--seed', type=int, default=1, help='random seed')
 
@@ -155,18 +155,7 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
             a = model.select_action(s, deterministic=False, with_logprob=False)
             act = Action_adapter(a, act_low, act_high)  # [0,1] to [-max,max]
 
-            #print(act)
-            ref = act #.tolist()
-            tra_state = np.array(env.ego_state) + np.array(ref[0:4])
-            tra_state = tra_state.tolist()
-            ref_obj = tra_state + ref[4:8]
-
-            # compute the mpc reference
-            ref_traj = env.ego_state + ref_obj + env.goal_state
-            # run  model predictive control
-            _act, pred_traj = env.high_mpc.solve(ref_traj)
-
-            s_prime, r, done, info = env.step(_act)
+            s_prime, r, done, info = env.step(act)
             print('under evaluation')
 
             s_prime = running_state(s_prime)
@@ -282,6 +271,7 @@ def main():
                 # track hyperparameters and run metadata
                 config={
                 "algo": "SAC", # discor
+                "algo": "vanilla_RL", # discor
                 }
             )
 
@@ -334,18 +324,7 @@ def main():
                 #a.tolist()
                 act = Action_adapter(a, env.act_low, env.act_high) #act∈[-max,max]
 
-            #print(act)
-            ref = act #.tolist()
-            tra_state = np.array(env.ego_state) + np.array(ref[0:4])
-            tra_state = tra_state.tolist()
-            ref_obj = tra_state + ref[4:8]
-
-            # compute the mpc reference
-            ref_traj = env.ego_state + ref_obj + env.goal_state
-            # run  model predictive control
-            _act, pred_traj = env.high_mpc.solve(ref_traj)
-
-            s_prime, r, done, info = env.step(_act)
+            s_prime, r, done, info = env.step(act)
             s_prime = running_state(s_prime)
             if render:
                 #env.render()

@@ -19,8 +19,6 @@ from gym import spaces
 from gym.utils import seeding
 import carla
 
-from high_mpc import High_MPC
-
 from gym_carla.envs.render import BirdeyeRender
 from gym_carla.envs.route_planner import RoutePlanner
 from gym_carla.envs.misc import *
@@ -65,12 +63,10 @@ class CarlaEnv(gym.Env):
       self.dests = None
 
     # action and observation spaces
-    #self.act_high = np.array([20.0, 10.0, 5.0, 20.0, 10.0, 10.0, 10.0, 10.0], dtype=np.float32)
-    #self.act_low = np.array([-20.0, -10, -5.0, -20.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float32)
-    self.act_high = np.array([20.0, 10.0, np.pi/2, 20.0, 10.0, 10.0, 10.0, 10.0], dtype=np.float32)
-    self.act_low = np.array([-5.0, -10, -np.pi/2, -5.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float32)
-    #self.act_high = np.array([1.0, 1.0], dtype=np.float32)
-    #self.act_low = np.array([-1.0, -1.0], dtype=np.float32)
+
+    self.act_high = np.array([3.0, np.pi/6], dtype=np.float32)
+    self.act_low = np.array([-3.0, -np.pi/6], dtype=np.float32)
+
 
     self.obs_high = np.array([275.0, 10.0, np.pi/2, 20.0, \
                               50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0,\
@@ -412,9 +408,6 @@ class CarlaEnv(gym.Env):
     obs = self._get_obs()
 
     self.travelled_dist = None
-
-    self.high_mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, L=self.inter_axle_distance, \
-                            vehicle_width = self.vehicle_width, lane_width = self.lane_width,  init_state=self.ego_state)
 
     return obs
   
