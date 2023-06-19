@@ -52,8 +52,8 @@ def save_frames_as_gif(frames, run_num=0):
 
 '''Hyperparameter Setting'''
 parser = argparse.ArgumentParser()
-parser.add_argument('--wandb', type=str2bool, default=False, help='Use Wandb to record the training')
-parser.add_argument('--write', type=str2bool, default=False, help='Use SummaryWriter to record the training')
+parser.add_argument('--wandb', type=str2bool, default=True, help='Use Wandb to record the training')
+parser.add_argument('--write', type=str2bool, default=True, help='Use SummaryWriter to record the training')
 parser.add_argument('--eval', type=str2bool, default=False, help='Evaluate or Not')
 parser.add_argument('--record', type=str2bool, default=False, help='Record gif or Not')
 parser.add_argument('--render', type=str2bool, default=True, help='Render or Not')
@@ -147,7 +147,7 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
     for j in range(turns):
         if record:
             frames = []
-        s, done, ep_r = env.reset(), False, 0
+        s, done, ep_r = env.reset(reset_eval=True), False, 0
         s = running_state(s)
         while not done:
             # Take deterministic actions at test time
@@ -174,6 +174,9 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
                 #frames.append(env.display.copy())
 
         # print(ep_r)
+        if ep_r <= -150:
+            ep_r = -150
+            
         scores += ep_r
 
         if record:
@@ -355,6 +358,7 @@ def main():
             '''record & log'''
             if (t + 1) % eval_interval == 0:
                 score = evaluate_policy(eval_env, model, False, steps_per_epoch, env.act_low, env.act_high, running_state)
+                #score = evaluate_policy(eval_env, model, False, steps_per_epoch, env.act_low, env.act_high, running_state)
                 if (use_wandb):
                     wandb.log({"step":t+1, "score": score})
                 if write:

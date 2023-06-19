@@ -205,7 +205,7 @@ class CarlaEnv(gym.Env):
       x, y = x.flatten(), y.flatten()
       self.pixel_grid = np.vstack((x, y)).T
 
-  def reset(self):
+  def reset(self, reset_eval=False):
 
     # reset time
     self.t = 0
@@ -216,17 +216,21 @@ class CarlaEnv(gym.Env):
     self.arrived = False
     self.out_of_time = False
     self.prev_decision_var = None
+    self.reset_eval = reset_eval
 
     # Clear sensor objects  
-    self.collision_sensor = None
-    self.lidar_sensor = None
-    self.camera_sensor = None
+    #self.collision_sensor = None
+    #self.lidar_sensor = None
+    #self.camera_sensor = None
 
     self.inter_axle_distance = None
 
     # Delete sensors, vehicles and walkers
-    self._clear_all_actors(['sensor.other.collision', 'sensor.other.obstacle', 'sensor.lidar.ray_cast', \
+    if self.reset_eval:
+      #pass
+      self._clear_all_actors(['sensor.other.collision', 'sensor.other.obstacle', 'sensor.lidar.ray_cast', \
                             'sensor.camera.rgb', 'vehicle.*', 'controller.ai.walker', 'walker.*'])
+      #self._clear_all_actors(['vehicle.*', 'controller.ai.walker', 'walker.*'], True)
 
     # Disable sync mode
     self._set_synchronous_mode(True)
@@ -474,6 +478,8 @@ class CarlaEnv(gym.Env):
 
     # Update timesteps
     self.t += self.sim_dt
+    #print('current time:', self.t)
+
     self.time_step += 1
     self.total_step += 1
 
@@ -492,10 +498,12 @@ class CarlaEnv(gym.Env):
     r = self._get_reward(),
     self.done = self._terminal()
 
-    #if self.done:
+    if self.done:
       # Delete sensors, vehicles and walkers
       #self._clear_all_actors(['sensor.other.collision', 'sensor.other.obstacle', 'sensor.lidar.ray_cast', \
                             #'sensor.camera.rgb', 'vehicle.*', 'controller.ai.walker', 'walker.*'])
+      #self._clear_all_actors(['vehicle.*', 'controller.ai.walker', 'walker.*', 'sensor.camera.rgb', 'sensor.other.collision', 'sensor.other.obstacle'])
+      self._clear_all_actors(['vehicle.*', 'controller.ai.walker', 'walker.*'])
 
     return obs,  r, self.done, copy.deepcopy(info) #(obs,  r, self.done, copy.deepcopy(info))
 
@@ -848,7 +856,7 @@ class CarlaEnv(gym.Env):
       #r_collision = -0.01*self.collision_hist[0]
 
     # reward for steering:
-    r_steer = -self.ego.get_control().steer  # **2
+    r_steer = -abs(self.ego.get_control().steer)  # **2
     #r_steer = 0
 
     # reward for out of lane
@@ -859,6 +867,13 @@ class CarlaEnv(gym.Env):
       #r_lane = -1
 
     # cost for too fast
+    r_fast = 0
+    v = self.ego.get_velocity()
+    speed = np.sqrt(v.x**2 + v.y**2)
+    if speed >= 15:
+      r_fast -= abs(speed - 15)
+
+    #r_speed = -abs(speed - self.desired_speed)
     #r_fast = 0
     #if lspeed_lon > self.desired_speed:
       #r_fast = -1
@@ -902,7 +917,7 @@ class CarlaEnv(gym.Env):
       
     #r = 200*r_collision + 1*lspeed_lon + 10*r_fast + 1*r_out + r_steer*5 + 0.2*r_lat - 0.1+  r_arrive + 10 * r_speed + 5 * r_s
     #r = 200 * r_collision + 30 * r_speed + 0.1 * r_s + r_arrive + 10 * r_lane + 1 * r_road + r_time
-    r = r_collision + r_time + r_forward + r_steer + r_arrive + r_speed + r_road
+    r = r_collision + r_time + r_forward + r_steer + r_arrive + r_speed + r_road + r_fast
 
     #self.reward += r
   
@@ -929,7 +944,12 @@ class CarlaEnv(gym.Env):
       if self.ego_state[0] >= self.goal_state[0]:
         self.arrived = True
         return True
-      
+    
+    # If out of road (not in road 34)
+    current_road_ID = self.map.get_waypoint(self.ego.get_location()).road_id
+    if not (current_road_ID == 34):
+      return True
+
     # If out of road (lane)
     #dis, _ = get_lane_dis(self.waypoints, ego_x, ego_y)
     #if abs(dis) > self.out_lane_thres: #+ self.lane_width:
@@ -941,14 +961,48 @@ class CarlaEnv(gym.Env):
 
     return False
 
-  def _clear_all_actors(self, actor_filters):
+  def _clear_all_actors(self, actor_filters, reset_eval=False):
     """Clear specific actors."""
+    #if eval
+    '''
+    alive_actors_list = self.world.get_actors()
+    for actor in alive_actors_list:
+      #if actor.type_id == 'sensor.other.collision' or 'sensor.other.obstacle' or 'sensor.lidar.ray_cast' or 'sensor.camera.rgb':
+        #actor.stop()
+      if actor.type_id in actor_filters:
+        actor.destroy()
+    '''
+
     for actor_filter in actor_filters:
       for actor in self.world.get_actors().filter(actor_filter):
         #if actor.is_alive:
-          #if actor.type_id == 'controller.ai.walker':
-           # actor.stop()
+          #if actor.type_id == 'controller.ai.walker': sensor.other.collision', '', , \
+                            #'sensor.camera.rgb'
+        #if actor.type_id == 'sensor.other.collision' or 'sensor.other.obstacle' or 'sensor.lidar.ray_cast' or 'sensor.camera.rgb':
+          #actor.stop()
+        #actor.stop()
+        #self.ego.destroy()
         actor.destroy()
+    '''
+    if not reset_eval:
+      self.collision_sensor.stop()
+      self.collision_sensor.destroy()
+
+      self.camera_sensor.stop()
+      self.camera_sensor.destroy()
+
+      for sensor_i in range(len(self.detector_list)):
+        self.detector_list[sensor_i].stop()
+        self.detector_list[sensor_i].destroy()
+
+    else:
+        pass
+    
+
+    self.ego.destory()
+    for agent_i in range(len(self.moving_agents)):
+      self.moving_agents[agent_i].destroy()
+    '''
 
   def get_longitudinal_speed(self, vehicle):
     velocity = vehicle.get_velocity()
