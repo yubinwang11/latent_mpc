@@ -12,8 +12,6 @@ import wandb
 import sys
 import traceback
 
-from matplotlib import animation
-import matplotlib.pyplot as plt
 import imageio
 
 from torch.utils.tensorboard import SummaryWriter
@@ -33,23 +31,6 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
     
-def save_frames_as_gif(frames, run_num=0):
-
-    path='./gif/'
-    filename='animation_{}.gif'.format(run_num)
-
-    #Mess with this to change frame size
-    plt.figure(figsize=(frames[0].shape[1] / 72.0, frames[0].shape[0] / 72.0), dpi=72) 
-
-    patch = plt.imshow(frames[0])
-    plt.axis('off')
-
-    def animate(i):
-        patch.set_data(frames[i])
-
-    anim = animation.FuncAnimation(plt.gcf(), animate, frames = len(frames), interval=50)
-    anim.save(path + filename, writer='imagemagick', fps=60)
-
 '''Hyperparameter Setting'''
 parser = argparse.ArgumentParser()
 parser.add_argument('--wandb', type=str2bool, default=True, help='Use Wandb to record the training')
