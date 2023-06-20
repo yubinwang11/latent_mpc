@@ -278,7 +278,7 @@ class CarlaEnv(gym.Env):
     print('L:', self.inter_axle_distance)
 
     # determine and visualize the destination
-    self.goal_state = np.array([275, 0, 0, 8]).tolist() # 275
+    self.goal_state = np.array([275, 0, 0, 8]).tolist() # 275 
     self.destination = self.all_default_spawn[255] 
     self.dests = self.goal_state
     self.world.debug.draw_point(self.destination.location, size=0.3, color=carla.Color(255,0,0), life_time=300)
@@ -290,9 +290,9 @@ class CarlaEnv(gym.Env):
                    65+random.uniform(-5,5), 55+random.uniform(-5,5), 70+random.uniform(-5,5), 90+random.uniform(-5,5),\
                    100+random.uniform(-5,5), 120+random.uniform(-5,5) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
 
-    #self.num_agents = len(self.lane_id_list)
+    self.num_agents = len(self.lane_id_list)
     #self.num_agents = 0
-    self.num_agents = 1
+    #self.num_agents = 1
 
     for i in range(self.num_agents):
         agent_waypoint = self.map.get_waypoint_xodr(34, self.lane_id_list[i], self.s_list[i])
@@ -369,7 +369,7 @@ class CarlaEnv(gym.Env):
     
     # Convert acceleration to throttle and brake
     if acc > 0:
-      throttle = np.clip(acc/3,0,1) # np.clip(acc/3,0,1) 
+      throttle = np.clip(acc/3,0,1) # np.clip(acc/3,0,1)
       brake = 0
     else:
       throttle = 0
@@ -730,7 +730,7 @@ class CarlaEnv(gym.Env):
     if self.dests is not None:
       #dist2desti = np.linalg.norm(np.array(self.goal_state[:3]) - np.array(state[:3]))
       #if dist2desti < 1:
-      if self.ego_state[0] >= self.goal_state[0]:
+      if self.ego_state[0] >= self.goal_state[0]-0.5:
         self.arrived = True
         return True
       
@@ -764,7 +764,7 @@ class CarlaEnv(gym.Env):
   def get_state_frenet(self, vehicle, map):
 
     x = map.get_waypoint(vehicle.get_location(), project_to_road=True).s
-    centerline_waypoint= map.get_waypoint_xodr(34, -2,x) # road and lane id
+    centerline_waypoint= map.get_waypoint_xodr(34, -2, x) # road and lane id
     if centerline_waypoint is None:
       centerline_waypoint = map.get_waypoint(vehicle.get_location(), project_to_road=True)
     tangent_vector = centerline_waypoint.transform.get_forward_vector()

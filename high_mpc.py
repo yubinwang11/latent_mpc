@@ -29,12 +29,12 @@ class High_MPC(object):
         self.lane_width = lane_width
         self.num_obstacles=num_obstacles
 
-        self.a_max = 1.5; self.a_min = -3
-        #self.a_max = 1.5*3; self.a_min = -3*3
-        self.delta_max = 0.75 ; self.delta_min = -0.75 
+        #self.a_max = 1.5; self.a_min = -3
+        self.a_max = 1.5*3; self.a_min = -3*3
+        self.delta_max = 0.75 ; self.delta_min = -0.75  # 0.75
 
-        self.v_min = -5
-        self.v_max = 10
+        self.v_min = -0
+        self.v_max = 15
 
         #
         # state dimension (x, y,           # vehicle position
@@ -93,7 +93,7 @@ class High_MPC(object):
         # here kinematic bicycle model
 
         x_dot = ca.vertcat(v*np.cos(phi+delta),  # f_x
-                            v*np.sin(phi+delta),  # f_y
+                            v*np.sin(phi+delta),  # f_y ------------
                             2*v/self.L*np.sin(delta), # f_phi
                             a, # f_vx
                             )
@@ -150,7 +150,7 @@ class High_MPC(object):
 
         x_max = [x_bound  for _ in range(self._s_dim)]
         x_max[0] = 300
-        x_max[1] = 1.5*self.lane_width - self.vehicle_width/2 #1.5*self.lane_width - self.vehicle_width/2
+        x_max[1] = 1.5*self.lane_width - self.vehicle_width/2 #1.5*self.lane_width - self.vehicle_width/2 1.5
         x_max[3] = self.v_max
 
         #
@@ -233,18 +233,18 @@ class High_MPC(object):
             self.lbg += g_min
             self.ubg += g_max
 
-            #for i in range(self.num_obstacles):
+            for i in range(self.num_obstacles):
                 #dist = (X[0, k+1]-obstacles_pos[i*2])**2 + (X[1, k+1]-obstacles_pos[i*2+1])**2
-                #dist = ca.sqrt((X[0, k]-P[ self._s_dim+i*2])**2 + (X[1, k]-P[self._s_dim+i*2+1])**2) # k+1
-            #dist = ca.sqrt((X[0, k]-15)**2 + (X[1, k]-0)**2) # k+1
-
-            self.nlp_g += [ca.sqrt((X[0, k]-15)**2 + (X[1, k]-0)**2)] # k+1]
-            self.lbg += [self.vehicle_length]#**2
-            self.ubg += [np.inf]
+                self.nlp_g += [ca.sqrt((X[0, k+1]-P[self._s_dim+i*2])**2 + (X[1, k+1]-P[self._s_dim+i*2+1])**2)-2] # k+1
+                #dist = ca.sqrt((X[0, k+1]-15)**2 + (X[1, k+1]-0)**2) # k+1
+                #self.nlp_g += [dist]
+                #self.nlp_g += [ca.sqrt((X[0, k+1]-15)**2 + (X[1, k+1]-0)**2)-0.5] # k+1]
+                self.lbg += [0]#**2
+                self.ubg += [np.inf]
             
-            self.nlp_g += [X[1, k]] # k+1
-            self.lbg += [-1.5*self.lane_width]
-            self.ubg += [1.5*self.lane_width]
+            self.nlp_g += [X[1, k+1]] # k+1
+            self.lbg += [-1.5*self.lane_width+self.vehicle_width/2]
+            self.ubg += [1.5*self.lane_width-self.vehicle_width/2]
         
         #print('nlp_g:', self.nlp_g)
         # nlp objective

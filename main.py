@@ -76,9 +76,11 @@ def evaluate_policy(env, render, steps_per_epoch, record=False):
             # run  model predictive control
             _act, pred_traj = env.high_mpc.solve(ref_traj)
             print('computed action:', _act)
+            print('predicted traj:', pred_traj)
 
             s_prime, r, done, info = env.step(_act)
             #print('under evaluation')
+            print('current state:', env.ego_state)
 
             # r = Reward_adapter(r, EnvIdex)
             if type(r) == tuple:
