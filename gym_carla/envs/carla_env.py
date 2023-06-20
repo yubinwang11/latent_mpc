@@ -293,7 +293,7 @@ class CarlaEnv(gym.Env):
     ## vehicle param
     self.startpoint = self.map.get_waypoint(self.ego.get_location(), project_to_road=True)
     self.lane_width = self.startpoint.lane_width
-    self.vehicle_width = self.ego.bounding_box.extent.x * 2 # actually use  length to estimate width with buffer
+    self.vehicle_width = 2*self.ego.bounding_box.extent.y #self.ego.bounding_box.extent.x * 2 # actually use  length to estimate width with buffer
       
     self.inter_axle_distance = 2*self.ego.bounding_box.extent.x
 
@@ -909,8 +909,8 @@ class CarlaEnv(gym.Env):
 
     # cost for out of road
     r_road = 0
-    if abs(self.ego_state[1]) >= 1.5 * self.lane_width + 1.0:
-      dist_road = abs((abs(self.ego_state[1]) - 1.5 * self.lane_width - 1.0))
+    if abs(self.ego_state[1]) >= 1.5 * self.lane_width - self.vehicle_width/2:
+      dist_road = abs((abs(self.ego_state[1]) - 1.5 * self.lane_width + self.vehicle_width/2))
       r_road = -dist_road
     #if dist_out_road >= 0:
       #r_road = - 100 * dist_out_road
