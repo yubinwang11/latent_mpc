@@ -27,6 +27,7 @@ class High_MPC(object):
         self.vehicle_length = self.L #vehicle_width*2
         self.vehicle_width = vehicle_width
         self.lane_width = lane_width
+        self.safe_dist = self.vehicle_length+4
         self.num_obstacles=num_obstacles
 
         #self.a_max = 1.5; self.a_min = -3
@@ -35,6 +36,9 @@ class High_MPC(object):
 
         self.v_min = 0
         self.v_max = 10
+
+        self.lt_bound = -1.5 * self.lane_width + self.vehicle_width/2
+        self.rt_bound = 1.5 * self.lane_width - self.vehicle_width/2
 
         #
         # state dimension (x, y,           # vehicle position
@@ -46,12 +50,16 @@ class High_MPC(object):
         
         # cost matrix for tracking the goal point
         self._Q_goal = np.diag([
-            100, 100,  # delta_x, delta_y 100 100 
-            100, # delta_phi 10
-            10])  # delta_v
+            10, 10,  # delta_x, delta_y 100 100 
+            10, # delta_phi 10
+            1])  # delta_v
 
         self._Q_u = np.diag([0.1, 0.1]) # a, delta self._Q_u = np.diag([0.1, 0.1]) # a, delta
         self._Q_delta_u = np.diag([1, 1]) # delta_a, delta_steer
+
+        self._Q_coll = np.diag([200])
+
+        self._Q_bound = np.diag([200])
 
         # initial state and control action
         if init_state is None:
@@ -112,17 +120,23 @@ class High_MPC(object):
         Delta_s = ca.SX.sym("Delta_s", self._s_dim)
 
         Delta_u = ca.SX.sym("Delta_u", self._u_dim)
-        Delta_delta_u = ca.SX.sym("Delta_delta_u", self._u_dim)      
+        Delta_delta_u = ca.SX.sym("Delta_delta_u", self._u_dim)     
+        Delta_violation = ca.SX.sym("Delta_violation", 1)
+        Delta_bound = ca.SX.sym("Delta_bound", 1)
         
         #        
         cost_goal = Delta_s.T @ self._Q_goal @ Delta_s 
         cost_u = Delta_u.T @ self._Q_u @ Delta_u
         cost_delta_u = Delta_delta_u.T @ self._Q_delta_u @ Delta_delta_u
+        cost_coll = Delta_violation.T @ self._Q_coll @ Delta_violation
+        cost_bound = Delta_bound.T @ self._Q_bound @ Delta_bound
 
         #
         f_cost_goal = ca.Function('cost_goal', [Delta_s], [cost_goal])
         f_cost_u = ca.Function('cost_u', [Delta_u], [cost_u])
         f_cost_delta_u = ca.Function('cost_delta_u', [Delta_delta_u], [cost_delta_u])
+        f_cost_coll = ca.Function('cost_coll', [Delta_violation], [cost_coll])
+        f_cost_bound = ca.Function('cost_bound', [Delta_bound], [cost_bound])
 
         #
         # # # # # # # # # # # # # # # # # # # # 
@@ -208,8 +222,32 @@ class High_MPC(object):
                 delta_delta_u_k = U[:, k]-[0, 0]
             
             cost_delta_u_k = f_cost_delta_u(delta_delta_u_k)
+            
+            violation = 0
+            cost_coll_k = 0
+            for i in range(self.num_obstacles):
+                dist_obs = ca.norm_2(self.X[:2, k+1] - self.P[self._s_dim+2*i:self._s_dim+2*i+2])
+                violation = ca.fmax(0, self.safe_dist - dist_obs)
+                #self.nlp_g += [ca.sqrt((self.X[0, k+1]-self.P[self._s_dim+i*2])**2 + (self.X[1, k+1]-self.P[self._s_dim+i*2+1])**2)] # k+1 self.vehicle_length
+                cost_coll_k += f_cost_coll(violation)
 
-            self.mpc_obj = self.mpc_obj + cost_goal_k + cost_u_k + cost_delta_u_k 
+            #dist_lt_bound = 0 
+            #dist_rt_bound = 0
+
+            safe_bound_dist = 3
+            dist_lt_bound = ca.norm_2(self.X[1, k+1] - self.lt_bound)
+            dist_rt_bound = ca.norm_2(self.X[1, k+1] - self.rt_bound)
+
+            vio_lt_bound = ca.fmax(0, safe_bound_dist - dist_lt_bound)
+            vio_rt_bound = ca.fmax(0, safe_bound_dist - dist_rt_bound)
+
+            cost_lt_bound_k = 0
+            cost_rt_bound_k = 0
+
+            cost_lt_bound_k = f_cost_bound(vio_lt_bound)
+            cost_rt_bound_k = f_cost_bound(vio_rt_bound)
+
+            self.mpc_obj = self.mpc_obj + cost_goal_k + cost_u_k + cost_delta_u_k + cost_coll_k + cost_lt_bound_k + cost_rt_bound_k
 
             # New NLP variable for state at end of interval
             self.nlp_w += [self.X[:, k+1]]
@@ -222,16 +260,16 @@ class High_MPC(object):
             self.lbg += g_min
             self.ubg += g_max
 
-            for i in range(self.num_obstacles-7):
-                self.nlp_g += [ca.sqrt((self.X[0, k+1]-self.P[self._s_dim+i*2])**2 + (self.X[1, k+1]-self.P[self._s_dim+i*2+1])**2)] # k+1 self.vehicle_length
+            #for i in range(self.num_obstacles):
+                #self.nlp_g += [ca.sqrt((self.X[0, k+1]-self.P[self._s_dim+i*2])**2 + (self.X[1, k+1]-self.P[self._s_dim+i*2+1])**2)] # k+1 self.vehicle_length
             #self.nlp_g += [ca.sqrt((self.X[0, k+1]-self.P[self._s_dim])**2 + (self.X[1, k+1]-self.P[self._s_dim+1])**2)] # k+1 self.vehicle_length
 
-                self.lbg += [self.vehicle_length]#**2
-                self.ubg += [np.inf]
+                #self.lbg += [self.vehicle_length]#**2
+                #self.ubg += [np.inf]
             
-            self.nlp_g += [self.X[1, k+1]] # k+1
-            self.lbg += [-1.5*self.lane_width+self.vehicle_width]
-            self.ubg += [1.5*self.lane_width-self.vehicle_width]
+            #self.nlp_g += [self.X[1, k+1]] # k+1
+            #self.lbg += [-1.5*self.lane_width+self.vehicle_width]
+            #self.ubg += [1.5*self.lane_width-self.vehicle_width]
 
             #self.nlp_g += [ca.sqrt((self.X[0, k+1]-self.P[self._s_dim+i*2])**2 + (self.X[1, k+1]-self.P[self._s_dim+i*2+1])**2)] # k+1
             #self.lbg += [-1.5*self.lane_width+self.vehicle_width/2]
