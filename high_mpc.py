@@ -24,7 +24,7 @@ class High_MPC(object):
         # inter-axle distance
         self.L = L
 
-        self.vehicle_length = vehicle_width*2
+        self.vehicle_length = self.L #vehicle_width*2
         self.vehicle_width = vehicle_width
         self.lane_width = lane_width
         self.num_obstacles=num_obstacles
@@ -33,8 +33,8 @@ class High_MPC(object):
         self.a_max = 1.5*3; self.a_min = -3*3
         self.delta_max = 0.75 ; self.delta_min = -0.75  # 0.75
 
-        self.v_min = -0
-        self.v_max = 15
+        self.v_min = 0
+        self.v_max = 10
 
         #
         # state dimension (x, y,           # vehicle position
@@ -110,7 +110,6 @@ class High_MPC(object):
 
         # placeholder for the quadratic cost function
         Delta_s = ca.SX.sym("Delta_s", self._s_dim)
-        Delta_p = ca.SX.sym("Delta_p", self._s_dim)
 
         Delta_u = ca.SX.sym("Delta_u", self._u_dim)
         Delta_delta_u = ca.SX.sym("Delta_delta_u", self._u_dim)      
@@ -144,13 +143,13 @@ class High_MPC(object):
         x_bound = np.inf #x_bound = ca.inf
 
         x_min = [-x_bound for _ in range(self._s_dim)]
-        x_min[0] = 0
-        x_min[1] = -1.5*self.lane_width + self.vehicle_width/2 #-1.5*self.lane_width + self.vehicle_width/2
+        #x_min[0] = 0
+        #x_min[1] = -1.5*self.lane_width + self.vehicle_width/2 #-1.5*self.lane_width + self.vehicle_width/2
         x_min[3] = self.v_min
 
         x_max = [x_bound  for _ in range(self._s_dim)]
-        x_max[0] = 300
-        x_max[1] = 1.5*self.lane_width - self.vehicle_width/2 #1.5*self.lane_width - self.vehicle_width/2 1.5
+        #x_max[0] = 300
+        #x_max[1] = 1.5*self.lane_width - self.vehicle_width/2 #1.5*self.lane_width - self.vehicle_width/2 1.5
         x_max[3] = self.v_max
 
         #
@@ -159,20 +158,20 @@ class High_MPC(object):
 
         #P = ca.SX.sym("P", self._s_dim+(self._s_dim+3)*1+self._s_dim)
         #P = ca.SX.sym("P", self._s_dim+self._s_dim)
-        P = ca.SX.sym("P", self._s_dim+(self.num_obstacles*2)*1+self._s_dim)
-        X = ca.SX.sym("X", self._s_dim, self._N+1)
+        self.P = ca.SX.sym("P", self._s_dim+(self.num_obstacles*2)*1+self._s_dim)
+        self.X = ca.SX.sym("X", self._s_dim, self._N+1)
         U = ca.SX.sym("U", self._u_dim, self._N)
         #
-        X_next = fMap(X[:, :self._N], U)
+        X_next = fMap(self.X[:, :self._N], U)
         
         # "Lift" initial conditions
-        self.nlp_w += [X[:, 0]]
+        self.nlp_w += [self.X[:, 0]]
         self.nlp_w0 += self._vehicle_s0
         self.lbw += x_min
         self.ubw += x_max
         
         # # starting point.
-        self.nlp_g += [ X[:, 0] - P[0:self._s_dim]]
+        self.nlp_g += [self.X[:, 0] - self.P[0:self._s_dim]]
         self.lbg += g_min
         self.ubg += g_max
         
@@ -195,19 +194,9 @@ class High_MPC(object):
             #delta_s_k = (X[:, k+1] - P[self._s_dim:]) # The goal postion.
             #cost_goal_k = f_cost_goal(delta_s_k)
 
-            
-            #if k >= self._N-1: # The goal postion.
-            if k >= self._N -1: # The goal postion.
 
-                #delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*1:])
-                delta_s_k = (X[:, k+1] - P[self._s_dim+(self.num_obstacles*2)*1:])
-                cost_goal_k = f_cost_goal(delta_s_k)
-
-            else:
-
-                #delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*1:])
-                delta_s_k = (X[:, k+1] - P[self._s_dim+(self.num_obstacles*2)*1:])
-                cost_goal_k = f_cost_goal(delta_s_k)
+            delta_s_k = (self.X[:, k+1] - self.P[self._s_dim+(self.num_obstacles*2)*1:])
+            cost_goal_k = f_cost_goal(delta_s_k)
 
             
             delta_u_k = U[:, k]-[0, 0] #delta_u_k = U[:, k]-[self._gz, 0, 0, 0]
@@ -223,34 +212,37 @@ class High_MPC(object):
             self.mpc_obj = self.mpc_obj + cost_goal_k + cost_u_k + cost_delta_u_k 
 
             # New NLP variable for state at end of interval
-            self.nlp_w += [X[:, k+1]]
+            self.nlp_w += [self.X[:, k+1]]
             self.nlp_w0 += self._vehicle_s0
             self.lbw += x_min
             self.ubw += x_max
 
             # Add equality constraint
-            self.nlp_g += [X_next[:, k] - X[:, k+1]]
+            self.nlp_g += [X_next[:, k] - self.X[:, k+1]]
             self.lbg += g_min
             self.ubg += g_max
 
-            for i in range(self.num_obstacles):
-                #dist = (X[0, k+1]-obstacles_pos[i*2])**2 + (X[1, k+1]-obstacles_pos[i*2+1])**2
-                self.nlp_g += [ca.sqrt((X[0, k+1]-P[self._s_dim+i*2])**2 + (X[1, k+1]-P[self._s_dim+i*2+1])**2)-2] # k+1
-                #dist = ca.sqrt((X[0, k+1]-15)**2 + (X[1, k+1]-0)**2) # k+1
-                #self.nlp_g += [dist]
-                #self.nlp_g += [ca.sqrt((X[0, k+1]-15)**2 + (X[1, k+1]-0)**2)-0.5] # k+1]
-                self.lbg += [0]#**2
+            for i in range(self.num_obstacles-7):
+                self.nlp_g += [ca.sqrt((self.X[0, k+1]-self.P[self._s_dim+i*2])**2 + (self.X[1, k+1]-self.P[self._s_dim+i*2+1])**2)] # k+1 self.vehicle_length
+            #self.nlp_g += [ca.sqrt((self.X[0, k+1]-self.P[self._s_dim])**2 + (self.X[1, k+1]-self.P[self._s_dim+1])**2)] # k+1 self.vehicle_length
+
+                self.lbg += [self.vehicle_length]#**2
                 self.ubg += [np.inf]
             
-            self.nlp_g += [X[1, k+1]] # k+1
-            self.lbg += [-1.5*self.lane_width+self.vehicle_width/2]
-            self.ubg += [1.5*self.lane_width-self.vehicle_width/2]
+            self.nlp_g += [self.X[1, k+1]] # k+1
+            self.lbg += [-1.5*self.lane_width+self.vehicle_width]
+            self.ubg += [1.5*self.lane_width-self.vehicle_width]
+
+            #self.nlp_g += [ca.sqrt((self.X[0, k+1]-self.P[self._s_dim+i*2])**2 + (self.X[1, k+1]-self.P[self._s_dim+i*2+1])**2)] # k+1
+            #self.lbg += [-1.5*self.lane_width+self.vehicle_width/2]
+            #self.ubg += [1.5*self.lane_width-self.vehicle_width/2]
         
         #print('nlp_g:', self.nlp_g)
         # nlp objective
+        
         nlp_dict = {'f': self.mpc_obj, 
             'x': ca.vertcat(*self.nlp_w), 
-            'p': P,               
+            'p': self.P,               
             'g': ca.vertcat(*self.nlp_g)}        
         
 
@@ -277,7 +269,7 @@ class High_MPC(object):
         # -- ipopt
         # # # # # # # # # # # # # # # # # # # 
 
-        ipopt_options = {
+        self.ipopt_options = {
             'verbose': False, \
             "ipopt.tol": 1e-4,
             "ipopt.acceptable_tol": 1e-4,
@@ -295,7 +287,27 @@ class High_MPC(object):
         
         # # reload compiled mpc
         #print(self.so_path)
-        self.solver = ca.nlpsol("solver", "ipopt", nlp_dict, ipopt_options)
+        
+        self.solver = ca.nlpsol("solver", "ipopt", nlp_dict, self.ipopt_options)
+        
+    def gen_constr(self, obstacles_pos):
+        nlp_g = self.nlp_g
+        lbg = self.lbg
+        ubg = self.ubg
+
+        for k in range(self._N):
+            for i in range(self.num_obstacles):
+                nlp_g += [ca.sqrt((self.X[0, k]-obstacles_pos[i*2])**2 + (self.X[1, k]-obstacles_pos[i*2+1])**2)] # k+1
+
+                lbg += [self.vehicle_length] #[self.vehicle_length]#**2
+                ubg += [np.inf]
+        
+        nlp_dict = {'f': self.mpc_obj, 
+            'x': ca.vertcat(*self.nlp_w), 
+            'p': self.P,               
+            'g': ca.vertcat(*nlp_g)}    
+
+        return nlp_dict, lbg, ubg
 
     def solve(self, ref_states):
 
@@ -303,6 +315,10 @@ class High_MPC(object):
         # -------- solve NLP ---------
         # # # # # # # # # # # # # # # #
         #
+        
+        #nlp_dict, lbg, ubg = self.gen_constr(obstacles_pos)
+        #self.solver = ca.nlpsol("solver", "ipopt", nlp_dict, self.ipopt_options) 
+        
         self.sol = self.solver(
             x0=self.nlp_w0, 
             lbx=self.lbw, 

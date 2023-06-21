@@ -99,7 +99,7 @@ class CarlaEnv(gym.Env):
 
     self.map = self.world.get_map()
 
-    self.plan_T = 5.0 # Prediction horizon for MPC 
+    self.plan_T = 5.0 #self.plan_T = 5.0 # Prediction horizon for MPC  
     self.plan_dt = 0.1 # Sampling time step for MPC
 
     # simulation parameters ....
@@ -292,7 +292,7 @@ class CarlaEnv(gym.Env):
 
     self.num_agents = len(self.lane_id_list)
     #self.num_agents = 0
-    #self.num_agents = 1
+    #self.num_agents = 2
 
     for i in range(self.num_agents):
         agent_waypoint = self.map.get_waypoint_xodr(34, self.lane_id_list[i], self.s_list[i])
@@ -345,8 +345,8 @@ class CarlaEnv(gym.Env):
 
     self.travelled_dist = None
 
-    self.high_mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, L=self.inter_axle_distance, \
-                            vehicle_width = self.vehicle_width, lane_width = self.lane_width,  init_state=self.ego_state, num_obstacles=self.num_agents)
+    #self.high_mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, L=self.inter_axle_distance, \
+                            #vehicle_width = self.vehicle_width, lane_width = self.lane_width,  init_state=self.ego_state, num_obstacles=self.num_agents)
 
     return obs
   
@@ -364,7 +364,7 @@ class CarlaEnv(gym.Env):
       steer = self.discrete_act[1][action%self.n_steer]
     else:
       acc = action[0]
-      steer = action[1]
+      steer = -action[1]
 
     
     # Convert acceleration to throttle and brake
@@ -629,7 +629,7 @@ class CarlaEnv(gym.Env):
       if agent_road_ID == 34:
         agent_state = self.get_state_frenet(agent, self.map)
       else:
-        agent_state = self.ego_state #[0, 0, 0, 0]
+        agent_state = [0,0,0,0] #[0, 0, 0, 0]
       
       obs += agent_state[0:2]
   
@@ -774,12 +774,14 @@ class CarlaEnv(gym.Env):
                                     -vehicle.get_location().y-(-centerline_waypoint.transform.location.y)])
     y = np.dot(normal_vector_normalized, y_hat)
     forward_angle = np.arctan2(-tangent_vector.y, tangent_vector.x) * 180/np.pi
-    if -180 <= forward_angle <= 0:
+    if -180 <= forward_angle < 0:
         forward_angle += 360
     global_yaw = -vehicle.get_transform().rotation.yaw
-    if -180 <= global_yaw <= 0:
+    if -180 <= global_yaw < 0:
         global_yaw += 360
-    yaw = (forward_angle - global_yaw)/180 * np.pi
+    #yaw = (forward_angle + global_yaw - 90 )/180 * np.pi #(forward_angle - global_yaw )/180 * np.pi
+    #yaw = (forward_angle - global_yaw )/180 * np.pi
+    yaw = (global_yaw-forward_angle)/180 * np.pi
     speed = self.get_longitudinal_speed(vehicle)
     vehicle_state =np.array([x, y, yaw, speed]).tolist()
 

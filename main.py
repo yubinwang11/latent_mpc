@@ -12,6 +12,7 @@ from matplotlib import animation
 import matplotlib.pyplot as plt
 import imageio
 
+from high_mpc import High_MPC
 
 from datetime import datetime
 import os, shutil
@@ -68,19 +69,42 @@ def evaluate_policy(env, render, steps_per_epoch, record=False):
 
         while not done:
 
-            ref_obj = s
+            obstacle_pos = s
+            #obstacle_pos = []
+            
             #print('other vehicle pos:', ref_obj)
+            '''
+            close_obstacles = []
+            for i in range(env.num_agents):
+                dist = np.sqrt((np.array(env.ego_state[0])-np.array(obstacle_pos[2*i]))**2+(np.array(env.ego_state[1])-np.array(obstacle_pos[2*i+1]))**2)
+                if dist <= 10:
+                     close_obstacles += [obstacle_pos[2*i:2*i+2]]
 
+            num_obstacle = len(close_obstacles)
+            
+            high_mpc = High_MPC(T=env.plan_T, dt=env.plan_dt, L=env.inter_axle_distance, \
+                vehicle_width = env.vehicle_width, lane_width = env.lane_width,  init_state=env.ego_state, num_obstacles=num_obstacle)
+            '''
+
+            high_mpc = High_MPC(T=env.plan_T, dt=env.plan_dt, L=env.inter_axle_distance, \
+                vehicle_width = env.vehicle_width, lane_width = env.lane_width,  init_state=env.ego_state, num_obstacles=env.num_agents)
+            
             # compute the mpc reference
-            ref_traj = env.ego_state + ref_obj + env.goal_state
+            #ref_state = [env.ego_state[0]+10, 0, 0, 8]
+            #ref_traj = env.ego_state + obstacle_pos + ref_state #env.goal_state
+            ref_traj = env.ego_state + obstacle_pos + env.goal_state  #
+            #ref_traj = env.ego_state +  close_obstacles + env.goal_state
             # run  model predictive control
-            _act, pred_traj = env.high_mpc.solve(ref_traj)
-            print('computed action:', _act)
-            print('predicted traj:', pred_traj)
+            #_act, pred_traj = env.high_mpc.solve(ref_traj, obstacle_pos)
+            #_act, pred_traj = env.high_mpc.solve(ref_traj)
+            _act, pred_traj = high_mpc.solve(ref_traj)
+            
+            #print('predicted traj:', pred_traj)
 
             s_prime, r, done, info = env.step(_act)
             #print('under evaluation')
             print('current state:', env.ego_state)
+            print('computed action:', _act)
 
             # r = Reward_adapter(r, EnvIdex)
             if type(r) == tuple:
