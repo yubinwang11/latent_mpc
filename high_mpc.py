@@ -27,7 +27,7 @@ class High_MPC(object):
         self.vehicle_length = self.L #vehicle_width*2
         self.vehicle_width = vehicle_width
         self.lane_width = lane_width
-        self.safe_dist = self.vehicle_length+4
+        self.safe_dist = self.vehicle_length+1
         self.num_obstacles=num_obstacles
 
         #self.a_max = 1.5; self.a_min = -3
@@ -39,6 +39,7 @@ class High_MPC(object):
 
         self.lt_bound = -1.5 * self.lane_width + self.vehicle_width/2
         self.rt_bound = 1.5 * self.lane_width - self.vehicle_width/2
+        self.safe_bound_dist = self.lane_width/2
 
         #
         # state dimension (x, y,           # vehicle position
@@ -50,16 +51,16 @@ class High_MPC(object):
         
         # cost matrix for tracking the goal point
         self._Q_goal = np.diag([
-            10, 10,  # delta_x, delta_y 100 100 
-            10, # delta_phi 10
+            5, 5,  # delta_x, delta_y 100 100 
+            1, # delta_phi 10
             1])  # delta_v
 
         self._Q_u = np.diag([0.1, 0.1]) # a, delta self._Q_u = np.diag([0.1, 0.1]) # a, delta
         self._Q_delta_u = np.diag([1, 1]) # delta_a, delta_steer
 
-        self._Q_coll = np.diag([200])
+        self._Q_coll = np.diag([250])
 
-        self._Q_bound = np.diag([200])
+        self._Q_bound = np.diag([250])
 
         # initial state and control action
         if init_state is None:
@@ -238,8 +239,8 @@ class High_MPC(object):
             dist_lt_bound = ca.norm_2(self.X[1, k+1] - self.lt_bound)
             dist_rt_bound = ca.norm_2(self.X[1, k+1] - self.rt_bound)
 
-            vio_lt_bound = ca.fmax(0, safe_bound_dist - dist_lt_bound)
-            vio_rt_bound = ca.fmax(0, safe_bound_dist - dist_rt_bound)
+            vio_lt_bound = ca.fmax(0, self.safe_bound_dist - dist_lt_bound)
+            vio_rt_bound = ca.fmax(0, self.safe_bound_dist - dist_rt_bound)
 
             cost_lt_bound_k = 0
             cost_rt_bound_k = 0

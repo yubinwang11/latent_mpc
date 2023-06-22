@@ -293,9 +293,9 @@ class CarlaEnv(gym.Env):
                    #100+random.uniform(-5,5), 120+random.uniform(-5,5) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
     ''''''
 
-    self.lane_id_list = [-3,  -1, -1, -2, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
+    self.lane_id_list = [-3,  -1, -1, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
     self.s_list = [22+random.uniform(-5,5), 50+random.uniform(-5,5), \
-                   65+random.uniform(-5,5),  70+random.uniform(-5,5), 90+random.uniform(-5,5),\
+                   65+random.uniform(-5,5),  70+random.uniform(-5,5), \
                    100+random.uniform(-5,5), 120+random.uniform(-5,5) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
 
 
