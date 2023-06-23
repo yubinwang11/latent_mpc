@@ -279,6 +279,7 @@ class CarlaEnv(gym.Env):
 
     # determine and visualize the destination
     self.goal_state = np.array([275, 0, 0, 8]).tolist() # 275 
+    #self.goal_state = np.array([50, 0, 0, 8]).tolist() # 275 
     self.destination = self.all_default_spawn[255] 
     self.dests = self.goal_state
     self.world.debug.draw_point(self.destination.location, size=0.3, color=carla.Color(255,0,0), life_time=300)
@@ -286,13 +287,13 @@ class CarlaEnv(gym.Env):
     # spawn the moving obstacles (agents)
     self.moving_agents = []
     self.lane_id_list = [-3, -2, -1, -1, -2, -2, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
-    self.s_list = [22+random.uniform(-5,5), 32+random.uniform(-5,5), 50+random.uniform(-5,5), \
+    self.s_list = [27+random.uniform(-5,5), 32+random.uniform(-5,5), 50+random.uniform(-5,5), \
                    65+random.uniform(-5,5), 55+random.uniform(-5,5), 70+random.uniform(-5,5), 90+random.uniform(-5,5),\
                    100+random.uniform(-5,5), 120+random.uniform(-5,5) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
 
     self.num_agents = len(self.lane_id_list)
     #self.num_agents = 0
-    #self.num_agents = 2
+    #self.num_agents = 4
 
     for i in range(self.num_agents):
         agent_waypoint = self.map.get_waypoint_xodr(34, self.lane_id_list[i], self.s_list[i])
@@ -364,7 +365,8 @@ class CarlaEnv(gym.Env):
       steer = self.discrete_act[1][action%self.n_steer]
     else:
       acc = action[0]
-      steer = -action[1]
+      #steer = -action[1]
+      steer = action[1]
 
     
     # Convert acceleration to throttle and brake
@@ -631,7 +633,8 @@ class CarlaEnv(gym.Env):
       else:
         agent_state = [0,0,0,0] #[0, 0, 0, 0]
       
-      obs += agent_state[0:2]
+      #obs += agent_state[0:3]
+      obs += agent_state
   
     #obs = np.array(obs)
 
@@ -730,7 +733,7 @@ class CarlaEnv(gym.Env):
     if self.dests is not None:
       #dist2desti = np.linalg.norm(np.array(self.goal_state[:3]) - np.array(state[:3]))
       #if dist2desti < 1:
-      if self.ego_state[0] >= self.goal_state[0]-0.5:
+      if self.ego_state[0] >= self.goal_state[0]-2:
         self.arrived = True
         return True
       
@@ -779,9 +782,9 @@ class CarlaEnv(gym.Env):
     global_yaw = -vehicle.get_transform().rotation.yaw
     if -180 <= global_yaw < 0:
         global_yaw += 360
-    #yaw = (forward_angle + global_yaw - 90 )/180 * np.pi #(forward_angle - global_yaw )/180 * np.pi
-    #yaw = (forward_angle - global_yaw )/180 * np.pi
-    yaw = (global_yaw-forward_angle)/180 * np.pi
+  
+    yaw = (forward_angle - global_yaw )/180 * np.pi
+    #yaw = (global_yaw-forward_angle)/180 * np.pi
     speed = self.get_longitudinal_speed(vehicle)
     vehicle_state =np.array([x, y, yaw, speed]).tolist()
 

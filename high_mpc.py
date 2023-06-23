@@ -36,6 +36,8 @@ class High_MPC(object):
         self.v_min = 0
         self.v_max = 10
 
+        self.safe_dist = np.sqrt(self.vehicle_length**2+self.vehicle_width**2)
+
         #
         # state dimension (x, y,           # vehicle position
         #                  v,                    # linear velocity
@@ -97,6 +99,14 @@ class High_MPC(object):
                             2*v/self.L*np.sin(delta), # f_phi
                             a, # f_vx
                             )
+        '''
+        x_dot = ca.vertcat(v*np.cos(phi-delta),  # f_x
+                            v*np.sin(phi-delta),  # f_y ------------
+                            2*v/self.L*np.sin(-delta), # f_phi
+                            a, # f_vx
+                            )
+        '''
+
         #
         self.f = ca.Function('f', [self._x, self._u], [x_dot], ['x', 'u'], ['ode'])
                 
@@ -149,7 +159,7 @@ class High_MPC(object):
 
         x_max = [x_bound  for _ in range(self._s_dim)]
         #x_max[0] = 300
-        #x_max[1] = 1.5*self.lane_width - self.vehicle_width/2 #1.5*self.lane_width - self.vehicle_width/2 1.5
+        #x_max[1] = 1.5*self.lane_width - self.vehicle_width/2 # - self.vehicle_width/2 #1.5*self.lane_width - self.vehicle_width/2 1.5
         x_max[3] = self.v_max
 
         #
@@ -158,7 +168,7 @@ class High_MPC(object):
 
         #P = ca.SX.sym("P", self._s_dim+(self._s_dim+3)*1+self._s_dim)
         #P = ca.SX.sym("P", self._s_dim+self._s_dim)
-        self.P = ca.SX.sym("P", self._s_dim+(self.num_obstacles*2)*1+self._s_dim)
+        self.P = ca.SX.sym("P", self._s_dim+(self.num_obstacles*4)*1+self._s_dim)
         self.X = ca.SX.sym("X", self._s_dim, self._N+1)
         U = ca.SX.sym("U", self._u_dim, self._N)
         #
@@ -182,20 +192,13 @@ class High_MPC(object):
             self.lbw += u_min
             self.ubw += u_max
             
-            # retrieve time constant
-            #idx_k = self._s_dim+self._s_dim+(self._s_dim+3)*(k)
-            idx_k = self._s_dim 
-            #idx_k_end = self._s_dim+(self._s_dim+3)*(k+1)\
-            #idx_k_end = self._s_dim+self._s_dim+3
-            idx_k_end = self._s_dim+self.num_obstacles*2
-            
             # cost for tracking the goal position
             cost_goal_k = 0
             #delta_s_k = (X[:, k+1] - P[self._s_dim:]) # The goal postion.
             #cost_goal_k = f_cost_goal(delta_s_k)
 
 
-            delta_s_k = (self.X[:, k+1] - self.P[self._s_dim+(self.num_obstacles*2)*1:])
+            delta_s_k = (self.X[:, k+1] - self.P[self._s_dim+(self.num_obstacles*4)*1:])
             cost_goal_k = f_cost_goal(delta_s_k)
 
             
@@ -222,20 +225,18 @@ class High_MPC(object):
             self.lbg += g_min
             self.ubg += g_max
 
-            for i in range(self.num_obstacles-7):
-                self.nlp_g += [ca.sqrt((self.X[0, k+1]-self.P[self._s_dim+i*2])**2 + (self.X[1, k+1]-self.P[self._s_dim+i*2+1])**2)] # k+1 self.vehicle_length
-            #self.nlp_g += [ca.sqrt((self.X[0, k+1]-self.P[self._s_dim])**2 + (self.X[1, k+1]-self.P[self._s_dim+1])**2)] # k+1 self.vehicle_length
+            for i in range(self.num_obstacles):
+                self.nlp_g += [ca.sqrt((self.X[0, k+1]-self.P[self._s_dim+i*4]-0.1*self.P[self._s_dim+i*4+3]*(k+1))**2 + \
+                                        (self.X[1, k+1]-self.P[self._s_dim+i*4+1])**2)] # k+1 self.vehicle_length
 
-                self.lbg += [self.vehicle_length]#**2
+                #self.lbg += [self.safe_dist]
+                self.lbg += [3*(0.98**(k))]
                 self.ubg += [np.inf]
             
-            self.nlp_g += [self.X[1, k+1]] # k+1
-            self.lbg += [-1.5*self.lane_width+self.vehicle_width]
-            self.ubg += [1.5*self.lane_width-self.vehicle_width]
+            #self.nlp_g += [self.X[1, k+1]] # k+1
+            #self.lbg += [-1.5*self.lane_width+self.vehicle_width]
+            #self.ubg += [1.5*self.lane_width-self.vehicle_width]
 
-            #self.nlp_g += [ca.sqrt((self.X[0, k+1]-self.P[self._s_dim+i*2])**2 + (self.X[1, k+1]-self.P[self._s_dim+i*2+1])**2)] # k+1
-            #self.lbg += [-1.5*self.lane_width+self.vehicle_width/2]
-            #self.ubg += [1.5*self.lane_width-self.vehicle_width/2]
         
         #print('nlp_g:', self.nlp_g)
         # nlp objective
