@@ -19,7 +19,7 @@ from gym import spaces
 from gym.utils import seeding
 import carla
 
-from high_mpc import High_MPC
+#from agents.navigation.behavior_agent import BehaviorAgent
 
 from gym_carla.envs.render import BirdeyeRender
 from gym_carla.envs.route_planner import RoutePlanner
@@ -278,9 +278,9 @@ class CarlaEnv(gym.Env):
     #print('L:', self.inter_axle_distance)
 
     # determine and visualize the destination
-    self.goal_state = np.array([275, 0, 0, 8]).tolist() # 275 
+    #self.goal_state = np.array([275, 0, 0, 8]).tolist() # 275 
     self.destination = self.all_default_spawn[255] 
-    self.dests = self.goal_state
+    #self.dests = self.goal_state
     self.world.debug.draw_point(self.destination.location, size=0.3, color=carla.Color(255,0,0), life_time=300)
     
     # spawn the moving obstacles (agents)
@@ -355,40 +355,17 @@ class CarlaEnv(gym.Env):
 
     self.travelled_dist = None
 
-    self.high_mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, L=self.inter_axle_distance, \
-                            vehicle_width = self.vehicle_width, lane_width = self.lane_width,  init_state=self.ego_state, num_obstacles=self.num_agents)
-
     return obs
   
-  def step(self, action):
+  def step(self, control):
 
      # top view
     self.spectator = self.world.get_spectator()
     transform = self.ego.get_transform()
     self.spectator.set_transform(carla.Transform(transform.location + carla.Location(z=30),
                                             carla.Rotation(pitch=-90)))
-        
-    # Calculate acceleration and steering
-    if self.discrete:
-      acc = self.discrete_act[0][action//self.n_steer]
-      steer = self.discrete_act[1][action%self.n_steer]
-    else:
-      acc = action[0]
-      steer = action[1]
-
-    
-    # Convert acceleration to throttle and brake
-    if acc > 0:
-      throttle = np.clip(acc/3,0,1) # np.clip(acc/3,0,1)
-      brake = 0
-    else:
-      throttle = 0
-      brake = np.clip(-acc/8,0,1)
-    
-    # Apply control
-    act = carla.VehicleControl(throttle=float(throttle), steer=float(steer), brake=float(brake))
-    #print(act)
-    self.ego.apply_control(act)
+  
+    self.ego.apply_control(control)
 
     self.world.tick()
 

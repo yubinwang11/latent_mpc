@@ -12,10 +12,8 @@ from matplotlib import animation
 import matplotlib.pyplot as plt
 import imageio
 
-from high_mpc import High_MPC
+from agents.navigation.behavior_agent import BehaviorAgent
 
-from datetime import datetime
-import os, shutil
 import argparse
 
 def str2bool(v):
@@ -67,37 +65,32 @@ def evaluate_policy(env, render, steps_per_epoch, record=False):
             frames = []
         s, done, ep_r = env.reset(), False, 0
 
+        agent = BehaviorAgent(env.ego, behavior='aggressive') #aggressive
+        # generate the route
+        agent.set_destination(env.ego.get_location(), env.destination.location, clean=True) 
+
         while not done:
-
+        
             obstacle_state = s
-            #obstacle_pos = []
-            
-            #print('other vehicle pos:', ref_obj)
-            #high_mpc = High_MPC(T=env.plan_T, dt=env.plan_dt, L=env.inter_axle_distance, \
-                #vehicle_width = env.vehicle_width, lane_width = env.lane_width,  init_state=env.ego_state, num_obstacles=env.num_agents)
-            
-            # compute the mpc reference
-            #ref_state = [env.ego_state[0]+10, 0, 0, 8]
-            #ref_traj = env.ego_state + obstacle_pos + ref_state #env.goal_state
-            ref_traj = env.ego_state + obstacle_state + env.goal_state  #
-            #ref_traj = env.ego_state +  close_obstacles + env.goal_state
-            # run  model predictive control
-            #_act, pred_traj = env.high_mpc.solve(ref_traj, obstacle_pos)
-            #_act, pred_traj = env.high_mpc.solve(ref_traj)
-            _act, pred_traj = env.high_mpc.solve(ref_traj)
-            
-            print('predicted traj:', pred_traj)
 
-            s_prime, r, done, info = env.step(_act)
-            #print('under evaluation')
-            print('current state:', env.ego_state)
-            print('computed action:', _act)
+            agent.update_information(env.ego)
+        
+            speed_limit = env.ego.get_speed_limit()
+            agent.get_local_planner().set_speed(speed_limit)
+
+            control = agent.run_step(debug=False)
+
+            s_prime, r, done, info = env.step(control)
 
             # r = Reward_adapter(r, EnvIdex)
             if type(r) == tuple:
                 r = np.array(list(r))
             ep_r += r
 
+            if len(agent._local_planner.waypoints_queue)<1:
+                print('======== Success, Arrivied at Target Point!')
+                done = True
+                
             if render:
                 env.render()
             if record:
