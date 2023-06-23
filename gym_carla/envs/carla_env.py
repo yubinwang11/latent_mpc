@@ -286,18 +286,19 @@ class CarlaEnv(gym.Env):
     # spawn the moving obstacles (agents)
     self.moving_agents = []
 
-    ''''''
-    #self.lane_id_list = [-3, -2, -1, -1, -2, -2, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
-    #self.s_list = [22+random.uniform(-5,5), 32+random.uniform(-5,5), 50+random.uniform(-5,5), \
-                   #65+random.uniform(-5,5), 55+random.uniform(-5,5), 70+random.uniform(-5,5), 90+random.uniform(-5,5),\
-                   #100+random.uniform(-5,5), 120+random.uniform(-5,5) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
-    ''''''
+    '''
+    self.lane_id_list = [-3, -2, -1, -1, -2, -2, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
+    self.s_list = [22+random.uniform(-5,5), 32+random.uniform(-5,5), 50+random.uniform(-5,5), \
+                   65+random.uniform(-5,5), 55+random.uniform(-5,5), 70+random.uniform(-5,5), 90+random.uniform(-5,5),\
+                   100+random.uniform(-5,5), 120+random.uniform(-5,5) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
+    '''
 
     self.lane_id_list = [-3,  -1, -1, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
-    self.s_list = [22+random.uniform(-5,5), 50+random.uniform(-5,5), \
-                   65+random.uniform(-5,5),  70+random.uniform(-5,5), \
-                   100+random.uniform(-5,5), 120+random.uniform(-5,5) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
+    self.s_list = [27+random.uniform(-5,5), 50+random.uniform(-5,5), \
+                   70+random.uniform(-5,5),  85+random.uniform(-5,5), \
+                   100+random.uniform(-5,5), 110+random.uniform(-5,5) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
 
+    
 
     self.num_agents = len(self.lane_id_list)
     #self.num_agents = 0
@@ -640,7 +641,8 @@ class CarlaEnv(gym.Env):
       else:
         agent_state = [0,0,0,0] #[0, 0, 0, 0]
       
-      obs += agent_state[0:2]
+      #obs += agent_state[0:2]
+      obs += agent_state
   
     #obs = np.array(obs)
 
@@ -739,7 +741,7 @@ class CarlaEnv(gym.Env):
     if self.dests is not None:
       #dist2desti = np.linalg.norm(np.array(self.goal_state[:3]) - np.array(state[:3]))
       #if dist2desti < 1:
-      if self.ego_state[0] >= self.goal_state[0]-0.5:
+      if self.ego_state[0] >= self.goal_state[0]-2:
         self.arrived = True
         return True
       

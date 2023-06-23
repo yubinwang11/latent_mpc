@@ -39,7 +39,7 @@ class High_MPC(object):
 
         self.lt_bound = -1.5 * self.lane_width + self.vehicle_width/2
         self.rt_bound = 1.5 * self.lane_width - self.vehicle_width/2
-        self.safe_bound_dist = self.lane_width/2
+        self.safe_bound_dist = self.lane_width / 2
 
         #
         # state dimension (x, y,           # vehicle position
@@ -60,7 +60,7 @@ class High_MPC(object):
 
         self._Q_coll = np.diag([250])
 
-        self._Q_bound = np.diag([250])
+        self._Q_bound = np.diag([300])
 
         # initial state and control action
         if init_state is None:
@@ -173,7 +173,7 @@ class High_MPC(object):
 
         #P = ca.SX.sym("P", self._s_dim+(self._s_dim+3)*1+self._s_dim)
         #P = ca.SX.sym("P", self._s_dim+self._s_dim)
-        self.P = ca.SX.sym("P", self._s_dim+(self.num_obstacles*2)*1+self._s_dim)
+        self.P = ca.SX.sym("P", self._s_dim+(self.num_obstacles*4)*1+self._s_dim)
         self.X = ca.SX.sym("X", self._s_dim, self._N+1)
         U = ca.SX.sym("U", self._u_dim, self._N)
         #
@@ -197,20 +197,13 @@ class High_MPC(object):
             self.lbw += u_min
             self.ubw += u_max
             
-            # retrieve time constant
-            #idx_k = self._s_dim+self._s_dim+(self._s_dim+3)*(k)
-            idx_k = self._s_dim 
-            #idx_k_end = self._s_dim+(self._s_dim+3)*(k+1)\
-            #idx_k_end = self._s_dim+self._s_dim+3
-            idx_k_end = self._s_dim+self.num_obstacles*2
-            
             # cost for tracking the goal position
             cost_goal_k = 0
             #delta_s_k = (X[:, k+1] - P[self._s_dim:]) # The goal postion.
             #cost_goal_k = f_cost_goal(delta_s_k)
 
 
-            delta_s_k = (self.X[:, k+1] - self.P[self._s_dim+(self.num_obstacles*2)*1:])
+            delta_s_k = (self.X[:, k+1] - self.P[self._s_dim+(self.num_obstacles*4)*1:])
             cost_goal_k = f_cost_goal(delta_s_k)
 
             
@@ -227,15 +220,21 @@ class High_MPC(object):
             violation = 0
             cost_coll_k = 0
             for i in range(self.num_obstacles):
-                dist_obs = ca.norm_2(self.X[:2, k+1] - self.P[self._s_dim+2*i:self._s_dim+2*i+2])
+                obstacle_pos = self.P[self._s_dim+4*i:self._s_dim+4*i+2]
+                obstacle_pos[0] += 0.1*(k)* self.P[self._s_dim+4*i+3] * np.cos(-self.P[self._s_dim+4*i+2])
+                obstacle_pos[1] += 0.1*(k)* self.P[self._s_dim+4*i+3] * np.sin(-self.P[self._s_dim+4*i+2])
+
+                #if self.X[:1, k+1] >= obstacle_pos[0]:
+                   # cost_coll_k += 0
+                #else:
+                dist_obs = ca.norm_2(self.X[:2, k+1] - obstacle_pos)
                 violation = ca.fmax(0, self.safe_dist - dist_obs)
-                #self.nlp_g += [ca.sqrt((self.X[0, k+1]-self.P[self._s_dim+i*2])**2 + (self.X[1, k+1]-self.P[self._s_dim+i*2+1])**2)] # k+1 self.vehicle_length
+                    #self.nlp_g += [ca.sqrt((self.X[0, k+1]-self.P[self._s_dim+i*2])**2 + (self.X[1, k+1]-self.P[self._s_dim+i*2+1])**2)] # k+1 self.vehicle_length
                 cost_coll_k += f_cost_coll(violation)
 
             #dist_lt_bound = 0 
             #dist_rt_bound = 0
 
-            safe_bound_dist = 3
             dist_lt_bound = ca.norm_2(self.X[1, k+1] - self.lt_bound)
             dist_rt_bound = ca.norm_2(self.X[1, k+1] - self.rt_bound)
 

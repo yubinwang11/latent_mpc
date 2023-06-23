@@ -69,7 +69,7 @@ def evaluate_policy(env, render, steps_per_epoch, record=False):
 
         while not done:
 
-            obstacle_pos = s
+            obstacle_state = s
             #obstacle_pos = []
             
             #print('other vehicle pos:', ref_obj)
@@ -79,14 +79,14 @@ def evaluate_policy(env, render, steps_per_epoch, record=False):
             # compute the mpc reference
             #ref_state = [env.ego_state[0]+10, 0, 0, 8]
             #ref_traj = env.ego_state + obstacle_pos + ref_state #env.goal_state
-            ref_traj = env.ego_state + obstacle_pos + env.goal_state  #
+            ref_traj = env.ego_state + obstacle_state + env.goal_state  #
             #ref_traj = env.ego_state +  close_obstacles + env.goal_state
             # run  model predictive control
             #_act, pred_traj = env.high_mpc.solve(ref_traj, obstacle_pos)
             #_act, pred_traj = env.high_mpc.solve(ref_traj)
             _act, pred_traj = env.high_mpc.solve(ref_traj)
             
-            #print('predicted traj:', pred_traj)
+            print('predicted traj:', pred_traj)
 
             s_prime, r, done, info = env.step(_act)
             #print('under evaluation')
