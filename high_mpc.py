@@ -33,8 +33,8 @@ class High_MPC(object):
         self.a_max = 1.5*3; self.a_min = -3*3
         self.delta_max = 0.75 ; self.delta_min = -0.75  # 0.75
 
-        self.v_min = 0
-        self.v_max = 10
+        #self.v_min = 0
+        #self.v_max = 10
 
         self.safe_dist = np.sqrt(self.vehicle_length**2+self.vehicle_width**2)
 
@@ -150,13 +150,11 @@ class High_MPC(object):
 
         x_min = [-x_bound for _ in range(self._s_dim)]
         #x_min[0] = 0
-        #x_min[1] = -1.75*self.lane_width #+ self.vehicle_width/2 #-1.5*self.lane_width + self.vehicle_width/2
-        x_min[3] = self.v_min
+        #x_min[3] = self.v_min
 
         x_max = [x_bound  for _ in range(self._s_dim)]
         #x_max[0] = 300
-        #x_max[1] = 1.5*self.lane_width - self.vehicle_width/2 # - self.vehicle_width/2 #1.5*self.lane_width - self.vehicle_width/2 1.5
-        x_max[3] = self.v_max
+        #x_max[3] = self.v_max
 
         #
         g_min = [0 for _ in range(self._s_dim)]
@@ -190,9 +188,6 @@ class High_MPC(object):
             
             # cost for tracking the goal position
             cost_goal_k = 0
-            #delta_s_k = (X[:, k+1] - P[self._s_dim:]) # The goal postion.
-            #cost_goal_k = f_cost_goal(delta_s_k)
-
 
             delta_s_k = (X[:, k+1] - P[self._s_dim+(self.num_obstacles*4)*1:])
             cost_goal_k = f_cost_goal(delta_s_k)
@@ -245,21 +240,15 @@ class High_MPC(object):
                     obs_pos = P[self._s_dim+i*4:self._s_dim+i*4+2]
                     obs_pos[0] += 0.1*P[self._s_dim+i*4+3]*(k+1) * np.cos(P[self._s_dim+i*4+2])
                     obs_pos[1] += 0.1*P[self._s_dim+i*4+3]*(k+1) * np.sin(P[self._s_dim+i*4+2])
-                    #obs_pos[0] += 0.1*self.P[self._s_dim+i*4+3]*(k+1) * np.cos(self.P[self._s_dim+i*4+2])
-                    #obs_pos[1] += 0.1*self.P[self._s_dim+i*4+3]*(k+1) * np.sin(self.P[self._s_dim+i*4+2])
 
                     other_rotation = self._get_roatation_matrix(P[self._s_dim+i*4+2])
                     Delta_coll_dist = corner_pos - obs_pos
                     g_coll  = Delta_coll_dist.T @ other_rotation.T @ np.diag([1/self.vehicle_width**(2), 1/self.vehicle_length**(2)]) @ other_rotation @ Delta_coll_dist
-                    #self.nlp_g += [ca.sqrt(((self.X[0, k+1]-obs_pos[0])/self.vehicle_width)**2 + \
-                                            #((self.X[1, k+1]-obs_pos[1])/self.vehicle_length)**2)] # k+1 self.vehicle_length
                     self.nlp_g += [g_coll]
-                    #self.nlp_g += [ca.sqrt(((corner_pos[0]-obs_pos[0])/(self.vehicle_width+0.3))**2 + \
-                                            #((corner_pos[1]-obs_pos[1])/(self.vehicle_length+1.0))**2)]
+        
 
                     self.lbg += [1.1]
                     #self.lbg += [1.1*(0.98**(k+1))]
-                    #self.lbg += [3] # 3 is working for re-init
                     self.ubg += [np.inf]
 
         
