@@ -272,7 +272,9 @@ class CarlaEnv(gym.Env):
     ## vehicle param
     self.startpoint = self.map.get_waypoint(self.ego.get_location(), project_to_road=True)
     self.lane_width = self.startpoint.lane_width
-    self.vehicle_width = self.ego.bounding_box.extent.x * 2 # actually use  length to estimate width with buffer
+
+    self.vehicle_length = self.ego.bounding_box.extent.x * 2
+    self.vehicle_width = self.ego.bounding_box.extent.y * 2 # actually use  length to estimate width with buffer
       
     self.inter_axle_distance = 2*self.ego.bounding_box.extent.x
     #print('L:', self.inter_axle_distance)
@@ -297,8 +299,6 @@ class CarlaEnv(gym.Env):
     self.s_list = [27+random.uniform(-5,5), 50+random.uniform(-5,5), \
                    70+random.uniform(-5,5),  85+random.uniform(-5,5), \
                    100+random.uniform(-5,5), 110+random.uniform(-5,5) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
-
-    
 
     self.num_agents = len(self.lane_id_list)
     #self.num_agents = 0
@@ -355,7 +355,7 @@ class CarlaEnv(gym.Env):
 
     self.travelled_dist = None
 
-    self.high_mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, L=self.inter_axle_distance, \
+    self.high_mpc = High_MPC(T=self.plan_T, dt=self.plan_dt, L=self.inter_axle_distance, vehicle_length=self.vehicle_length,\
                             vehicle_width = self.vehicle_width, lane_width = self.lane_width,  init_state=self.ego_state, num_obstacles=self.num_agents)
 
     return obs
@@ -374,7 +374,7 @@ class CarlaEnv(gym.Env):
       steer = self.discrete_act[1][action%self.n_steer]
     else:
       acc = action[0]
-      steer = action[1]
+      steer = -action[1]
 
     
     # Convert acceleration to throttle and brake
@@ -779,8 +779,10 @@ class CarlaEnv(gym.Env):
     if centerline_waypoint is None:
       centerline_waypoint = map.get_waypoint(vehicle.get_location(), project_to_road=True)
     tangent_vector = centerline_waypoint.transform.get_forward_vector()
-    normal_vector = carla.Vector3D(-(-tangent_vector.y), tangent_vector.x, 0)
-    normal_vector_normalized = np.array([normal_vector.x, -normal_vector.y]) /  np.linalg.norm(np.array([normal_vector.x, -normal_vector.y]))
+    normal_vector = carla.Vector2D(-(-tangent_vector.y), tangent_vector.x)
+    #normal_vector_normalized = np.array([normal_vector.x, -normal_vector.y]) /  np.linalg.norm(np.array([normal_vector.x, -normal_vector.y]))
+    norm_normal_vector = np.linalg.norm(np.array([normal_vector.x, normal_vector.y])) 
+    normal_vector_normalized = 1 / norm_normal_vector * np.array([normal_vector.x, normal_vector.y]).T
     y_hat = np.array([vehicle.get_location().x-centerline_waypoint.transform.location.x, 
                                     -vehicle.get_location().y-(-centerline_waypoint.transform.location.y)])
     y = np.dot(normal_vector_normalized, y_hat)
@@ -791,8 +793,8 @@ class CarlaEnv(gym.Env):
     if -180 <= global_yaw < 0:
         global_yaw += 360
     #yaw = (forward_angle + global_yaw - 90 )/180 * np.pi #(forward_angle - global_yaw )/180 * np.pi
-    yaw = (forward_angle - global_yaw )/180 * np.pi
-    #yaw = (global_yaw-forward_angle)/180 * np.pi
+    #yaw = (forward_angle - global_yaw )/180 * np.pi
+    yaw = (global_yaw-forward_angle)/180 * np.pi
     speed = self.get_longitudinal_speed(vehicle)
     vehicle_state =np.array([x, y, yaw, speed]).tolist()
 
