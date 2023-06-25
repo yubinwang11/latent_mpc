@@ -716,20 +716,9 @@ class CarlaEnv(gym.Env):
       return True
 
     if self.dests is not None:
-      #dist2desti = np.linalg.norm(np.array(self.goal_state[:3]) - np.array(state[:3]))
-      #if dist2desti < 1:
       if self.ego_state[0] >= self.goal_state[0]-2:
         self.arrived = True
         return True
-      
-    # If out of road (lane)
-    #dis, _ = get_lane_dis(self.waypoints, ego_x, ego_y)
-    #if abs(dis) > self.out_lane_thres: #+ self.lane_width:
-      #return True
-
-    # If out of road:
-    #if abs(self.ego_state[1]) >= self.lane_width*1.5 + self.out_lane_thres:
-      #return True
 
     return False
 
