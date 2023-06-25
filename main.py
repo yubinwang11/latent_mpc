@@ -81,8 +81,8 @@ def evaluate_policy(env, render, steps_per_epoch, record=False):
             control = agent.run_step(debug=False)
 
             s_prime, r, done, info = env.step(control)
+            s = s_prime
 
-            # r = Reward_adapter(r, EnvIdex)
             if type(r) == tuple:
                 r = np.array(list(r))
             ep_r += r

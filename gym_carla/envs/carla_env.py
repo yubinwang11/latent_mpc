@@ -297,7 +297,7 @@ class CarlaEnv(gym.Env):
     self.s_list = [27+random.uniform(-5,5), 50+random.uniform(-5,5), \
                    70+random.uniform(-5,5),  85+random.uniform(-5,5), \
                    100+random.uniform(-5,5), 110+random.uniform(-5,5) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
-
+    
     
 
     self.num_agents = len(self.lane_id_list)
