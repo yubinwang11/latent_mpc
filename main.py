@@ -33,8 +33,8 @@ def str2bool(v):
     
 '''Hyperparameter Setting'''
 parser = argparse.ArgumentParser()
-parser.add_argument('--wandb', type=str2bool, default=True, help='Use Wandb to record the training')
-parser.add_argument('--write', type=str2bool, default=True, help='Use SummaryWriter to record the training')
+parser.add_argument('--wandb', type=str2bool, default=False, help='Use Wandb to record the training')
+parser.add_argument('--write', type=str2bool, default=False, help='Use SummaryWriter to record the training')
 parser.add_argument('--eval', type=str2bool, default=False, help='Evaluate or Not')
 parser.add_argument('--record', type=str2bool, default=False, help='Record gif or Not')
 parser.add_argument('--render', type=str2bool, default=True, help='Render or Not')
@@ -133,7 +133,7 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
         while not done:
             # Take deterministic actions at test time
             #print('normalized state  is ', s)
-            a = model.select_action(s, deterministic=False, with_logprob=False)
+            a = model.select_action(s, deterministic=True, with_logprob=False)
             act = Action_adapter(a, act_low, act_high)  # [0,1] to [-max,max]
 
             s_prime, r, done, info = env.step(act)

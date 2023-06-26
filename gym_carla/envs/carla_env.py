@@ -207,6 +207,13 @@ class CarlaEnv(gym.Env):
 
   def reset(self, reset_eval=False):
 
+    # Delete sensors, vehicles and walkers
+    #if self.reset_eval:
+      #pass
+    self._clear_all_actors(['sensor.other.collision', 'sensor.other.obstacle', 'sensor.lidar.ray_cast', \
+                            'sensor.camera.rgb', 'vehicle.*', 'controller.ai.walker', 'walker.*'])
+      #self._clear_all_actors(['vehicle.*', 'controller.ai.walker', 'walker.*'], True)
+
     # reset time
     self.t = 0
     # reset reward
@@ -224,13 +231,6 @@ class CarlaEnv(gym.Env):
     #self.camera_sensor = None
 
     self.inter_axle_distance = None
-
-    # Delete sensors, vehicles and walkers
-    if self.reset_eval:
-      #pass
-      self._clear_all_actors(['sensor.other.collision', 'sensor.other.obstacle', 'sensor.lidar.ray_cast', \
-                            'sensor.camera.rgb', 'vehicle.*', 'controller.ai.walker', 'walker.*'])
-      #self._clear_all_actors(['vehicle.*', 'controller.ai.walker', 'walker.*'], True)
 
     # Disable sync mode
     self._set_synchronous_mode(True)
@@ -293,6 +293,7 @@ class CarlaEnv(gym.Env):
     ## vehicle param
     self.startpoint = self.map.get_waypoint(self.ego.get_location(), project_to_road=True)
     self.lane_width = self.startpoint.lane_width
+    self.vehicle_length = 2*self.ego.bounding_box.extent.x
     self.vehicle_width = 2*self.ego.bounding_box.extent.y #self.ego.bounding_box.extent.x * 2 # actually use  length to estimate width with buffer
       
     self.inter_axle_distance = 2*self.ego.bounding_box.extent.x
@@ -429,7 +430,7 @@ class CarlaEnv(gym.Env):
       steer = self.discrete_act[1][action%self.n_steer]
     else:
       acc = action[0]
-      steer = action[1]
+      steer = -action[1]
 
     
     # Convert acceleration to throttle and brake
@@ -498,12 +499,12 @@ class CarlaEnv(gym.Env):
     r = self._get_reward(),
     self.done = self._terminal()
 
-    if self.done:
+    #if self.done:
       # Delete sensors, vehicles and walkers
       #self._clear_all_actors(['sensor.other.collision', 'sensor.other.obstacle', 'sensor.lidar.ray_cast', \
                             #'sensor.camera.rgb', 'vehicle.*', 'controller.ai.walker', 'walker.*'])
       #self._clear_all_actors(['vehicle.*', 'controller.ai.walker', 'walker.*', 'sensor.camera.rgb', 'sensor.other.collision', 'sensor.other.obstacle'])
-      self._clear_all_actors(['vehicle.*', 'controller.ai.walker', 'walker.*'])
+      #self._clear_all_actors(['vehicle.*', 'controller.ai.walker', 'walker.*'])
 
     return obs,  r, self.done, copy.deepcopy(info) #(obs,  r, self.done, copy.deepcopy(info))
 
@@ -841,6 +842,9 @@ class CarlaEnv(gym.Env):
 
     return obs
 
+  def _get_roatation_matrix(self,yaw):
+        return np.array([[np.cos(yaw), -np.sin(yaw)], [np.sin(yaw), np.cos(yaw)]])
+  
   def _get_reward(self):
 
     """Calculate the reward."""
@@ -870,8 +874,8 @@ class CarlaEnv(gym.Env):
     r_fast = 0
     v = self.ego.get_velocity()
     speed = np.sqrt(v.x**2 + v.y**2)
-    if speed >= 15:
-      r_fast -= abs(speed - 15)
+    if speed >= 10:
+      r_fast -= abs(speed - 10)
 
     #r_speed = -abs(speed - self.desired_speed)
     #r_fast = 0
@@ -909,11 +913,22 @@ class CarlaEnv(gym.Env):
 
     # cost for out of road
     r_road = 0
-    if abs(self.ego_state[1]) >= 1.5 * self.lane_width - self.vehicle_width/2:
-      dist_road = abs((abs(self.ego_state[1]) - 1.5 * self.lane_width + self.vehicle_width/2))
-      r_road = -dist_road
-    #if dist_out_road >= 0:
-      #r_road = - 100 * dist_out_road
+    ego_rotation = self._get_roatation_matrix(self.ego_state[2])
+    for corner_id in range(4):
+      if corner_id == 0:
+          alpha = np.array([self.vehicle_width/2, self.vehicle_length/2]).T
+      elif corner_id == 1:
+          alpha = np.array([self.vehicle_width/2, -self.vehicle_length/2]).T
+      elif corner_id == 2:
+          alpha = np.array([-self.vehicle_width/2, -self.vehicle_length/2]).T
+      else:
+          alpha = np.array([-self.vehicle_width/2, self.vehicle_length/2]).T
+      
+      corner_pos = self.ego_state[:2] + ego_rotation @ alpha
+
+      if abs(corner_pos[1]) >= 1.5 * self.lane_width:
+        dist_road = abs(abs(corner_pos[1]) - 1.5 * self.lane_width)
+        r_road = -dist_road
       
     #r = 200*r_collision + 1*lspeed_lon + 10*r_fast + 1*r_out + r_steer*5 + 0.2*r_lat - 0.1+  r_arrive + 10 * r_speed + 5 * r_s
     #r = 200 * r_collision + 30 * r_speed + 0.1 * r_s + r_arrive + 10 * r_lane + 1 * r_road + r_time
@@ -941,7 +956,7 @@ class CarlaEnv(gym.Env):
     if self.dests is not None:
       #dist2desti = np.linalg.norm(np.array(self.goal_state[:3]) - np.array(state[:3]))
       #if dist2desti < 1:
-      if self.ego_state[0] >= self.goal_state[0]:
+      if self.ego_state[0] >= self.goal_state[0]-2:
         self.arrived = True
         return True
     
@@ -1014,22 +1029,26 @@ class CarlaEnv(gym.Env):
   def get_state_frenet(self, vehicle, map):
 
     x = map.get_waypoint(vehicle.get_location(), project_to_road=True).s
-    centerline_waypoint= map.get_waypoint_xodr(34, -2,x) # road and lane id
+    centerline_waypoint= map.get_waypoint_xodr(34, -2, x) # road and lane id
     if centerline_waypoint is None:
       centerline_waypoint = map.get_waypoint(vehicle.get_location(), project_to_road=True)
     tangent_vector = centerline_waypoint.transform.get_forward_vector()
-    normal_vector = carla.Vector3D(-(-tangent_vector.y), tangent_vector.x, 0)
-    normal_vector_normalized = np.array([normal_vector.x, -normal_vector.y]) /  np.linalg.norm(np.array([normal_vector.x, -normal_vector.y]))
+    normal_vector = carla.Vector2D(-(-tangent_vector.y), tangent_vector.x)
+    #normal_vector_normalized = np.array([normal_vector.x, -normal_vector.y]) /  np.linalg.norm(np.array([normal_vector.x, -normal_vector.y]))
+    norm_normal_vector = np.linalg.norm(np.array([normal_vector.x, normal_vector.y])) 
+    normal_vector_normalized = 1 / norm_normal_vector * np.array([normal_vector.x, normal_vector.y]).T
     y_hat = np.array([vehicle.get_location().x-centerline_waypoint.transform.location.x, 
                                     -vehicle.get_location().y-(-centerline_waypoint.transform.location.y)])
     y = np.dot(normal_vector_normalized, y_hat)
     forward_angle = np.arctan2(-tangent_vector.y, tangent_vector.x) * 180/np.pi
-    if -180 <= forward_angle <= 0:
+    if -180 <= forward_angle < 0:
         forward_angle += 360
     global_yaw = -vehicle.get_transform().rotation.yaw
-    if -180 <= global_yaw <= 0:
+    if -180 <= global_yaw < 0:
         global_yaw += 360
-    yaw = (forward_angle - global_yaw)/180 * np.pi
+  
+    #yaw = (forward_angle - global_yaw )/180 * np.pi
+    yaw = (global_yaw-forward_angle)/180 * np.pi
     speed = self.get_longitudinal_speed(vehicle)
     vehicle_state =np.array([x, y, yaw, speed]).tolist()
 
