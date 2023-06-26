@@ -5,14 +5,13 @@ import casadi as ca
 import numpy as np
 import time
 from os import system
-from common.vehicle_index import *
 
 #
 class High_MPC(object):
     """
     Nonlinear MPC
     """
-    def __init__(self, T, dt, L, vehicle_width, lane_width = 4, init_state=None, init_u=None):
+    def __init__(self, T, dt, L, vehicle_length, vehicle_width, lane_width = 4, init_state=None, init_u=None):
         """
         Nonlinear MPC for vehicle control        
         """
@@ -25,6 +24,7 @@ class High_MPC(object):
         # inter-axle distance
         self.L = L
 
+        self.vehicle_length = vehicle_length
         self.vehicle_width = vehicle_width
         self.lane_width = lane_width
 
@@ -32,7 +32,7 @@ class High_MPC(object):
         self.a_max = 1.5*3; self.a_min = -3*3
         self.delta_max = 0.75 ; self.delta_min = -0.75 
 
-        self.v_min = -5
+        self.v_min = 0
         self.v_max = 10
 
         #
@@ -143,13 +143,13 @@ class High_MPC(object):
         x_bound = np.inf #x_bound = ca.inf
 
         x_min = [-x_bound for _ in range(self._s_dim)]
-        x_min[0] = 0
-        x_min[1] = -self.lane_width #-1.5*self.lane_width + self.vehicle_width/2
+        #x_min[0] = 0
+        #x_min[1] = -self.lane_width #-1.5*self.lane_width + self.vehicle_width/2
         x_min[3] = self.v_min
 
         x_max = [x_bound  for _ in range(self._s_dim)]
-        x_max[0] = 300
-        x_max[1] = self.lane_width #1.5*self.lane_width - self.vehicle_width/2
+        #x_max[0] = 300
+        #x_max[1] = self.lane_width #1.5*self.lane_width - self.vehicle_width/2
         x_max[3] = self.v_max
 
         #
@@ -199,44 +199,25 @@ class High_MPC(object):
 
             cost_tra = Delta_p.T @ self._Q_tra @ Delta_p 
             f_cost_tra = ca.Function('cost_tra', [Delta_p], [cost_tra])
-
-            # # # # # # # # # # # # # # # # # # # # # # # # 
-            # - compute exponetial weights
-            # - time_k[2] defines the temporal spread of the weight
-            # - time_k[0] defines the current time 
-            # - time_k[1] defines the best traversal time, which is selected via 
-            #              a high-level policy / a deep high-level policy
-
-            # # # # # # # # # # # # # # # # # # # # # # # # 
-            #weight = ca.exp(- time_k[2] * (time_k[0]-time_k[1])**2 ) 
-            #weight = ca.exp(- time_k[2] * (time_k[0]-time_k[1])**2 ) 
             
             # cost for tracking the goal position
-            cost_goal_k, cost_gap_k = 0, 0
-            #delta_s_k = (X[:, k+1] - P[self._s_dim:]) # The goal postion.
-            #cost_goal_k = f_cost_goal(delta_s_k)
+            cost_goal_k, cost_tra_k = 0, 0
 
-            
             #if k >= self._N-1: # The goal postion.
             if k >= self._N -1: # The goal postion.
 
-                #delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*1:])
                 delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim*2)*1:])
                 cost_goal_k = f_cost_goal(delta_s_k)
 
             else:
 
-                #delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim+3)*1:])
                 delta_s_k = (X[:, k+1] - P[self._s_dim+(self._s_dim*2)*1:])
                 cost_goal_k = f_cost_goal(delta_s_k)
                                     
-                # cost for tracking the moving gap
-                #delta_p_k = (X[0:self._s_dim, k+1] - P[self._s_dim+(self._s_dim+3)*0 : \
-                    #self._s_dim+(self._s_dim+3)*(0+1)-3]) 
+                # cost for tracking the references
                 delta_p_k = (X[0:self._s_dim, k+1] - P[self._s_dim+(self._s_dim*2)*0 : \
                     self._s_dim+(self._s_dim*2)*(0+1)-self._s_dim]) 
                 cost_tra_k = f_cost_tra(delta_p_k) #* weight
-                #print(cost_gap_k.shape)
             
             delta_u_k = U[:, k]-[0, 0] #delta_u_k = U[:, k]-[self._gz, 0, 0, 0]
             cost_u_k = f_cost_u(delta_u_k)

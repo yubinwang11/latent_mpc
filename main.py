@@ -58,13 +58,13 @@ parser.add_argument('--eval', type=str2bool, default=True, help='Evaluate or Not
 parser.add_argument('--record', type=str2bool, default=False, help='Record gif or Not')
 parser.add_argument('--render', type=str2bool, default=True, help='Render or Not')
 parser.add_argument('--Loadmodel', type=str2bool, default=True, help='Load pretrained model or Not')
-parser.add_argument('--ModelIdex', type=int, default= 90000, help='which model to load') # 270000
+parser.add_argument('--ModelIdex', type=int, default= 500000, help='which model to load') # 270000
 parser.add_argument('--seed', type=int, default=1, help='random seed')
 
 parser.add_argument('--total_steps', type=int, default=int(5e6), help='Max training steps')
 parser.add_argument('--save_interval', type=int, default=int(1e4), help='Model saving interval, in steps.')
 parser.add_argument('--eval_interval', type=int, default=int(1e3), help='Model evaluating interval, in stpes.')
-parser.add_argument('--eval_turn', type=int, default=3, help='Model evaluating times, in episode.') # 3
+parser.add_argument('--eval_turn', type=int, default=100, help='Model evaluating times, in episode.') # 3
 parser.add_argument('--update_every', type=int, default=50, help='Training Fraquency, in stpes')
 parser.add_argument('--gamma', type=float, default=0.99, help='Discounted Factor')
 parser.add_argument('--net_width', type=int, default=256, help='Hidden net width')
@@ -143,6 +143,11 @@ class ZFilter:
 def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, running_state, record=False):
     scores = 0
     turns = opt.eval_turn
+    success_num = 0 
+    collided_num = 0
+    out_time_num = 0
+    total_travel = 0
+    total_time = 0
 
     for j in range(turns):
         if record:
@@ -167,7 +172,7 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
             _act, pred_traj = env.high_mpc.solve(ref_traj)
 
             s_prime, r, done, info = env.step(_act)
-            print('under evaluation')
+            #print('under evaluation')
 
             s_prime = running_state(s_prime)
             # r = Reward_adapter(r, EnvIdex)
@@ -185,7 +190,19 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
                 #frames.append(env.display.copy())
 
         # print(ep_r)
+        if env.arrived:
+            success_num += 1
+        elif env.collided:
+            collided_num += 1
+        elif env.out_of_time:
+            out_time_num += 1
+        
+        total_travel += env.ego_state[0]
+        total_time += env.t
+
         scores += ep_r
+        print('current iter:', j, 'success num:', success_num/(j+1), 'collided num:', collided_num/(j+1), 'out of time num:', out_time_num/(j+1))
+        print('current iter:', j, 'averaged speed:', total_travel/total_time, 'total travel:', total_travel, 'total time', total_time,)
 
         if record:
             # save_frames_as_gif(frames, j)
@@ -282,6 +299,7 @@ def main():
                 # track hyperparameters and run metadata
                 config={
                 "algo": "SAC", # discor
+                "max_speed": "15", # discor
                 }
             )
 

@@ -1,4 +1,4 @@
-# Learning to constrcuct a parameterized MPC for autonomous driving with latent collosion avoidance representation
+# Latent-MPC
 Author: Yubin Wang
 
 ## Requirements
@@ -12,7 +12,6 @@ Author: Yubin Wang
 The versions are just what I used and not necessarily strict requirements.
 
 ## How to Run
-
 
 ### Run  MPC
 
