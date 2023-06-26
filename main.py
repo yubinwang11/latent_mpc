@@ -157,7 +157,7 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
         while not done:
             # Take deterministic actions at test time
             #print('normalized state  is ', s)
-            a = model.select_action(s, deterministic=False, with_logprob=False)
+            a = model.select_action(s, deterministic=True, with_logprob=False)
             act = Action_adapter(a, act_low, act_high)  # [0,1] to [-max,max]
 
             #print(act)
@@ -201,8 +201,8 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
         total_time += env.t
 
         scores += ep_r
-        print('current iter:', j, 'success num:', success_num/(j+1), 'collided num:', collided_num/(j+1), 'out of time num:', out_time_num/(j+1))
-        print('current iter:', j, 'averaged speed:', total_travel/total_time, 'total travel:', total_travel, 'total time', total_time,)
+        print('current iter:', j+1, 'success num:', success_num/(j+1), 'collided num:', collided_num/(j+1), 'out of time num:', out_time_num/(j+1))
+        print('current iter:', j+1, 'averaged speed:', total_travel/total_time, 'total travel:', total_travel, 'total time', total_time,)
 
         if record:
             # save_frames_as_gif(frames, j)
@@ -322,7 +322,7 @@ def main():
     if not os.path.exists('model'): os.mkdir('model')
     if opt.Loadmodel: 
         model.load(opt.ModelIdex)
-        with open("./model/mean_std_{}.txt".format(opt.ModelIdex), 'rb') as saved_mean_std:
+        with open("./model/mpc/mean_std_{}.txt".format(opt.ModelIdex), 'rb') as saved_mean_std:
                 running_state = pickle.load(saved_mean_std)
 
     replay_buffer = RandomBuffer(state_dim, action_dim, env_with_Dead, max_size=int(1e6))
@@ -385,7 +385,7 @@ def main():
 
             '''save model'''
             if (t + 1) % save_interval == 0:
-                with open("./model/mean_std_{}.txt".format(t + 1), 'wb') as saved_mean_std:
+                with open("./model/mpc/mean_std_{}.txt".format(t + 1), 'wb') as saved_mean_std:
                     pickle.dump(running_state, saved_mean_std)
                     saved_mean_std.close()
 

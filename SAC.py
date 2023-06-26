@@ -177,13 +177,13 @@ class SAC_Agent(object):
 
 
 	def save(self,episode):
-		torch.save(self.actor.state_dict(), "./model/sac_actor{}.pth".format(episode))
-		torch.save(self.q_critic.state_dict(), "./model/sac_q_critic{}.pth".format(episode))
+		torch.save(self.actor.state_dict(), "./model/mpc/sac_actor{}.pth".format(episode))
+		torch.save(self.q_critic.state_dict(), "./model/mpc/sac_q_critic{}.pth".format(episode))
 
 
 	def load(self,episode):
-		self.actor.load_state_dict(torch.load("./model/sac_actor{}.pth".format(episode)))
-		self.q_critic.load_state_dict(torch.load("./model/sac_q_critic{}.pth".format(episode)))
+		self.actor.load_state_dict(torch.load("./model/mpc/sac_actor{}.pth".format(episode)))
+		self.q_critic.load_state_dict(torch.load("./model/mpc/sac_q_critic{}.pth".format(episode)))
 
 
 
