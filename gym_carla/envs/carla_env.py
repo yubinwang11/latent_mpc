@@ -221,6 +221,7 @@ class CarlaEnv(gym.Env):
     # reset done
     self.done = False
     self.arrived = False
+    self.collided = False
     self.out_of_time = False
     self.prev_decision_var = None
     self.reset_eval = reset_eval
@@ -495,10 +496,10 @@ class CarlaEnv(gym.Env):
       #'waypoints': self.curr_waypoint,
       'ego_state': self.ego_state
     }
-    
-    r = self._get_reward(),
-    self.done = self._terminal()
 
+    self.done = self._terminal()
+    r = self._get_reward(),
+    
     #if self.done:
       # Delete sensors, vehicles and walkers
       #self._clear_all_actors(['sensor.other.collision', 'sensor.other.obstacle', 'sensor.lidar.ray_cast', \
@@ -871,11 +872,11 @@ class CarlaEnv(gym.Env):
       #r_lane = -1
 
     # cost for too fast
-    r_fast = 0
+    r_out_speed = 0
     v = self.ego.get_velocity()
     speed = np.sqrt(v.x**2 + v.y**2)
     if speed >= 10:
-      r_fast -= abs(speed - 10)
+      r_out_speed -= abs(speed - 10)
 
     #r_speed = -abs(speed - self.desired_speed)
     #r_fast = 0
@@ -895,7 +896,11 @@ class CarlaEnv(gym.Env):
 
     r_speed = 0
     if self.arrived:
-      r_speed = 275 / self.t
+      r_speed += 10* (275 / self.t - 3)
+
+    r_fast = 0
+    if speed >= 7:
+      r_fast += 0.1*abs(speed)
 
     r_time = 0 
     if self.out_of_time:
@@ -932,7 +937,7 @@ class CarlaEnv(gym.Env):
       
     #r = 200*r_collision + 1*lspeed_lon + 10*r_fast + 1*r_out + r_steer*5 + 0.2*r_lat - 0.1+  r_arrive + 10 * r_speed + 5 * r_s
     #r = 200 * r_collision + 30 * r_speed + 0.1 * r_s + r_arrive + 10 * r_lane + 1 * r_road + r_time
-    r = r_collision + r_time + r_forward + r_steer + r_arrive + r_speed + r_road + r_fast
+    r = r_collision + r_time + r_forward + r_steer + r_arrive + r_fast + r_road + r_speed + r_out_speed
 
     #self.reward += r
   
@@ -945,6 +950,7 @@ class CarlaEnv(gym.Env):
     # If collides
     if len(self.collision_hist)>0: 
       print('end with collision')
+      self.collided = True
       return True
 
     # If reach maximum timestep

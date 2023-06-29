@@ -33,19 +33,20 @@ def str2bool(v):
     
 '''Hyperparameter Setting'''
 parser = argparse.ArgumentParser()
-parser.add_argument('--wandb', type=str2bool, default=False, help='Use Wandb to record the training')
+parser.add_argument('--wandb', type=str2bool, default=True, help='Use Wandb to record the training')
 parser.add_argument('--write', type=str2bool, default=False, help='Use SummaryWriter to record the training')
 parser.add_argument('--eval', type=str2bool, default=False, help='Evaluate or Not')
 parser.add_argument('--record', type=str2bool, default=False, help='Record gif or Not')
-parser.add_argument('--render', type=str2bool, default=True, help='Render or Not')
+parser.add_argument('--render', type=str2bool, default=False, help='Render or Not')
 parser.add_argument('--Loadmodel', type=str2bool, default=False, help='Load pretrained model or Not')
-parser.add_argument('--ModelIdex', type=int, default= 90000, help='which model to load') # 270000
+parser.add_argument('--ModelIdex', type=int, default= 90000, help='which model to load') 
 parser.add_argument('--seed', type=int, default=1, help='random seed')
 
 parser.add_argument('--total_steps', type=int, default=int(5e6), help='Max training steps')
 parser.add_argument('--save_interval', type=int, default=int(1e4), help='Model saving interval, in steps.')
 parser.add_argument('--eval_interval', type=int, default=int(1e3), help='Model evaluating interval, in stpes.')
 parser.add_argument('--eval_turn', type=int, default=3, help='Model evaluating times, in episode.') # 3
+parser.add_argument('--eval_runs', type=int, default=100, help='Model evaluating times, in episode.') # 3
 parser.add_argument('--update_every', type=int, default=50, help='Training Fraquency, in stpes')
 parser.add_argument('--gamma', type=float, default=0.99, help='Discounted Factor')
 parser.add_argument('--net_width', type=int, default=256, help='Hidden net width')
@@ -121,9 +122,19 @@ class ZFilter:
     def output_shape(self, input_space):
         return input_space.shape
     
-def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, running_state, record=False):
+def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, running_state):
     scores = 0
     turns = opt.eval_turn
+    eval = opt.eval
+    record = opt.record
+    if eval:
+        turns = opt.eval_runs
+
+    success_num = 0 
+    collided_num = 0
+    out_time_num = 0
+    total_travel = 0
+    total_time = 0
 
     for j in range(turns):
         if record:
@@ -137,13 +148,13 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
             act = Action_adapter(a, act_low, act_high)  # [0,1] to [-max,max]
 
             s_prime, r, done, info = env.step(act)
-            print('under evaluation')
+            #print('under evaluation')
 
             s_prime = running_state(s_prime)
             # r = Reward_adapter(r, EnvIdex)
             if type(r) == tuple:
                 r = np.array(list(r))
-            ep_r += r
+            ep_r = ep_r + r
             s = s_prime
             if render:
                 env.render()
@@ -157,7 +168,21 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
         # print(ep_r)
         if ep_r <= -150:
             ep_r = -150
+
+        if eval:
+            # print(ep_r)
+            if env.arrived:
+                success_num += 1
+            elif env.collided:
+                collided_num += 1
+            elif env.out_of_time:
+                out_time_num += 1
             
+            total_travel += env.ego_state[0]
+            total_time += env.t
+            print('current iter:', (j+1), 'success num:', success_num/(j+1), 'collided num:', collided_num/(j+1), 'out of time num:', out_time_num/(j+1))
+            print('current iter:', (j+1), 'averaged speed:', total_travel/total_time, 'total travel:', total_travel, 'total time', total_time,)
+
         scores += ep_r
 
         if record:
@@ -275,16 +300,16 @@ def main():
     running_state = ZFilter((state_dim,), clip=5.0)
     model = SAC_Agent(**kwargs)
 
-    if not os.path.exists('model'): os.mkdir('model')
+    if not os.path.exists('model/rl'): os.mkdir('model/rl')
     if opt.Loadmodel: 
         model.load(opt.ModelIdex)
-        with open("./model/mean_std_{}.txt".format(opt.ModelIdex), 'rb') as saved_mean_std:
+        with open("./model/rl/mean_std_{}.txt".format(opt.ModelIdex), 'rb') as saved_mean_std:
                 running_state = pickle.load(saved_mean_std)
 
     replay_buffer = RandomBuffer(state_dim, action_dim, env_with_Dead, max_size=int(1e6))
 
     if eval:
-        average_reward = evaluate_policy(eval_env, model, False, steps_per_epoch, env.act_low, env.act_high, running_state, record=record) #evaluate_policy(env, model, render, steps_per_epoch, max_action, EnvIdex)
+        average_reward = evaluate_policy(eval_env, model, False, steps_per_epoch, env.act_low, env.act_high, running_state) #evaluate_policy(env, model, render, steps_per_epoch, max_action, EnvIdex)
         print('Average Reward:', average_reward)
     else:
         s, done, current_steps = env.reset(), False, 0
@@ -330,7 +355,7 @@ def main():
 
             '''save model'''
             if (t + 1) % save_interval == 0:
-                with open("./model/mean_std_{}.txt".format(t + 1), 'wb') as saved_mean_std:
+                with open("./model/rl/mean_std_{}.txt".format(t + 1), 'wb') as saved_mean_std:
                     pickle.dump(running_state, saved_mean_std)
                     saved_mean_std.close()
 
