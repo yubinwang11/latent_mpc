@@ -56,15 +56,17 @@ parser.add_argument('--wandb', type=str2bool, default=False, help='Use Wandb to 
 parser.add_argument('--write', type=str2bool, default=False, help='Use SummaryWriter to record the training')
 parser.add_argument('--eval', type=str2bool, default=True, help='Evaluate or Not')
 parser.add_argument('--record', type=str2bool, default=False, help='Record gif or Not')
+parser.add_argument('--plot', type=str2bool, default=True, help='Plot or Not')
 parser.add_argument('--render', type=str2bool, default=True, help='Render or Not')
 parser.add_argument('--Loadmodel', type=str2bool, default=True, help='Load pretrained model or Not')
-parser.add_argument('--ModelIdex', type=int, default= 500000, help='which model to load') # 270000
+parser.add_argument('--ModelIdex', type=int, default= 120000, help='which model to load') # 270000
 parser.add_argument('--seed', type=int, default=1, help='random seed')
 
 parser.add_argument('--total_steps', type=int, default=int(5e6), help='Max training steps')
 parser.add_argument('--save_interval', type=int, default=int(1e4), help='Model saving interval, in steps.')
 parser.add_argument('--eval_interval', type=int, default=int(1e3), help='Model evaluating interval, in stpes.')
-parser.add_argument('--eval_turn', type=int, default=100, help='Model evaluating times, in episode.') # 3
+parser.add_argument('--eval_turn', type=int, default=3, help='Model evaluating times, in episode.') # 3
+parser.add_argument('--eval_runs', type=int, default=100, help='Model evaluating times, in episode.') # 3
 parser.add_argument('--update_every', type=int, default=50, help='Training Fraquency, in stpes')
 parser.add_argument('--gamma', type=float, default=0.99, help='Discounted Factor')
 parser.add_argument('--net_width', type=int, default=256, help='Hidden net width')
@@ -143,11 +145,28 @@ class ZFilter:
 def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, running_state, record=False):
     scores = 0
     turns = opt.eval_turn
+    eval = opt.eval
+    plot = opt.plot
     success_num = 0 
     collided_num = 0
     out_time_num = 0
     total_travel = 0
     total_time = 0
+
+    if plot:
+        wandb.init(
+                # set the wandb project where this run will be logged
+                project="latent-mpc-plot",
+                entity="yubinwang",
+                # track hyperparameters and run metadata
+                #config={
+                #}
+            )
+
+    if eval:
+        turns = opt.eval_runs
+    if plot:
+        turns = 1
 
     for j in range(turns):
         if record:
@@ -170,6 +189,9 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
             ref_traj = env.ego_state + ref_obj + env.goal_state
             # run  model predictive control
             _act, pred_traj = env.high_mpc.solve(ref_traj)
+            
+            if plot:
+                wandb.log({"time":env.t, "speed": env.ego_state[-1], "acc":  _act[0],  "steer":  _act[1]})
 
             s_prime, r, done, info = env.step(_act)
             #print('under evaluation')
@@ -189,25 +211,28 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
                 frames.append(np.fliplr(frame))
                 #frames.append(env.display.copy())
 
-        # print(ep_r)
-        if env.arrived:
-            success_num += 1
-        elif env.collided:
-            collided_num += 1
-        elif env.out_of_time:
-            out_time_num += 1
-        
-        total_travel += env.ego_state[0]
-        total_time += env.t
+        if eval:
+            # print(ep_r)
+            if env.arrived:
+                success_num += 1
+            elif env.collided:
+                collided_num += 1
+            elif env.out_of_time:
+                out_time_num += 1
+            
+            total_travel += env.ego_state[0]
+            total_time += env.t 
+            print('current iter:', j+1, 'success num:', success_num/(j+1), 'collided num:', collided_num/(j+1), 'out of time num:', out_time_num/(j+1))
+            print('current iter:', j+1, 'averaged speed:', total_travel/total_time, 'total travel:', total_travel, 'total time', total_time,)
 
         scores += ep_r
-        print('current iter:', j+1, 'success num:', success_num/(j+1), 'collided num:', collided_num/(j+1), 'out of time num:', out_time_num/(j+1))
-        print('current iter:', j+1, 'averaged speed:', total_travel/total_time, 'total travel:', total_travel, 'total time', total_time,)
+        
 
         if record:
+           if not os.path.exists('gif/mpc'): os.mkdir('gif/mpc')
             # save_frames_as_gif(frames, j)
             #frames_pil = imageio.fromarray
-           imageio.mimsave('./gif/{}.gif'.format(j), frames, fps=10)
+           imageio.mimsave('./gif/mpc/run_{}.gif'.format(j), frames, fps=10)
 
 
     return scores/turns
@@ -222,6 +247,7 @@ def main():
 
     # parameters for the gym_carla environment
     params = {
+    'env_id': 'env_0',  # which scenario  to simulate
 	'number_of_vehicles': 0, # 100
 	'number_of_walkers': 0,
 	'display_size': 256*2,  # screen size of bird-eye render
@@ -234,8 +260,8 @@ def main():
 	#'continuous_steer_range': [-0.3, 0.3],  # continuous steering angle range
 	'ego_vehicle_filter': 'vehicle.tesla.model3*',  # filter for defining ego vehicle lincoln
 	'port': 2000,  # connection port
-	'town': 'Town05',  # which town to simulate
-	'task_mode': 'normal',  # mode of the task, [random, normal, roundabout (only for Town03)]
+	#'town': 'Town05',  # which town to simulate
+	#'task_mode': 'normal',  # mode of the task, [random, normal, roundabout (only for Town03)]
 	'max_time_episode': 500,  # maximum timesteps per episode
 	'max_waypt': 12,  # maximum number of waypoints
     'detect_range': 50,  # obstacle detection range (meter)
@@ -251,6 +277,8 @@ def main():
 	'pixor_size': 64,  # size of the pixor labels
 	'pixor': False,  # whether to output PIXOR observation
     'render': render,
+    'eval': eval,
+    'record': record,
 	}
         
     # Create environments.
@@ -319,7 +347,7 @@ def main():
     running_state = ZFilter((state_dim,), clip=5.0)
     model = SAC_Agent(**kwargs)
 
-    if not os.path.exists('model'): os.mkdir('model')
+    if not os.path.exists('model/mpc'): os.mkdir('model/mpc')
     if opt.Loadmodel: 
         model.load(opt.ModelIdex)
         with open("./model/mpc/mean_std_{}.txt".format(opt.ModelIdex), 'rb') as saved_mean_std:

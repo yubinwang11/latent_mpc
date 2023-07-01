@@ -31,12 +31,13 @@ class CarlaEnv(gym.Env):
 
   def __init__(self, params):
     # parameters
+    self.env_id = params['env_id']
     self.display_size = params['display_size']  # rendering screen size
     self.max_past_step = params['max_past_step']
     self.number_of_vehicles = params['number_of_vehicles']
     self.number_of_walkers = params['number_of_walkers']
     self.dt = params['dt']
-    self.task_mode = params['task_mode']
+    #self.task_mode = params['task_mode']
     self.max_time_episode = params['max_time_episode']
     self.max_waypt = params['max_waypt']
     self.detect_range = params['detect_range']
@@ -45,12 +46,18 @@ class CarlaEnv(gym.Env):
     self.obs_range = params['obs_range']
     self.lidar_bin = params['lidar_bin']
     self.d_behind = params['d_behind']
-    self.obs_size = int(self.obs_range/self.lidar_bin)
+    #self.obs_size = int(self.obs_range/self.lidar_bin)
     self.out_lane_thres = params['out_lane_thres']
     self.desired_speed = params['desired_speed']
     self.max_ego_spawn_times = params['max_ego_spawn_times']
     self.display_route = params['display_route']
     self.use_render = params['render']
+    self.eval = params['eval']
+    self.record = params['record']
+    if not self.record:
+      self.obs_size = int(self.obs_range/self.lidar_bin)
+    else:
+      self.obs_size = 1920
 
     if 'pixor' in params.keys():
       self.pixor = params['pixor']
@@ -59,10 +66,7 @@ class CarlaEnv(gym.Env):
       self.pixor = False
 
     # Destination
-    if params['task_mode'] == 'roundabout':
-      self.dests = [[4.46, -61.46, 0], [-49.53, -2.89, 0], [-6.48, 55.47, 0], [35.96, 3.33, 0]]
-    else:
-      self.dests = None
+    self.dests = None
 
     # action and observation spaces
     self.act_high = np.array([20.0, 10.0, np.pi/2, 20.0, 10.0, 10.0, 10.0, 10.0], dtype=np.float32)
@@ -110,7 +114,11 @@ class CarlaEnv(gym.Env):
     print('connecting to Carla server...')
     client = carla.Client('localhost', params['port'])
     client.set_timeout(10.0) # 10.0
-    self.world = client.load_world(params['town'])
+    if self.env_id == 'env_0':
+      self.town_id = 'Town05'
+    #self.world = client.load_world(params['town'])
+    self.world = client.load_world(self.town_id)
+    
     print('Carla server connected!')
 
     self.map = self.world.get_map()
@@ -142,7 +150,8 @@ class CarlaEnv(gym.Env):
         self.walker_spawn_points.append(spawn_point)
 
     # Create the ego vehicle blueprint
-    self.ego_bp = self._create_vehicle_bluepprint(params['ego_vehicle_filter'], color='49,8,8')
+    #self.ego_bp = self._create_vehicle_bluepprint(params['ego_vehicle_filter'], color='49,8,8')
+    self.ego_bp = self._create_vehicle_bluepprint(params['ego_vehicle_filter'], color='255,0,0')
 
     # Collision sensor
     self.collision_hist = [] # The collision history
@@ -178,12 +187,14 @@ class CarlaEnv(gym.Env):
 
     # Camera sensor
     self.camera_img = np.zeros((self.obs_size, self.obs_size, 3), dtype=np.uint8)
-    self.camera_trans = carla.Transform(carla.Location(x=0.8, z=1.7))
+    #self.camera_trans = carla.Transform(carla.Location(x=0.8, z=1.7))
+    self.camera_trans = carla.Transform(carla.Location(x=-6.0, z=2.5))
     self.camera_bp = self.world.get_blueprint_library().find('sensor.camera.rgb')
     # Modify the attributes of the blueprint to set image resolution and field of view.
     self.camera_bp.set_attribute('image_size_x', str(self.obs_size))
     self.camera_bp.set_attribute('image_size_y', str(self.obs_size))
-    self.camera_bp.set_attribute('fov', '110')
+    #self.camera_bp.set_attribute('fov', '110')
+    self.camera_bp.set_attribute('fov', '70')
     # Set the time in seconds between sensor captures
     self.camera_bp.set_attribute('sensor_tick', '0.02')
 
@@ -205,6 +216,11 @@ class CarlaEnv(gym.Env):
       x, y = x.flatten(), y.flatten()
       self.pixel_grid = np.vstack((x, y)).T
 
+    if self.eval:
+      self.noise_bound = 2
+    else:
+      self.noise_bound = 5
+
   def reset(self):
 
     # Delete sensors, vehicles and walkers
@@ -212,9 +228,9 @@ class CarlaEnv(gym.Env):
                             'sensor.camera.rgb', 'vehicle.*', 'controller.ai.walker', 'walker.*'])
     
     # Clear sensor objects  
-    self.collision_sensor = None
-    self.lidar_sensor = None
-    self.camera_sensor = None
+    #self.collision_sensor = None
+    #self.lidar_sensor = None
+   #self.camera_sensor = None
 
     # reset time
     self.t = 0
@@ -273,14 +289,8 @@ class CarlaEnv(gym.Env):
       if ego_spawn_times > self.max_ego_spawn_times:
         self.reset()
 
-      if self.task_mode == 'random':
-        transform = random.choice(self.vehicle_spawn_points)
-      if self.task_mode == 'normal':
+      if self.env_id == 'env_0':
         transform = self.all_default_spawn[155] 
-      if self.task_mode == 'roundabout':
-        self.start=[52.1+np.random.uniform(-5,5),-4.2, 178.66] # random
-        # self.start=[52.1,-4.2, 178.66] # static
-        transform = set_carla_transform(self.start)
       if self._try_spawn_ego_vehicle_at(transform):
         break
       else:
@@ -290,6 +300,8 @@ class CarlaEnv(gym.Env):
     ## vehicle param
     self.startpoint = self.map.get_waypoint(self.ego.get_location(), project_to_road=True)
     self.lane_width = self.startpoint.lane_width
+    if self.env_id == 'env_0':
+      self.road_bound_abs = 1.5 * self.lane_width
 
     self.vehicle_length = self.ego.bounding_box.extent.x * 2
     self.vehicle_width = self.ego.bounding_box.extent.y * 2 # actually use  length to estimate width with buffer
@@ -297,23 +309,30 @@ class CarlaEnv(gym.Env):
     self.inter_axle_distance = 2*self.ego.bounding_box.extent.x
 
     # determine and visualize the destination
-    self.goal_state = np.array([275, 0, 0, 8]).tolist() # 275
-    self.destination = self.all_default_spawn[255] 
-    self.dests = self.goal_state
+    if self.env_id == 'env_0':
+      self.goal_state = np.array([275, 0, 0, 8]).tolist() # 275
+      self.destination = self.all_default_spawn[255] 
+      self.dests = self.goal_state
+      self.road_len = self.goal_state[0]
     self.world.debug.draw_point(self.destination.location, size=0.3, color=carla.Color(255,0,0), life_time=300)
     
     # spawn the moving obstacles (agents)
     self.moving_agents = []
-    self.lane_id_list = [-3, -2, -1, -1, -2, -2, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
-    self.s_list = [22+random.uniform(-5,5), 32+random.uniform(-5,5), 50+random.uniform(-5,5), \
-                   65+random.uniform(-5,5), 55+random.uniform(-5,5), 70+random.uniform(-5,5), 90+random.uniform(-5,5),\
-                   100+random.uniform(-5,5), 120+random.uniform(-5,5) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
+    if self.env_id == 'env_0':
+      self.lane_id_list = [-3, -2, -1, -1, -2, -2, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
+      self.s_list = [22+random.uniform(-self.noise_bound,self.noise_bound), 32+random.uniform(-self.noise_bound,self.noise_bound), \
+                     50+random.uniform(-self.noise_bound,self.noise_bound), 65+random.uniform(-self.noise_bound,self.noise_bound), \
+                      55+random.uniform(-self.noise_bound,self.noise_bound), 70+random.uniform(-self.noise_bound,self.noise_bound), \
+                        90+random.uniform(-self.noise_bound,self.noise_bound),100+random.uniform(-self.noise_bound,self.noise_bound), \
+                          120+random.uniform(-self.noise_bound,self.noise_bound) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
+      self.road_id = 34
+      self.center_lane_id = -2
 
     self.num_agents = len(self.lane_id_list)
     #self.num_agents = 0
 
     for i in range(self.num_agents):
-        agent_waypoint = self.map.get_waypoint_xodr(34, self.lane_id_list[i], self.s_list[i])
+        agent_waypoint = self.map.get_waypoint_xodr(self.road_id, self.lane_id_list[i], self.s_list[i])
         spawn_agent_transform = carla.Transform(location=carla.Location(x=agent_waypoint.transform.location.x, \
                                     y=agent_waypoint.transform.location.y, z=agent_waypoint.transform.location.z+0.5),\
                                                     rotation=agent_waypoint.transform.rotation)
@@ -397,7 +416,8 @@ class CarlaEnv(gym.Env):
 
     # Enable sync mode
     self.settings.synchronous_mode = True
-    self.settings.no_rendering_mode = True
+    if not self.record:
+      self.settings.no_rendering_mode = True
     self.world.apply_settings(self.settings)
 
     self.routeplanner = RoutePlanner(self.ego, self.max_waypt)
@@ -486,10 +506,10 @@ class CarlaEnv(gym.Env):
       #'waypoints': self.curr_waypoint,
       'ego_state': self.ego_state
     }
-    
-    r = self._get_reward(),
-    self.done = self._terminal()
 
+    self.done = self._terminal()
+    r = self._get_reward()
+    
     #if self.done:
       # Delete sensors, vehicles and walkers
       #self._clear_all_actors(['sensor.other.collision', 'sensor.other.obstacle', 'sensor.lidar.ray_cast', \
@@ -752,8 +772,6 @@ class CarlaEnv(gym.Env):
     obs += self.ego_state[1:]
     obs += self.distance_measurements
     #obs += self.goal_state
-    #obs += [-1.5*self.lane_width]
-    #obs += [1.5*self.lane_width]
     
     #for agent in self.moving_agents:
     #  agent_location = agent.get_location()
@@ -860,9 +878,9 @@ class CarlaEnv(gym.Env):
       #r_lane = -1
 
     # cost for too fast
-    #r_fast = 0
-    #if lspeed_lon > self.desired_speed:
-      #r_fast = -1
+    #r_out_speed = 0
+    #if speed >= 10:
+      #r_out_speed -= abs(speed - 10)
 
     # longitudinal speed
     #lspeed = np.array([v.x, v.y])
@@ -877,7 +895,13 @@ class CarlaEnv(gym.Env):
 
     r_speed = 0
     if self.arrived:
-      r_speed = 275 / self.t
+      r_speed += 10* (self.road_len / self.t - 3)
+
+    r_fast = 0
+    v = self.ego.get_velocity()
+    speed = np.sqrt(v.x**2 + v.y**2)
+    if 7<= speed <=10:
+      r_fast += 0.1*abs(speed)
 
     r_time = 0 
     if self.out_of_time:
@@ -907,8 +931,8 @@ class CarlaEnv(gym.Env):
       
       corner_pos = self.ego_state[:2] + ego_rotation @ alpha
 
-      if abs(corner_pos[1]) >= 1.5 * self.lane_width:
-        dist_road = abs(abs(corner_pos[1]) - 1.5 * self.lane_width)
+      if abs(corner_pos[1]) >=self.road_bound_abs:
+        dist_road = abs(abs(corner_pos[1]) - self.road_bound_abs)
         r_road = -dist_road
       
     #r = 200*r_collision + 1*lspeed_lon + 10*r_fast + 1*r_out + r_steer*5 + 0.2*r_lat - 0.1+  r_arrive + 10 * r_speed + 5 * r_s
@@ -942,15 +966,6 @@ class CarlaEnv(gym.Env):
         self.arrived = True
         return True
       
-    # If out of road (lane)
-    #dis, _ = get_lane_dis(self.waypoints, ego_x, ego_y)
-    #if abs(dis) > self.out_lane_thres: #+ self.lane_width:
-      #return True
-
-    # If out of road:
-    #if abs(self.ego_state[1]) >= self.lane_width*1.5 + self.out_lane_thres:
-      #return True
-
     return False
 
   def _clear_all_actors(self, actor_filters):
@@ -972,7 +987,7 @@ class CarlaEnv(gym.Env):
   def get_state_frenet(self, vehicle, map):
 
     x = map.get_waypoint(vehicle.get_location(), project_to_road=True).s
-    centerline_waypoint= map.get_waypoint_xodr(34, -2, x) # road and lane id
+    centerline_waypoint= map.get_waypoint_xodr(self.road_id,self.center_lane_id, x) # road and lane id
     if centerline_waypoint is None:
       centerline_waypoint = map.get_waypoint(vehicle.get_location(), project_to_road=True)
     tangent_vector = centerline_waypoint.transform.get_forward_vector()
