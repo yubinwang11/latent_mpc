@@ -8,6 +8,7 @@ import carla
 import sys
 import traceback
 import wandb
+import time
 
 from matplotlib import animation
 import matplotlib.pyplot as plt
@@ -49,7 +50,7 @@ def save_frames_as_gif(frames, run_num=0):
 parser = argparse.ArgumentParser()
 parser.add_argument('--record', type=str2bool, default=False, help='Record gif or Not')
 parser.add_argument('--render', type=str2bool, default=True, help='Render or Not')
-parser.add_argument('--plot', type=str2bool, default=False, help='Plot or Not')
+parser.add_argument('--plot', type=str2bool, default=True, help='Plot or Not')
 
 parser.add_argument('--seed', type=int, default=1, help='random seed')
 
@@ -83,14 +84,17 @@ def evaluate_policy(env, render, steps_per_epoch, record=False):
 
             obstacle_state = s
             
+            start_time = time.time()
             # compute the mpc reference
             ref_traj = env.ego_state + obstacle_state + env.goal_state  #
             _act, pred_traj = env.high_mpc.solve(ref_traj)
+            end_time = time.time()
             
             #print('predicted traj:', pred_traj)
 
             if plot:
-                wandb.log({"time":env.t, "speed": env.ego_state[-1], "acc":  _act[0],  "steer":  _act[1]})
+                com_time = end_time - start_time
+                wandb.log({"time":env.t, "speed": env.ego_state[-1], "acc":  _act[0],  "steer":  _act[1], "runtime": com_time})
 
             s_prime, r, done, info = env.step(_act)
             s = s_prime
