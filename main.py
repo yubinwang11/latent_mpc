@@ -177,9 +177,11 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
         while not done:
             # Take deterministic actions at test time
             #print('normalized state  is ', s)
-            start_time = time.time()
+            rl_start_time = time.time()
             a = model.select_action(s, deterministic=True, with_logprob=False)
             act = Action_adapter(a, act_low, act_high)  # [0,1] to [-max,max]
+            rl_end_time = time.time()
+            rl_time = rl_end_time - rl_start_time
 
             #print(act)
             ref = act #.tolist()
@@ -190,10 +192,13 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
             # compute the mpc reference
             ref_traj = env.ego_state + ref_obj + env.goal_state
             # run  model predictive control
+            mpc_start_time = time.time()
             _act, pred_traj = env.high_mpc.solve(ref_traj)
-            end_time = time.time()
+            mpc_end_time = time.time()
+            mpc_time = mpc_end_time - mpc_start_time
+
             if plot:
-                com_time = end_time - start_time
+                com_time = rl_time + mpc_time
                 wandb.log({"time":env.t, "speed": env.ego_state[-1], "acc":  _act[0],  "steer":  _act[1], "runtime":  com_time})
 
             s_prime, r, done, info = env.step(_act)
