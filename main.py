@@ -33,13 +33,14 @@ def str2bool(v):
     
 '''Hyperparameter Setting'''
 parser = argparse.ArgumentParser()
-parser.add_argument('--wandb', type=str2bool, default=True, help='Use Wandb to record the training')
+parser.add_argument('--wandb', type=str2bool, default=False, help='Use Wandb to record the training')
 parser.add_argument('--write', type=str2bool, default=False, help='Use SummaryWriter to record the training')
-parser.add_argument('--eval', type=str2bool, default=False, help='Evaluate or Not')
+parser.add_argument('--eval', type=str2bool, default=True, help='Evaluate or Not')
 parser.add_argument('--record', type=str2bool, default=False, help='Record gif or Not')
-parser.add_argument('--render', type=str2bool, default=False, help='Render or Not')
-parser.add_argument('--Loadmodel', type=str2bool, default=False, help='Load pretrained model or Not')
-parser.add_argument('--ModelIdex', type=int, default= 90000, help='which model to load') 
+parser.add_argument('--plot', type=str2bool, default=True, help='Plot or Not')
+parser.add_argument('--render', type=str2bool, default=True, help='Render or Not')
+parser.add_argument('--Loadmodel', type=str2bool, default=True, help='Load pretrained model or Not')
+parser.add_argument('--ModelIdex', type=int, default= 100000, help='which model to load') 
 parser.add_argument('--seed', type=int, default=1, help='random seed')
 
 parser.add_argument('--total_steps', type=int, default=int(5e6), help='Max training steps')
@@ -127,8 +128,21 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
     turns = opt.eval_turn
     eval = opt.eval
     record = opt.record
+    plot = opt.plot
+
     if eval:
         turns = opt.eval_runs
+    
+    if plot:
+        turns =1 
+        wandb.init(
+                # set the wandb project where this run will be logged
+                project="latent-mpc-plot",
+                entity="yubinwang",
+                # track hyperparameters and run metadata
+                #config={
+                #}
+            )
 
     success_num = 0 
     collided_num = 0
@@ -146,6 +160,9 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
             #print('normalized state  is ', s)
             a = model.select_action(s, deterministic=True, with_logprob=False)
             act = Action_adapter(a, act_low, act_high)  # [0,1] to [-max,max]
+
+            if plot:
+                wandb.log({"time":env.t, "speed": env.ego_state[-1], "acc":  act[0],  "steer":  act[1]})
 
             s_prime, r, done, info = env.step(act)
             #print('under evaluation')
