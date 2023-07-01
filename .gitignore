@@ -36,7 +36,7 @@ wandb/*
 figs/*
 videos/*
 model/*
-models_saved/*
+model copy/*
 .vscode/*
 runs/*
 gif/*
