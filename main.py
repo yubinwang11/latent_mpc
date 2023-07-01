@@ -11,6 +11,7 @@ import carla
 import wandb
 import sys
 import traceback
+import time
 
 import imageio
 
@@ -158,11 +159,14 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
         while not done:
             # Take deterministic actions at test time
             #print('normalized state  is ', s)
+            start_time = time.time()
             a = model.select_action(s, deterministic=True, with_logprob=False)
             act = Action_adapter(a, act_low, act_high)  # [0,1] to [-max,max]
+            end_time = time.time()
 
             if plot:
-                wandb.log({"time":env.t, "speed": env.ego_state[-1], "acc":  act[0],  "steer":  act[1]})
+                com_time = end_time - start_time
+                wandb.log({"time":env.t, "speed": env.ego_state[-1], "acc":  act[0],  "steer":  act[1], "runtime": com_time})
 
             s_prime, r, done, info = env.step(act)
             #print('under evaluation')
