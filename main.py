@@ -7,6 +7,7 @@ import gym_carla
 import carla
 import sys
 import traceback
+import wandb
 
 from matplotlib import animation
 import matplotlib.pyplot as plt
@@ -48,6 +49,7 @@ def save_frames_as_gif(frames, run_num=0):
 parser = argparse.ArgumentParser()
 parser.add_argument('--record', type=str2bool, default=False, help='Record gif or Not')
 parser.add_argument('--render', type=str2bool, default=True, help='Render or Not')
+parser.add_argument('--plot', type=str2bool, default=False, help='Plot or Not')
 
 parser.add_argument('--seed', type=int, default=1, help='random seed')
 
@@ -59,6 +61,18 @@ print(opt)
 def evaluate_policy(env, render, steps_per_epoch, record=False):
     scores = 0
     turns = opt.eval_turn
+
+    plot = opt.plot
+    if plot:
+        turns = 1
+        wandb.init(
+                # set the wandb project where this run will be logged
+                project="latent-mpc-plot",
+                entity="yubinwang",
+                # track hyperparameters and run metadata
+                #config={
+                #}
+            )
 
     for j in range(turns):
         if record:
@@ -74,7 +88,9 @@ def evaluate_policy(env, render, steps_per_epoch, record=False):
             # run  model predictive control
             _act, pred_traj = env.high_mpc.solve(ref_traj)
             
-            print('predicted traj:', pred_traj)
+            #print('predicted traj:', pred_traj)
+            if plot:
+                wandb.log({"time":env.t, "speed": env.ego_state[-1], "acc":  _act[0],  "steer":  _act[1]})
 
             s_prime, r, done, info = env.step(_act)
             print('current state:', env.ego_state)

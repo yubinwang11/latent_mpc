@@ -33,8 +33,8 @@ class High_MPC(object):
         self.a_max = 1.5*3; self.a_min = -3*3
         self.delta_max = 0.75 ; self.delta_min = -0.75  # 0.75
 
-        #self.v_min = 0
-        #self.v_max = 10
+        self.v_min = 0
+        self.v_max = 10
 
         self.safe_dist = np.sqrt(self.vehicle_length**2+self.vehicle_width**2)
 
@@ -150,11 +150,11 @@ class High_MPC(object):
 
         x_min = [-x_bound for _ in range(self._s_dim)]
         #x_min[0] = 0
-        #x_min[3] = self.v_min
+        x_min[3] = self.v_min
 
         x_max = [x_bound  for _ in range(self._s_dim)]
         #x_max[0] = 300
-        #x_max[3] = self.v_max
+        x_max[3] = self.v_max
 
         #
         g_min = [0 for _ in range(self._s_dim)]
@@ -231,8 +231,8 @@ class High_MPC(object):
                 corner_pos = X[:2, k+1] + ego_rotation @ alpha
 
                 self.nlp_g += [corner_pos[1]] # k+1
-                self.lbg += [-1.3*self.lane_width]
-                self.ubg += [1.3*self.lane_width]
+                self.lbg += [-1.4*self.lane_width]
+                self.ubg += [1.4*self.lane_width]
 
 
                 for i in range(self.num_obstacles):
@@ -244,10 +244,11 @@ class High_MPC(object):
                     other_rotation = self._get_roatation_matrix(P[self._s_dim+i*4+2])
                     Delta_coll_dist = corner_pos - obs_pos
                     g_coll  = Delta_coll_dist.T @ other_rotation.T @ np.diag([1/self.vehicle_width**(2), 1/self.vehicle_length**(2)]) @ other_rotation @ Delta_coll_dist
+                    #g_coll  = Delta_coll_dist.T @ other_rotation.T @ np.diag([1/self.vehicle_length**(2), 1/self.vehicle_width**(2)]) @ other_rotation @ Delta_coll_dist
                     self.nlp_g += [g_coll]
         
 
-                    self.lbg += [1.1]
+                    self.lbg += [1.05]
                     #self.lbg += [1.1*(0.98**(k+1))]
                     self.ubg += [np.inf]
 
