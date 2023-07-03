@@ -57,7 +57,7 @@ class CarlaEnv(gym.Env):
     if not self.record:
       self.obs_size = int(self.obs_range/self.lidar_bin)
     else:
-      self.obs_size = 1920
+      self.obs_size = int(self.obs_range/self.lidar_bin) # 1920
 
     if 'pixor' in params.keys():
       self.pixor = params['pixor']
@@ -224,13 +224,14 @@ class CarlaEnv(gym.Env):
   def reset(self):
 
     # Delete sensors, vehicles and walkers
-    self._clear_all_actors(['sensor.other.collision', 'sensor.other.obstacle', 'sensor.lidar.ray_cast', \
-                            'sensor.camera.rgb', 'vehicle.*', 'controller.ai.walker', 'walker.*'])
+    #self._clear_all_actors(['sensor.other.collision', 'sensor.other.obstacle', 'sensor.lidar.ray_cast', \
+                           #'sensor.camera.rgb', 'vehicle.*', 'controller.ai.walker', 'walker.*'])
+    self._clear_all_actors(['vehicle.*', 'controller.ai.walker', 'walker.*'])
     
     # Clear sensor objects  
     #self.collision_sensor = None
     #self.lidar_sensor = None
-   #self.camera_sensor = None
+    #self.camera_sensor = None
 
     # reset time
     self.t = 0
@@ -320,10 +321,10 @@ class CarlaEnv(gym.Env):
     self.moving_agents = []
     if self.env_id == 'env_0':
       self.lane_id_list = [-3, -2, -1, -1, -2, -2, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
-      self.s_list = [22+random.uniform(-self.noise_bound,self.noise_bound), 32+random.uniform(-self.noise_bound,self.noise_bound), \
-                     50+random.uniform(-self.noise_bound,self.noise_bound), 65+random.uniform(-self.noise_bound,self.noise_bound), \
-                      55+random.uniform(-self.noise_bound,self.noise_bound), 70+random.uniform(-self.noise_bound,self.noise_bound), \
-                        90+random.uniform(-self.noise_bound,self.noise_bound),100+random.uniform(-self.noise_bound,self.noise_bound), \
+      self.s_list = [20+random.uniform(-self.noise_bound,self.noise_bound), 30+random.uniform(-self.noise_bound,self.noise_bound), \
+                     40+random.uniform(-self.noise_bound,self.noise_bound), 65+random.uniform(-self.noise_bound,self.noise_bound), \
+                      55+random.uniform(-self.noise_bound,self.noise_bound), 80+random.uniform(-self.noise_bound,self.noise_bound), \
+                        95+random.uniform(-self.noise_bound,self.noise_bound),100+random.uniform(-self.noise_bound,self.noise_bound), \
                           120+random.uniform(-self.noise_bound,self.noise_bound) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
       self.road_id = 34
       self.center_lane_id = -2
@@ -439,11 +440,12 @@ class CarlaEnv(gym.Env):
   
   def step(self, action):
 
-     # top view
-    self.spectator = self.world.get_spectator()
-    transform = self.ego.get_transform()
-    self.spectator.set_transform(carla.Transform(transform.location + carla.Location(z=30),
-                                            carla.Rotation(pitch=-90)))
+    if self.eval:
+      # top view
+      self.spectator = self.world.get_spectator()
+      transform = self.ego.get_transform()
+      self.spectator.set_transform(carla.Transform(transform.location + carla.Location(z=30),
+                                              carla.Rotation(pitch=-90)))
         
     # Calculate acceleration and steering
     if self.discrete:
@@ -513,7 +515,8 @@ class CarlaEnv(gym.Env):
     #if self.done:
       # Delete sensors, vehicles and walkers
       #self._clear_all_actors(['sensor.other.collision', 'sensor.other.obstacle', 'sensor.lidar.ray_cast', \
-                            #'sensor.camera.rgb', 'vehicle.*', 'controller.ai.walker', 'walker.*'])
+                            #'sensor.camera.rgb']), 
+                            # 'vehicle.*', 'controller.ai.walker', 'walker.*'])
 
     return obs,  r, self.done, copy.deepcopy(info) #(obs,  r, self.done, copy.deepcopy(info))
 
@@ -895,13 +898,14 @@ class CarlaEnv(gym.Env):
 
     r_speed = 0
     if self.arrived:
-      r_speed += 10* (self.road_len / self.t - 3)
+      #r_speed += 10* (self.road_len / self.t - 3)
+      r_speed += self.road_len / self.t 
 
     r_fast = 0
     v = self.ego.get_velocity()
     speed = np.sqrt(v.x**2 + v.y**2)
-    if 7<= speed <=10:
-      r_fast += 0.1*abs(speed)
+    #if 7<= speed <=10:
+      #r_fast += 0.1*abs(speed)
 
     r_time = 0 
     if self.out_of_time:

@@ -53,18 +53,18 @@ def save_frames_as_gif(frames, run_num=0):
 
 '''Hyperparameter Setting'''
 parser = argparse.ArgumentParser()
-parser.add_argument('--wandb', type=str2bool, default=False, help='Use Wandb to record the training')
+parser.add_argument('--wandb', type=str2bool, default=True, help='Use Wandb to record the training')
 parser.add_argument('--write', type=str2bool, default=False, help='Use SummaryWriter to record the training')
-parser.add_argument('--eval', type=str2bool, default=True, help='Evaluate or Not')
+parser.add_argument('--eval', type=str2bool, default=False, help='Evaluate or Not')
 parser.add_argument('--record', type=str2bool, default=False, help='Record gif or Not')
-parser.add_argument('--plot', type=str2bool, default=True, help='Plot or Not')
+parser.add_argument('--plot', type=str2bool, default=False, help='Plot or Not')
 parser.add_argument('--render', type=str2bool, default=True, help='Render or Not')
-parser.add_argument('--Loadmodel', type=str2bool, default=True, help='Load pretrained model or Not')
-parser.add_argument('--ModelIdex', type=int, default= 120000, help='which model to load') # 270000
+parser.add_argument('--Loadmodel', type=str2bool, default=False, help='Load pretrained model or Not')
+parser.add_argument('--ModelIdex', type=int, default=290000, help='which model to load') # 270000
 parser.add_argument('--seed', type=int, default=1, help='random seed')
 
 parser.add_argument('--total_steps', type=int, default=int(5e6), help='Max training steps')
-parser.add_argument('--save_interval', type=int, default=int(1e4), help='Model saving interval, in steps.')
+parser.add_argument('--save_interval', type=int, default=int(1e3), help='Model saving interval, in steps.') # 1e4
 parser.add_argument('--eval_interval', type=int, default=int(1e3), help='Model evaluating interval, in stpes.')
 parser.add_argument('--eval_turn', type=int, default=3, help='Model evaluating times, in episode.') # 3
 parser.add_argument('--eval_runs', type=int, default=100, help='Model evaluating times, in episode.') # 3
@@ -143,17 +143,20 @@ class ZFilter:
     def output_shape(self, input_space):
         return input_space.shape
     
-def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, running_state, record=False):
+def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, running_state):
+    print('start evaluating')
     scores = 0
     turns = opt.eval_turn
     eval = opt.eval
     plot = opt.plot
+    record = opt.record
     success_num = 0 
     collided_num = 0
     out_time_num = 0
     total_travel = 0
     total_time = 0
-
+    
+    '''
     if plot:
         wandb.init(
                 # set the wandb project where this run will be logged
@@ -163,6 +166,7 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
                 #config={
                 #}
             )
+    '''
 
     if eval:
         turns = opt.eval_runs
@@ -177,11 +181,13 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
         while not done:
             # Take deterministic actions at test time
             #print('normalized state  is ', s)
-            rl_start_time = time.time()
+            if plot:
+                rl_start_time = time.time()
             a = model.select_action(s, deterministic=True, with_logprob=False)
             act = Action_adapter(a, act_low, act_high)  # [0,1] to [-max,max]
-            rl_end_time = time.time()
-            rl_time = rl_end_time - rl_start_time
+            if plot:
+                rl_end_time = time.time()
+                rl_time = rl_end_time - rl_start_time
 
             #print(act)
             ref = act #.tolist()
@@ -192,10 +198,14 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
             # compute the mpc reference
             ref_traj = env.ego_state + ref_obj + env.goal_state
             # run  model predictive control
-            mpc_start_time = time.time()
+
+            if plot:
+                mpc_start_time = time.time()
+
             _act, pred_traj = env.high_mpc.solve(ref_traj)
-            mpc_end_time = time.time()
-            mpc_time = mpc_end_time - mpc_start_time
+            if plot:
+                mpc_end_time = time.time()
+                mpc_time = mpc_end_time - mpc_start_time
 
             if plot:
                 com_time = rl_time + mpc_time
@@ -364,7 +374,7 @@ def main():
     replay_buffer = RandomBuffer(state_dim, action_dim, env_with_Dead, max_size=int(1e6))
 
     if eval:
-        average_reward = evaluate_policy(eval_env, model, False, steps_per_epoch, env.act_low, env.act_high, running_state, record=record) #evaluate_policy(env, model, render, steps_per_epoch, max_action, EnvIdex)
+        average_reward = evaluate_policy(eval_env, model, False, steps_per_epoch, env.act_low, env.act_high, running_state) #evaluate_policy(env, model, render, steps_per_epoch, max_action, EnvIdex)
         print('Average Reward:', average_reward)
     else:
         s, done, current_steps = env.reset(), False, 0
