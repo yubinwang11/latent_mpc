@@ -38,7 +38,7 @@ parser.add_argument('--wandb', type=str2bool, default=False, help='Use Wandb to 
 parser.add_argument('--write', type=str2bool, default=False, help='Use SummaryWriter to record the training')
 parser.add_argument('--eval', type=str2bool, default=True, help='Evaluate or Not')
 parser.add_argument('--record', type=str2bool, default=False, help='Record gif or Not')
-parser.add_argument('--plot', type=str2bool, default=True, help='Plot or Not')
+parser.add_argument('--plot', type=str2bool, default=False, help='Plot or Not')
 parser.add_argument('--render', type=str2bool, default=True, help='Render or Not')
 parser.add_argument('--Loadmodel', type=str2bool, default=True, help='Load pretrained model or Not')
 parser.add_argument('--ModelIdex', type=int, default= 100000, help='which model to load') 

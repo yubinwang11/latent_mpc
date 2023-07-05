@@ -64,9 +64,8 @@ class CarlaEnv(gym.Env):
 
     # action and observation spaces
 
-    self.act_high = np.array([3.0, np.pi/6], dtype=np.float32)
-    self.act_low = np.array([-3.0, -np.pi/6], dtype=np.float32)
-
+    self.act_high = np.array([4.5, 0.75], dtype=np.float32)
+    self.act_low = np.array([-4.5, -0.75], dtype=np.float32)
 
     self.obs_high = np.array([275.0, 10.0, np.pi/2, 20.0, \
                               50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0,\
@@ -210,9 +209,9 @@ class CarlaEnv(gym.Env):
     # Delete sensors, vehicles and walkers
     #if self.reset_eval:
       #pass
-    self._clear_all_actors(['sensor.other.collision', 'sensor.other.obstacle', 'sensor.lidar.ray_cast', \
-                            'sensor.camera.rgb', 'vehicle.*', 'controller.ai.walker', 'walker.*'])
-      #self._clear_all_actors(['vehicle.*', 'controller.ai.walker', 'walker.*'], True)
+    #self._clear_all_actors(['sensor.other.collision', 'sensor.other.obstacle', 'sensor.lidar.ray_cast', \
+                           # 'sensor.camera.rgb', 'vehicle.*', 'controller.ai.walker', 'walker.*'])
+    self._clear_all_actors(['vehicle.*', 'controller.ai.walker', 'walker.*'])
 
     # reset time
     self.t = 0
@@ -227,9 +226,9 @@ class CarlaEnv(gym.Env):
     self.reset_eval = reset_eval
 
     # Clear sensor objects  
-    #self.collision_sensor = None
-    #self.lidar_sensor = None
-    #self.camera_sensor = None
+    self.collision_sensor = None
+    self.lidar_sensor = None
+    self.camera_sensor = None
 
     self.inter_axle_distance = None
 
@@ -307,11 +306,18 @@ class CarlaEnv(gym.Env):
     
     # spawn the moving obstacles (agents)
     self.moving_agents = []
+    #self.lane_id_list = [-3, -2, -1, -1, -2, -2, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
+    #self.s_list = [22+random.uniform(-5,5), 32+random.uniform(-5,5), 50+random.uniform(-5,5), \
+                   #65+random.uniform(-5,5), 55+random.uniform(-5,5), 70+random.uniform(-5,5), 90+random.uniform(-5,5),\
+                   #100+random.uniform(-5,5), 120+random.uniform(-5,5) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
+    self.noise_bound = 5
     self.lane_id_list = [-3, -2, -1, -1, -2, -2, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
-    self.s_list = [22+random.uniform(-5,5), 32+random.uniform(-5,5), 50+random.uniform(-5,5), \
-                   65+random.uniform(-5,5), 55+random.uniform(-5,5), 70+random.uniform(-5,5), 90+random.uniform(-5,5),\
-                   100+random.uniform(-5,5), 120+random.uniform(-5,5) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
-
+    self.s_list = [20+random.uniform(-self.noise_bound,self.noise_bound), 30+random.uniform(-self.noise_bound,self.noise_bound), \
+                     40+random.uniform(-self.noise_bound,self.noise_bound), 65+random.uniform(-self.noise_bound,self.noise_bound), \
+                      55+random.uniform(-self.noise_bound,self.noise_bound), 80+random.uniform(-self.noise_bound,self.noise_bound), \
+                        95+random.uniform(-self.noise_bound,self.noise_bound),100+random.uniform(-self.noise_bound,self.noise_bound), \
+                          120+random.uniform(-self.noise_bound,self.noise_bound) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
+    
     self.num_agents = len(self.lane_id_list)
     #self.num_agents = 0
 
@@ -878,6 +884,9 @@ class CarlaEnv(gym.Env):
     if speed >= 10:
       r_out_speed -= abs(speed - 10)
 
+    r_slow = 0
+    if speed <= 7.5:
+      r_slow -= 0.5* abs(speed - 7)
     #r_speed = -abs(speed - self.desired_speed)
     #r_fast = 0
     #if lspeed_lon > self.desired_speed:
@@ -896,11 +905,12 @@ class CarlaEnv(gym.Env):
 
     r_speed = 0
     if self.arrived:
-      r_speed += 10* (275 / self.t - 3)
+      #r_speed += 10* (275 / self.t - 3)
+      r_speed += 275 / self.t 
 
     r_fast = 0
-    if speed >= 7:
-      r_fast += 0.1*abs(speed)
+    #if speed >= 7:
+     # r_fast += 0.1*abs(speed)
 
     r_time = 0 
     if self.out_of_time:
@@ -937,7 +947,7 @@ class CarlaEnv(gym.Env):
       
     #r = 200*r_collision + 1*lspeed_lon + 10*r_fast + 1*r_out + r_steer*5 + 0.2*r_lat - 0.1+  r_arrive + 10 * r_speed + 5 * r_s
     #r = 200 * r_collision + 30 * r_speed + 0.1 * r_s + r_arrive + 10 * r_lane + 1 * r_road + r_time
-    r = r_collision + r_time + r_forward + r_steer + r_arrive + r_fast + r_road + r_speed + r_out_speed
+    r = r_collision + r_time + r_forward + r_steer + r_arrive + r_fast + r_road + r_speed + r_out_speed + r_slow
 
     #self.reward += r
   
