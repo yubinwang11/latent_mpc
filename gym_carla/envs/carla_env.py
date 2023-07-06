@@ -224,15 +224,17 @@ class CarlaEnv(gym.Env):
   def reset(self):
 
     # Delete sensors, vehicles and walkers
-    #self._clear_all_actors(['sensor.other.collision', 'sensor.other.obstacle', 'sensor.lidar.ray_cast', \
-                           #'sensor.camera.rgb', 'vehicle.*', 'controller.ai.walker', 'walker.*'])
-    self._clear_all_actors(['vehicle.*', 'controller.ai.walker', 'walker.*'])
+    #self._clear_all_actors(['vehicle.*', 'controller.ai.walker', 'walker.*'])
     
     # Clear sensor objects  
-    #self.collision_sensor = None
+    self.collision_sensor = None
     #self.lidar_sensor = None
-    #self.camera_sensor = None
+    self.camera_sensor = None
+    self.detector_list = None
 
+    self._clear_all_actors(['sensor.other.collision', 'sensor.other.obstacle', 'sensor.lidar.ray_cast', \
+                           'sensor.camera.rgb', 'vehicle.*', 'controller.ai.walker', 'walker.*'])
+    
     # reset time
     self.t = 0
     # reset reward
@@ -321,8 +323,8 @@ class CarlaEnv(gym.Env):
     self.moving_agents = []
     if self.env_id == 'env_0':
       self.lane_id_list = [-3, -2, -1, -1, -2, -2, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
-      self.s_list = [20+random.uniform(-self.noise_bound,self.noise_bound), 30+random.uniform(-self.noise_bound,self.noise_bound), \
-                     40+random.uniform(-self.noise_bound,self.noise_bound), 65+random.uniform(-self.noise_bound,self.noise_bound), \
+      self.s_list = [17+random.uniform(-self.noise_bound,self.noise_bound), 30+random.uniform(-self.noise_bound,self.noise_bound), \
+                     45+random.uniform(-self.noise_bound,self.noise_bound), 65+random.uniform(-self.noise_bound,self.noise_bound), \
                       55+random.uniform(-self.noise_bound,self.noise_bound), 80+random.uniform(-self.noise_bound,self.noise_bound), \
                         95+random.uniform(-self.noise_bound,self.noise_bound),100+random.uniform(-self.noise_bound,self.noise_bound), \
                           120+random.uniform(-self.noise_bound,self.noise_bound) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
@@ -517,6 +519,11 @@ class CarlaEnv(gym.Env):
       #self._clear_all_actors(['sensor.other.collision', 'sensor.other.obstacle', 'sensor.lidar.ray_cast', \
                             #'sensor.camera.rgb']), 
                             # 'vehicle.*', 'controller.ai.walker', 'walker.*'])
+      #self.camera_sensor.destroy()
+      #self.collision_sensor.destroy()
+      #for i in range(len(self.detector_list)):
+        #self.detector_list[i].destroy()
+      
 
     return obs,  r, self.done, copy.deepcopy(info) #(obs,  r, self.done, copy.deepcopy(info))
 

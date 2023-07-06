@@ -53,14 +53,14 @@ def save_frames_as_gif(frames, run_num=0):
 
 '''Hyperparameter Setting'''
 parser = argparse.ArgumentParser()
-parser.add_argument('--wandb', type=str2bool, default=True, help='Use Wandb to record the training')
+parser.add_argument('--wandb', type=str2bool, default=False, help='Use Wandb to record the training')
 parser.add_argument('--write', type=str2bool, default=False, help='Use SummaryWriter to record the training')
-parser.add_argument('--eval', type=str2bool, default=False, help='Evaluate or Not')
+parser.add_argument('--eval', type=str2bool, default=True, help='Evaluate or Not')
 parser.add_argument('--record', type=str2bool, default=False, help='Record gif or Not')
 parser.add_argument('--plot', type=str2bool, default=False, help='Plot or Not')
 parser.add_argument('--render', type=str2bool, default=True, help='Render or Not')
-parser.add_argument('--Loadmodel', type=str2bool, default=False, help='Load pretrained model or Not')
-parser.add_argument('--ModelIdex', type=int, default=290000, help='which model to load') # 270000
+parser.add_argument('--Loadmodel', type=str2bool, default=True, help='Load pretrained model or Not')
+parser.add_argument('--ModelIdex', type=int, default=128000, help='which model to load') # 270000
 parser.add_argument('--seed', type=int, default=1, help='random seed')
 
 parser.add_argument('--total_steps', type=int, default=int(5e6), help='Max training steps')
