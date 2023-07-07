@@ -50,11 +50,11 @@ def save_frames_as_gif(frames, run_num=0):
 parser = argparse.ArgumentParser()
 parser.add_argument('--record', type=str2bool, default=False, help='Record gif or Not')
 parser.add_argument('--render', type=str2bool, default=True, help='Render or Not')
-parser.add_argument('--plot', type=str2bool, default=True, help='Plot or Not')
+parser.add_argument('--plot', type=str2bool, default=False, help='Plot or Not')
 
 parser.add_argument('--seed', type=int, default=1, help='random seed')
 
-parser.add_argument('--eval_turn', type=int, default=3, help='Model evaluating times, in episode.') # 3
+parser.add_argument('--eval_turn', type=int, default=100, help='Model evaluating times, in episode.') # 3
 opt = parser.parse_args()
 print(opt)
 
@@ -63,6 +63,12 @@ def evaluate_policy(env, render, steps_per_epoch, record=False):
     scores = 0
     turns = opt.eval_turn
     plot = opt.plot
+
+    success_num = 0 
+    collided_num = 0
+    out_time_num = 0
+    total_travel = 0
+    total_time = 0
 
     if plot:
         turns = 1
@@ -99,8 +105,8 @@ def evaluate_policy(env, render, steps_per_epoch, record=False):
             s_prime, r, done, info = env.step(_act)
             s = s_prime
 
-            print('current state:', env.ego_state)
-            print('computed action:', _act)
+            #print('current state:', env.ego_state)
+            #print('computed action:', _act)
 
             if type(r) == tuple:
                 r = np.array(list(r))
@@ -117,6 +123,20 @@ def evaluate_policy(env, render, steps_per_epoch, record=False):
 
         # print(ep_r)
         scores += ep_r
+
+        if env.arrived:
+                success_num += 1
+
+                total_travel += env.ego_state[0]
+                total_time += env.t 
+                print('current iter:', j+1, 'averaged speed:', total_travel/total_time, 'total travel:', total_travel, 'total time', total_time,)
+
+        elif env.collided:
+            collided_num += 1
+        elif env.out_of_time:
+            out_time_num += 1
+        
+        print('current iter:', j+1, 'success num:', success_num/(j+1), 'collided num:', collided_num/(j+1), 'out of time num:', out_time_num/(j+1))
 
         if record:
             # save_frames_as_gif(frames, j)

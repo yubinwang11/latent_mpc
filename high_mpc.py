@@ -38,8 +38,8 @@ class High_MPC(object):
         self.v_max = 10
 
         self.lt_bound = -1.6 * self.lane_width 
-        self.rt_bound = 2.0 * self.lane_width
-        self.safe_bound_dist = 2 * self.lane_width / 3
+        self.rt_bound = 1.6 * self.lane_width
+        self.safe_bound_dist = 1 * self.lane_width / 2
 
         #
         # state dimension (x, y,           # vehicle position
@@ -58,9 +58,9 @@ class High_MPC(object):
         self._Q_u = np.diag([0.1, 0.1]) # a, delta self._Q_u = np.diag([0.1, 0.1]) # a, delta
         self._Q_delta_u = np.diag([1, 1]) # delta_a, delta_steer
 
-        self._Q_coll = np.diag([150])
+        self._Q_coll = np.diag([200]) # 150
 
-        self._Q_bound = np.diag([500]) # 750
+        self._Q_bound = np.diag([1000]) # 750
 
         # initial state and control action
         if init_state is None:
@@ -254,8 +254,8 @@ class High_MPC(object):
                                                                               #1/(self.vehicle_length+1.0)**(2)]) @ other_rotation @ Delta_coll_dist
                                                                               
                     violation = 0
-                    violation += ca.fmax(0, self.vehicle_length+1.5 - ca.sqrt(con_coll[0]*con_coll[0])) # 2.5
-                    violation += ca.fmax(0, self.vehicle_width+0.2 - ca.sqrt(con_coll[1]*con_coll[1]))  # 0.5
+                    violation += ca.fmax(0, self.vehicle_length+1.5 - ca.sqrt(con_coll[0]*con_coll[0])) # 2.5 1.5 
+                    violation += ca.fmax(0, self.vehicle_width+0.5 - ca.sqrt(con_coll[1]*con_coll[1]))  # 0.5
                     cost_coll_k += f_cost_coll(violation)
 
             self.mpc_obj = self.mpc_obj + cost_goal_k + cost_u_k + cost_delta_u_k + cost_coll_k + cost_lt_bound_k + cost_rt_bound_k
