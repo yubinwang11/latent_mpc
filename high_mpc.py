@@ -248,7 +248,7 @@ class High_MPC(object):
                     self.nlp_g += [g_coll]
         
 
-                    self.lbg += [1.05]
+                    self.lbg += [1.1]
                     #self.lbg += [1.1*(0.98**(k+1))]
                     self.ubg += [np.inf]
 

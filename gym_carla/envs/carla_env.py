@@ -199,6 +199,7 @@ class CarlaEnv(gym.Env):
     self.done = False
     self.arrived = False
     self.out_of_time = False
+    self.collided = False
     self.prev_decision_var = None
 
     # Clear sensor objects  
@@ -297,6 +298,14 @@ class CarlaEnv(gym.Env):
     self.s_list = [27+random.uniform(-5,5), 50+random.uniform(-5,5), \
                    70+random.uniform(-5,5),  85+random.uniform(-5,5), \
                    100+random.uniform(-5,5), 110+random.uniform(-5,5) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
+    
+    #self.noise_bound = 5
+    #self.lane_id_list = [-3, -2, -1, -1, -2, -2, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
+    #self.s_list = [17+random.uniform(-self.noise_bound,self.noise_bound), 30+random.uniform(-self.noise_bound,self.noise_bound), \
+                     #45+random.uniform(-self.noise_bound,self.noise_bound), 65+random.uniform(-self.noise_bound,self.noise_bound), \
+                      #55+random.uniform(-self.noise_bound,self.noise_bound), 80+random.uniform(-self.noise_bound,self.noise_bound), \
+                        #95+random.uniform(-self.noise_bound,self.noise_bound),100+random.uniform(-self.noise_bound,self.noise_bound), \
+                          #120+random.uniform(-self.noise_bound,self.noise_bound) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
     
     self.num_agents = len(self.lane_id_list)
     #self.num_agents = 0
@@ -729,6 +738,7 @@ class CarlaEnv(gym.Env):
     # If collides
     if len(self.collision_hist)>0: 
       print('end with collision')
+      self.collided = True
       return True
 
     # If reach maximum timestep
