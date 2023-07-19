@@ -60,7 +60,7 @@ parser.add_argument('--record', type=str2bool, default=False, help='Record gif o
 parser.add_argument('--plot', type=str2bool, default=False, help='Plot or Not')
 parser.add_argument('--render', type=str2bool, default=True, help='Render or Not')
 parser.add_argument('--Loadmodel', type=str2bool, default=True, help='Load pretrained model or Not')
-parser.add_argument('--ModelIdex', type=int, default=128000, help='which model to load') # 270000
+parser.add_argument('--ModelIdex', type=int, default=95000, help='which model to load') # 270000
 parser.add_argument('--seed', type=int, default=1, help='random seed')
 
 parser.add_argument('--total_steps', type=int, default=int(5e6), help='Max training steps')

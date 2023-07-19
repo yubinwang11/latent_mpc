@@ -69,8 +69,8 @@ class CarlaEnv(gym.Env):
     self.dests = None
 
     # action and observation spaces
-    self.act_high = np.array([20.0, 10.0, np.pi/2, 20.0, 10.0, 10.0, 10.0, 10.0], dtype=np.float32)
-    self.act_low = np.array([-5.0, -10, -np.pi/2, -5.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float32)
+    self.act_high = np.array([20.0, 10.0, np.pi/2, 20.0, 20.0, 20.0, 20.0, 20.0], dtype=np.float32)
+    self.act_low = np.array([-20.0, -10, -np.pi/2, -10.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float32)
 
     self.obs_high = np.array([275.0, 10.0, np.pi/2, 20.0, \
                               50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0,\
@@ -322,12 +322,16 @@ class CarlaEnv(gym.Env):
     # spawn the moving obstacles (agents)
     self.moving_agents = []
     if self.env_id == 'env_0':
-      self.lane_id_list = [-3, -2, -1, -1, -2, -2, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
-      self.s_list = [17+random.uniform(-self.noise_bound,self.noise_bound), 30+random.uniform(-self.noise_bound,self.noise_bound), \
-                     45+random.uniform(-self.noise_bound,self.noise_bound), 65+random.uniform(-self.noise_bound,self.noise_bound), \
-                      55+random.uniform(-self.noise_bound,self.noise_bound), 80+random.uniform(-self.noise_bound,self.noise_bound), \
-                        95+random.uniform(-self.noise_bound,self.noise_bound),100+random.uniform(-self.noise_bound,self.noise_bound), \
-                          120+random.uniform(-self.noise_bound,self.noise_bound) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
+      #self.lane_id_list = [-3, -2, -1, -1, -2, -2, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
+      #self.s_list = [17+random.uniform(-self.noise_bound,self.noise_bound), 30+random.uniform(-self.noise_bound,self.noise_bound), \
+                     #45+random.uniform(-self.noise_bound,self.noise_bound), 65+random.uniform(-self.noise_bound,self.noise_bound), \
+                      #55+random.uniform(-self.noise_bound,self.noise_bound), 80+random.uniform(-self.noise_bound,self.noise_bound), \
+                        #95+random.uniform(-self.noise_bound,self.noise_bound),100+random.uniform(-self.noise_bound,self.noise_bound), \
+                          #120+random.uniform(-self.noise_bound,self.noise_bound) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
+      self.lane_id_list = [-3,  -1, -1, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
+      self.s_list = [25+random.uniform(-5,5), 40+random.uniform(-5,5), \
+                   60+random.uniform(-5,5),  75+random.uniform(-5,5), \
+                   90+random.uniform(-5,5), 110+random.uniform(-5,5) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
       self.road_id = 34
       self.center_lane_id = -2
 
