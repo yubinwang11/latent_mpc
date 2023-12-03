@@ -53,14 +53,14 @@ def save_frames_as_gif(frames, run_num=0):
 
 '''Hyperparameter Setting'''
 parser = argparse.ArgumentParser()
-parser.add_argument('--wandb', type=str2bool, default=False, help='Use Wandb to record the training')
+parser.add_argument('--wandb', type=str2bool, default=True, help='Use Wandb to record the training')
 parser.add_argument('--write', type=str2bool, default=False, help='Use SummaryWriter to record the training')
-parser.add_argument('--eval', type=str2bool, default=True, help='Evaluate or Not')
+parser.add_argument('--eval', type=str2bool, default=False, help='Evaluate or Not')
 parser.add_argument('--record', type=str2bool, default=False, help='Record gif or Not')
 parser.add_argument('--plot', type=str2bool, default=False, help='Plot or Not')
 parser.add_argument('--render', type=str2bool, default=True, help='Render or Not')
-parser.add_argument('--Loadmodel', type=str2bool, default=True, help='Load pretrained model or Not')
-parser.add_argument('--ModelIdex', type=int, default=95000, help='which model to load') # 270000
+parser.add_argument('--Loadmodel', type=str2bool, default=False, help='Load pretrained model or Not')
+parser.add_argument('--ModelIdex', type=int, default=35000, help='which model to load') # 270000
 parser.add_argument('--seed', type=int, default=1, help='random seed')
 
 parser.add_argument('--total_steps', type=int, default=int(5e6), help='Max training steps')
@@ -87,6 +87,7 @@ class RunningStat(object):
 
     def push(self, x):
         x = np.asarray(x)
+        #print(x.shape, self._M.shape)
         assert x.shape == self._M.shape
         self._n += 1
         if self._n == 1:
@@ -191,9 +192,9 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
 
             #print(act)
             ref = act #.tolist()
-            tra_state = np.array(env.ego_state) + np.array(ref[0:4])
-            tra_state = tra_state.tolist()
-            ref_obj = tra_state + ref[4:8]
+            tra_state = np.array(env.ego_state[0]) + np.array(ref[0])
+            #tra_state = tra_state.tolist()
+            ref_obj = [tra_state] + ref[1:8]
 
             # compute the mpc reference
             ref_traj = env.ego_state + ref_obj + env.goal_state
@@ -213,7 +214,8 @@ def evaluate_policy(env, model, render, steps_per_epoch, act_low, act_high, runn
 
             s_prime, r, done, info = env.step(_act)
             #print('under evaluation')
-
+            #print(s_prime)
+            
             s_prime = running_state(s_prime)
             # r = Reward_adapter(r, EnvIdex)
             if type(r) == tuple:
@@ -265,7 +267,6 @@ def main():
 
     # parameters for the gym_carla environment
     params = {
-    'env_id': 'env_0',  # which scenario  to simulate
 	'number_of_vehicles': 0, # 100
 	'number_of_walkers': 0,
 	'display_size': 256*2,  # screen size of bird-eye render
@@ -283,7 +284,7 @@ def main():
 	'max_time_episode': 500,  # maximum timesteps per episode
 	'max_waypt': 12,  # maximum number of waypoints
     'detect_range': 50,  # obstacle detection range (meter)
-    'detector_num': 37,  # number of obstacle detectiors #19
+    'detector_num': 73,  # number of obstacle detectiors # 37
     'detect_angle': 180,  # horizontal angle of obstacle detection
 	'obs_range': 32,  # observation range (meter)
 	'lidar_bin': 0.125,  # bin size of lidar sensor (meter)
@@ -340,12 +341,12 @@ def main():
     if (use_wandb):
         wandb.init(
                 # set the wandb project where this run will be logged
-                project="CarlaEnv",
+                project="learn_ref",
                 entity="yubinwang",
                 # track hyperparameters and run metadata
                 config={
                 "algo": "SAC", # discor
-                "max_speed": "15", # discor
+                #"max_speed": "15", # discor
                 }
             )
 
@@ -400,9 +401,9 @@ def main():
 
             #print(act)
             ref = act #.tolist()
-            tra_state = np.array(env.ego_state) + np.array(ref[0:4])
-            tra_state = tra_state.tolist()
-            ref_obj = tra_state + ref[4:8]
+            tra_state = np.array(env.ego_state[0]) + np.array(ref[0])
+            #tra_state = tra_state.tolist()
+            ref_obj = [tra_state] + ref[1:8]
 
             # compute the mpc reference
             ref_traj = env.ego_state + ref_obj + env.goal_state

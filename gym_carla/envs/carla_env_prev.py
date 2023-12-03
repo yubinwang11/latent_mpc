@@ -70,13 +70,7 @@ class CarlaEnv(gym.Env):
     self.act_high = np.array([50.0, 10.0, np.pi/2, 20.0, 50.0, 50.0, 50.0, 50.0], dtype=np.float32) 
     self.act_low = np.array([-50.0, -10, -np.pi/2, -20.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float32)
     #self.act_low = np.array([-20.0, -10, -np.pi/2, -10.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float32)
-    self.obs_high, self.obs_low = [275.0, 10.0, np.pi/2, 20.0], [0.0, -10, -np.pi/2, -5.0]
-    for i in range(self.detector_num):
-      self.obs_high.append(50.0)
-      self.obs_low.append(0.0)
-    self.obs_high = np.array(self.obs_high, dtype=np.float32)
-    self.obs_low = np.array(self.obs_low, dtype=np.float32)
-    '''
+
     self.obs_high = np.array([275.0, 10.0, np.pi/2, 20.0, \
                               50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0,\
                               50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0,\
@@ -85,7 +79,6 @@ class CarlaEnv(gym.Env):
                              0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,\
                              0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,\
                              0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float32)
-    '''
     self.action_space = spaces.Box(
       low=self.act_low, high=self.act_high, dtype=np.float32
       )
@@ -222,7 +215,7 @@ class CarlaEnv(gym.Env):
       self.pixel_grid = np.vstack((x, y)).T
 
     if self.eval:
-      self.noise_bound = 0.5
+      self.noise_bound = 2
     else:
       self.noise_bound = 5
 
@@ -325,30 +318,24 @@ class CarlaEnv(gym.Env):
     
     # spawn the moving obstacles (agents)
     self.moving_agents = []
-    #self.lane_id_list = [-3, -2, -1, -1, -2, -2, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
-    self.s_list = [15+random.uniform(-self.noise_bound,self.noise_bound), 30+random.uniform(-self.noise_bound,self.noise_bound), \
-                    45+random.uniform(-self.noise_bound,self.noise_bound), 60+random.uniform(-self.noise_bound,self.noise_bound), \
-                    75+random.uniform(-self.noise_bound,self.noise_bound), 90+random.uniform(-self.noise_bound,self.noise_bound), \
-                      105+random.uniform(-self.noise_bound,self.noise_bound),120+random.uniform(-self.noise_bound,self.noise_bound), \
-                        135+random.uniform(-self.noise_bound,self.noise_bound) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
-    for i in range(len(self.s_list)):
-      if i > 0:
-        distance_agents = self.s_list[i] - self.s_list[i-1]
-        if distance_agents <= 6:
-          distance_refinement = 6-distance_agents
-          self.s_list[i-1] -= distance_refinement / 2 
-          self.s_list[i] += distance_refinement / 2 
-          
+    self.lane_id_list = [-3, -2, -1, -1, -2, -2, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
+    self.s_list = [17+random.uniform(-self.noise_bound,self.noise_bound), 30+random.uniform(-self.noise_bound,self.noise_bound), \
+                    45+random.uniform(-self.noise_bound,self.noise_bound), 65+random.uniform(-self.noise_bound,self.noise_bound), \
+                    55+random.uniform(-self.noise_bound,self.noise_bound), 80+random.uniform(-self.noise_bound,self.noise_bound), \
+                      95+random.uniform(-self.noise_bound,self.noise_bound),100+random.uniform(-self.noise_bound,self.noise_bound), \
+                        120+random.uniform(-self.noise_bound,self.noise_bound) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
+    #self.lane_id_list = [-3,  -1, -1, -3, -1, -3] #self.lane_id_list = [-3, -1, -1, -1, -2, -2, -2]
+    #self.s_list = [25+random.uniform(-5,5), 40+random.uniform(-5,5), \
+                  #60+random.uniform(-5,5),  75+random.uniform(-5,5), \
+                  #90+random.uniform(-5,5), 110+random.uniform(-5,5) ] #self.s_list = [30, 60, 80, 100, 100, 80, 120]
     self.road_id = 34
     self.center_lane_id = -2
 
-    self.num_agents = len(self.s_list)
+    self.num_agents = len(self.lane_id_list)
     #self.num_agents = 0
 
     for i in range(self.num_agents):
-        spawn_lane_id = -random.randint(1,3)
-        #print(spawn_lane_id)
-        agent_waypoint = self.map.get_waypoint_xodr(self.road_id, spawn_lane_id, self.s_list[i])
+        agent_waypoint = self.map.get_waypoint_xodr(self.road_id, self.lane_id_list[i], self.s_list[i])
         spawn_agent_transform = carla.Transform(location=carla.Location(x=agent_waypoint.transform.location.x, \
                                     y=agent_waypoint.transform.location.y, z=agent_waypoint.transform.location.z+0.5),\
                                                     rotation=agent_waypoint.transform.rotation)
@@ -379,6 +366,19 @@ class CarlaEnv(gym.Env):
       #self.detector_list[detector_i].listen(lambda distance_i: get_obstacle_distance(distance_i, detector_i))
 
       self.listen_dector_distance(detector_i)
+    
+    '''
+    # Add lidar sensor
+    self.lidar_sensor = self.world.spawn_actor(self.lidar_bp, self.lidar_trans, attach_to=self.ego)
+    self.lidar_sensor.listen(lambda data: get_lidar_data(data))
+    def get_lidar_data(data):
+      self.lidar_data = data
+    '''
+    # Add radar sensor
+    #self.radar_sensor = self.world.spawn_actor(self.radar_bp, self.radar_trans, attach_to=self.ego)
+    #self.radar_sensor.listen(lambda data: get_radar_data(data))
+    #def get_radar_data(data):
+    #self.radar_data = data
 
     # Add camera sensor
     self.camera_sensor = self.world.spawn_actor(self.camera_bp, self.camera_trans, attach_to=self.ego)
@@ -442,6 +442,22 @@ class CarlaEnv(gym.Env):
     else:
       throttle = 0
       brake = np.clip(-acc/8,0,1)
+
+    '''
+    max_throttle=0.75; max_brake=0.5; max_steering=0.75; KP=1; dead_zone = 0.05 # 0.1
+
+    if acc >= dead_zone:
+        throttle = min(max_throttle, KP*acc)
+        brake = 0
+    elif acc <= -dead_zone:
+        throttle = 0 
+        brake = min(max_brake, -KP*acc)
+    else:
+        throttle = 0
+        brake = 0.1
+
+    desired_steer_angle = np.clip(steer, -1, 1)
+    '''
     
     # Apply control
     act = carla.VehicleControl(throttle=float(throttle), steer=float(steer), brake=float(brake))
@@ -680,6 +696,53 @@ class CarlaEnv(gym.Env):
       birdeye_surface = rgb_to_display_surface(birdeye, self.display_size)
       self.display.blit(birdeye_surface, (0, 0))
       
+      ## Lidar image generation
+
+      # We need to convert point cloud(carla-format) into numpy.ndarray
+      #lidar_data = np.copy(np.frombuffer(self.lidar_data.raw_data, dtype = np.dtype("f4")))
+      #lidar_data = np.reshape(lidar_data, (int(lidar_data.shape[0] / 4), 4))
+
+      #lidar_data = lidar_data[:, :-1] # we only use x, y, z coordinates
+      #lidar_data[:, 1] = -lidar_data[:, 1] # This is different from official script
+      #lidar_measurements = lidar_data
+      '''
+      point_cloud = []
+      # Get point cloud data
+      for data in self.lidar_data:
+        point_cloud.append([data.point.x, data.point.y, data.point.z]) #location # data.point.x, data.point.y, -data.point.z
+      point_cloud = np.array(point_cloud)
+    
+      # Separate the 3D space to bins for point cloud, x and y is set according to self.lidar_bin,
+      # and z is set to be two bins.
+      y_bins = np.arange(-(self.obs_range - self.d_behind), self.d_behind+self.lidar_bin, self.lidar_bin)
+      x_bins = np.arange(-self.obs_range/2, self.obs_range/2+self.lidar_bin, self.lidar_bin)
+      z_bins = [-self.lidar_height-1, -self.lidar_height+0.25, 1]
+      # Get lidar image according to the bins
+      lidar, _ = np.histogramdd(point_cloud, bins=(x_bins, y_bins, z_bins)) # , z_bins
+      lidar[:,:,0] = np.array(lidar[:,:,0]>0, dtype=np.uint8)
+      lidar[:,:,1] = np.array(lidar[:,:,1]>0, dtype=np.uint8)
+
+      # Add the waypoints to lidar image
+      if self.display_route:
+        wayptimg = (birdeye[:,:,0] <= 10) * (birdeye[:,:,1] <= 10) * (birdeye[:,:,2] >= 240)
+      else:
+        wayptimg = birdeye[:,:,0] < 0  # Equal to a zero matrix
+      wayptimg = np.expand_dims(wayptimg, axis=2)
+      wayptimg = np.fliplr(np.rot90(wayptimg, 3))
+
+      # Get the final lidar image
+      lidar = np.concatenate((lidar, wayptimg), axis=2)
+      ''''''
+      lidar = np.flip(lidar, axis=1)
+      lidar = np.rot90(lidar, 1)
+      lidar = np.rot90(lidar, 1)#lidar = np.rot90(lidar, 1)
+      lidar = lidar * 255
+
+      # Display lidar image
+      lidar_surface = rgb_to_display_surface(lidar, self.display_size)
+      self.display.blit(lidar_surface, (self.display_size, 0))
+      '''
+      
       ## Display camera image
       camera = resize(self.camera_img, (self.obs_size, self.obs_size)) * 255
       camera_surface = rgb_to_display_surface(camera, self.display_size)
@@ -696,8 +759,81 @@ class CarlaEnv(gym.Env):
     #obs += self.ego_state[1:]
     obs += self.ego_state
     obs += self.distance_measurements
+    #obs += self.goal_state
+    
+    #for agent in self.moving_agents:
+    #  agent_location = agent.get_location()
+    #  waypoint = self.map.get_waypoint(agent_location)
+    #  agent_road_ID = waypoint.road_id
+    #  if agent_road_ID == 34:
+    #    agent_state = self.get_state_frenet(agent, self.map)
+    #  else:
+    #    agent_state = self.ego_state #[0, 0, 0, 0]
+    #  
+    #  obs += (np.array(agent_state)-np.array(self.ego_state)).tolist()
+  
+    #for i in range(6):
+      #agent_state = self.goal_state
+      #obs += agent_state
 
     obs = np.array(obs)
+
+    '''
+    if self.pixor:
+      ## Vehicle classification and regression maps (requires further normalization)
+      vh_clas = np.zeros((self.pixor_size, self.pixor_size))
+      vh_regr = np.zeros((self.pixor_size, self.pixor_size, 6))
+
+      # Generate the PIXOR image. Note in CARLA it is using left-hand coordinate
+      # Get the 6-dim geom parametrization in PIXOR, here we use pixel coordinate
+      for actor in self.world.get_actors().filter('vehicle.*'):
+        x, y, yaw, l, w = get_info(actor)
+        x_local, y_local, yaw_local = get_local_pose((x, y, yaw), (ego_x, ego_y, ego_yaw))
+        if actor.id != self.ego.id:
+          if abs(y_local)<self.obs_range/2+1 and x_local<self.obs_range-self.d_behind+1 and x_local>-self.d_behind-1:
+            x_pixel, y_pixel, yaw_pixel, l_pixel, w_pixel = get_pixel_info(
+              local_info=(x_local, y_local, yaw_local, l, w),
+              d_behind=self.d_behind, obs_range=self.obs_range, image_size=self.pixor_size)
+            cos_t = np.cos(yaw_pixel)
+            sin_t = np.sin(yaw_pixel)
+            logw = np.log(w_pixel)
+            logl = np.log(l_pixel)
+            pixels = get_pixels_inside_vehicle(
+              pixel_info=(x_pixel, y_pixel, yaw_pixel, l_pixel, w_pixel),
+              pixel_grid=self.pixel_grid)
+            for pixel in pixels:
+              vh_clas[pixel[0], pixel[1]] = 1
+              dx = x_pixel - pixel[0]
+              dy = y_pixel - pixel[1]
+              vh_regr[pixel[0], pixel[1], :] = np.array(
+                [cos_t, sin_t, dx, dy, logw, logl])
+
+      # Flip the image matrix so that the origin is at the left-bottom
+      vh_clas = np.flip(vh_clas, axis=0)
+      vh_regr = np.flip(vh_regr, axis=0)
+
+      # Pixor state, [x, y, cos(yaw), sin(yaw), speed]
+      pixor_state = [ego_x, ego_y, np.cos(ego_yaw), np.sin(ego_yaw), speed]
+    '''
+    '''
+    obs = {
+      'camera':camera.astype(np.uint8),
+      'lidar':lidar.astype(np.uint8),
+      'birdeye':birdeye.astype(np.uint8),
+      'state': state,
+    }
+    '''
+    #obs = drive_state
+
+    '''
+    if self.pixor:
+      obs.update({
+        'roadmap':roadmap.astype(np.uint8),
+        'vh_clas':np.expand_dims(vh_clas, -1).astype(np.float32),
+        'vh_regr':vh_regr.astype(np.float32),
+        'pixor_state': pixor_state,
+      })
+    '''
 
     return obs
 
@@ -708,14 +844,9 @@ class CarlaEnv(gym.Env):
 
     """Calculate the reward."""
     # reward for speed tracking
-    v = self.ego.get_velocity()
-    speed = np.sqrt(v.x**2 + v.y**2)
-    max_speed = 10
+    #v = self.ego.get_velocity()
+    #speed = np.sqrt(v.x**2 + v.y**2)
     #r_speed = -abs(speed - self.desired_speed)
-    r_speed = 0
-    if speed >= 8:
-      r_speed = speed / max_speed
-    
     
     # reward for collision
     r_collision = 0
@@ -727,14 +858,39 @@ class CarlaEnv(gym.Env):
     r_steer = -abs(self.ego.get_control().steer)  # **2
     #r_steer = 0
 
+    # reward for out of lane
+    #ego_x, ego_y = get_pos(self.ego)
+    #dis, w = get_lane_dis(self.waypoints, ego_x, ego_y)
+    #r_lane = 0
+    #if abs(dis) > self.out_lane_thres:
+      #r_lane = -1
+
+    # cost for too fast
+    #r_out_speed = 0
+    #if speed >= 10:
+      #r_out_speed -= abs(speed - 10)
+
+    # longitudinal speed
+    #lspeed = np.array([v.x, v.y])
+    #lspeed_lon = np.dot(lspeed, w)
+
+    # cost for lateral acceleration
+    #r_lat = - abs(self.ego.get_control().steer) * lspeed_lon**2
+
     r_arrive = 0
     #if self.arrived:
       #r_arrive = 50
 
-    r_speed_ep = 0
+    r_speed = 0
     if self.arrived:
       #r_speed += 10* (self.road_len / self.t - 3)
-      r_speed_ep += self.road_len / self.t 
+      r_speed += self.road_len / self.t 
+
+    r_fast = 0
+    v = self.ego.get_velocity()
+    speed = np.sqrt(v.x**2 + v.y**2)
+    #if 7<= speed <=10:
+      #r_fast += 0.1*abs(speed)
 
     r_time = 0 
     if self.out_of_time:
@@ -770,7 +926,7 @@ class CarlaEnv(gym.Env):
       
     #r = 200*r_collision + 1*lspeed_lon + 10*r_fast + 1*r_out + r_steer*5 + 0.2*r_lat - 0.1+  r_arrive + 10 * r_speed + 5 * r_s
     #r = 200 * r_collision + 30 * r_speed + 0.1 * r_s + r_arrive + 10 * r_lane + 1 * r_road + r_time
-    r = r_collision + r_time + r_forward + r_steer + r_arrive + r_speed + r_speed_ep + r_road
+    r = r_collision + r_time + r_forward + r_steer + r_arrive + r_speed + r_road
 
     #self.reward += r
   
@@ -849,8 +1005,8 @@ class CarlaEnv(gym.Env):
 
     agent_bp = random.choice(blueprint_lib.filter('vehicle.*'))
     #agent_bp = blueprint_lib.find('vehicle.tesla.model3')
-    #rand_r, rand_g, rand_b = random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)
-    #agent_bp.set_attribute('color', '{},{},{}'.format(rand_r, rand_g, rand_b))
+    rand_r, rand_g, rand_b = random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)
+    agent_bp.set_attribute('color', '{},{},{}'.format(rand_r, rand_g, rand_b))
     agent_bp.set_attribute('role_name', 'autopilot')
     agent = world.spawn_actor(agent_bp, spawn_transform)
     agent.set_autopilot(True)

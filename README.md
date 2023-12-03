@@ -11,22 +11,36 @@ Author: Yubin Wang
 
 The versions are just what I used and not necessarily strict requirements.
 
-## How to Run
+## Train the Models
 
-### Run  MPC
-
-Run standard MPC:
+Use wandb to monitor the training
 ```shell
-python run_mpc.py
+python main.py 
 ```
 
-## More
+Train the models without monitoring:
+```shell
+python main.py --wandb False
+```
 
-Under construction...
+## Evaluate the performance 
+Replace the model index with the model your trianed to evaluate the performance:
+```shell
+python main.py --wandb False --eavl True --Loadmodel True --ModelIdex 35000
+```
 
 ## Reference
 
 Please consider citing the our paper if useful :
+
+```bibtex
+@article{wang2023learning,
+  title={Learning the References of Online Model Predictive Control for Urban Self-Driving},
+  author={Wang, Yubin and Peng, Zengqi and Ghazzai, Hakim and Ma, Jun},
+  journal={arXiv preprint arXiv:2308.15808},
+  year={2023}
+}
+```
 
 ```bibtex
 @article{wang2023chance,
