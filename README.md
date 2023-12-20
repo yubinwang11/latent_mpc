@@ -44,5 +44,5 @@ Please consider citing the our paper if useful :
 ```
 
 ## References
-[High-MPC](https://github.com/uzh-rpg/high_mpc) [Gym-CARLA](https://github.com/cjy1992/gym-carla) [SAC-Continuous-Pytorch ](https://github.com/XinJingHao/SAC-Continuous-Pytorch)
+|[High-MPC](https://github.com/uzh-rpg/high_mpc)| |[Gym-CARLA](https://github.com/cjy1992/gym-carla)| |[SAC-Continuous-Pytorch ](https://github.com/XinJingHao/SAC-Continuous-Pytorch)|
 
