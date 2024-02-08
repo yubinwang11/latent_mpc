@@ -16,9 +16,9 @@ python main.py
 ```
 
 ## Evaluate the performance 
-Replace the model index with the model your trianed to evaluate the performance:
+Replace the model index with the model you trained to evaluate the performance:
 ```shell
-python main.py --eavl True --Loadmodel True --ModelIdex 35000
+python main.py --eval True --Loadmodel True --ModelIdex 35000
 ```
 
 ## Citations
@@ -28,18 +28,18 @@ Please consider citing the our paper if useful :
 ```bibtex
 @article{wang2023learning,
   title={Learning the References of Online Model Predictive Control for Urban Self-Driving},
-  author={Wang, Yubin and Peng, Zengqi and Ghazzai, Hakim and Ma, Jun},
+  author={Wang, Yubin and Peng, Zengqi and Xie, Yusen and Li, Yulin and Ghazzai, Hakim and Ma, Jun},
   journal={arXiv preprint arXiv:2308.15808},
-  year={2023}
+  year={2024}
 }
 ```
 
 ```bibtex
 @article{wang2023chance,
   title={Chance-Aware Lane Change with High-Level Model Predictive Control Through Curriculum Reinforcement Learning},
-  author={Wang, Yubin and Li, Yulin and Ghazzai, Hakim and Massoud, Yehia and Ma, Jun},
-  journal={arXiv preprint arXiv:2303.03723},
-  year={2023}
+  author={Wang, Yubin and Li, Yulin and Peng, Zengqi and Ghazzai, Hakim and Ma, Jun},
+  journal={2024 IEEE International Conference on Robotics and Automation (ICRA)},
+  year={2024}
 }
 ```
 
