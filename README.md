@@ -26,7 +26,7 @@ python main.py --eval True --Loadmodel True --ModelIdex 35000
 Please consider citing the our paper if useful :
 
 ```bibtex
-@article{wang2023learning,
+@article{wang2024learning,
   title={Learning the References of Online Model Predictive Control for Urban Self-Driving},
   author={Wang, Yubin and Peng, Zengqi and Xie, Yusen and Li, Yulin and Ghazzai, Hakim and Ma, Jun},
   journal={arXiv preprint arXiv:2308.15808},
