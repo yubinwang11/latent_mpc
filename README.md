@@ -35,7 +35,7 @@ Please consider citing the our paper if useful :
 ```
 
 ```bibtex
-@article{wang2023chance,
+@article{wang2024chance,
   title={Chance-Aware Lane Change with High-Level Model Predictive Control Through Curriculum Reinforcement Learning},
   author={Wang, Yubin and Li, Yulin and Peng, Zengqi and Ghazzai, Hakim and Ma, Jun},
   journal={2024 IEEE International Conference on Robotics and Automation (ICRA)},
