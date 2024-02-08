@@ -9,7 +9,7 @@ Author: Yubin Wang
 * Unreal Engine 4.26
 * Carla 0.9.12
 
-## Train the Models
+## Train your models
 
 ```shell
 python main.py 
