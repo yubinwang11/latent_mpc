@@ -1,4 +1,4 @@
-# Latent-MPC
+# Learning the References of Online Model Predictive Control for Urban Self-Driving
 Author: Yubin Wang
 
 ## Requirements
