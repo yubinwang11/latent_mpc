@@ -23,7 +23,7 @@ python main.py --eval True --Loadmodel True --ModelIdex 35000
 
 ## Citations
 
-Please consider citing the our paper if useful :
+Please consider citing our paper if useful :
 
 ```bibtex
 @article{wang2024learning,
